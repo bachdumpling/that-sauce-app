@@ -1,0 +1,44 @@
+# Node.js
+node_modules/
+npm-debug.log*
+
+# Logs
+logs/
+*.log
+*.log.*
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# IDEs and Editors
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+
+# Build files
+dist/
+build/
+
+# Temporary files
+*.tmp
+*.swp
+
+# Environment variables
+.env
+.env.*.local
+
+# Dependencies and package locks
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Monorepo specific
+client/node_modules/
+client/dist/
+
+# Custom exclusions
+custom_folder_to_ignore/
