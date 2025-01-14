@@ -1,21 +1,28 @@
-// src/app.ts
 import express from "express";
-import dotenv from "dotenv";
 import { setupCors } from "./middleware/cors";
 import { setupSecurity } from "./middleware/security";
+import { PORT } from "./config/env";
 import logger from "./config/logger";
 import supabase from "./lib/supabase";
 
-// Load environment variables
-dotenv.config();
-
 const app = express();
-const port = process.env.PORT || 4000;
+const port = PORT || 8000;
 
 // Setup middleware
 setupCors(app);
 setupSecurity(app);
 app.use(express.json());
+
+logger.info({
+  msg: "Starting server with configuration",
+  config: {
+    nodeEnv: process.env.NODE_ENV,
+    hasSupabaseUrl: !!process.env.SUPABASE_URL,
+    hasSupabaseKey: !!process.env.SUPABASE_SERVICE_KEY,
+    clientUrl: process.env.CLIENT_URL,
+    port: process.env.PORT || 4000,
+  },
+});
 
 // Test route
 app.get("/", (req, res) => {
@@ -25,7 +32,10 @@ app.get("/", (req, res) => {
 // Test database connection
 app.get("/test-db", async (req, res) => {
   try {
-    const { data, error } = await supabase.from("images").select("*").limit(1);
+    const { data, error } = await supabase
+      .from("portfolios")
+      .select("*")
+      .limit(2);
 
     if (error) {
       logger.error("Database connection test failed:", error);

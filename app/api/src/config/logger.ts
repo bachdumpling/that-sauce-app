@@ -1,3 +1,4 @@
+// src/config/logger.ts
 import pino from "pino";
 
 const logger = pino({
@@ -9,7 +10,12 @@ const logger = pino({
       translateTime: "UTC:yyyy-mm-dd HH:MM:ss.l",
     },
   },
-  level: process.env.NODE_ENV === "development" ? "debug" : "info",
+  level: "debug", // Force debug level for now to see all logs
 });
+
+// Test the logger
+logger.debug("Logger initialized");
+logger.info("Logger ready");
+logger.error("Logger error test");
 
 export default logger;

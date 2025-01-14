@@ -1,22 +1,37 @@
 import { Request, Response, NextFunction } from "express";
-import jwt from "jsonwebtoken";
-import { JWT_SECRET } from "../config/env";
+import supabase from "../lib/supabase";
+import logger from "../config/logger";
 
-export const authenticate = async (
-  req: Request,
+export interface AuthenticatedRequest extends Request {
+  user?: any;
+}
+
+export const authenticateUser = async (
+  req: AuthenticatedRequest,
   res: Response,
   next: NextFunction
 ) => {
   try {
-    const token = req.headers.authorization?.split(" ")[1];
-    if (!token) {
-      return res.status(401).json({ message: "No token provided" });
+    const authHeader = req.headers.authorization;
+
+    if (!authHeader) {
+      return res.status(401).json({ error: "No authorization header" });
     }
 
-    const decoded = jwt.verify(token, JWT_SECRET as string);
-    req.user = decoded;
+    const token = authHeader.split(" ")[1];
+    const {
+      data: { user },
+      error,
+    } = await supabase.auth.getUser(token);
+
+    if (error || !user) {
+      return res.status(401).json({ error: "Invalid token" });
+    }
+
+    req.user = user;
     next();
   } catch (error) {
-    res.status(401).json({ message: "Invalid token" });
+    logger.error("Auth middleware error:", error);
+    res.status(401).json({ error: "Authentication failed" });
   }
 };
