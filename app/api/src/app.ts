@@ -4,7 +4,7 @@ import { setupSecurity } from "./middleware/security";
 import { PORT } from "./config/env";
 import logger from "./config/logger";
 import supabase from "./lib/supabase";
-
+import searchRouter from "./routes/search";
 const app = express();
 const port = PORT || 8000;
 
@@ -20,7 +20,7 @@ logger.info({
     hasSupabaseUrl: !!process.env.SUPABASE_URL,
     hasSupabaseKey: !!process.env.SUPABASE_SERVICE_KEY,
     clientUrl: process.env.CLIENT_URL,
-    port: process.env.PORT || 4000,
+    port: process.env.PORT || 8000,
   },
 });
 
@@ -62,6 +62,9 @@ app.use(
     res.status(500).json({ error: "Internal server error" });
   }
 );
+
+// Routes
+app.use("/api/search", searchRouter);
 
 // Start server
 app.listen(port, () => {
