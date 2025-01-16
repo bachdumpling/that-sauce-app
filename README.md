@@ -83,8 +83,3 @@ npm run build
 ├── packages/           # Shared packages
 └── package.json        # Root package.json
 ```
-
-```
-
-This README provides the essential information for getting started with the project, including prerequisites, setup instructions, and basic commands. Feel free to customize it further based on your specific needs!
-```
