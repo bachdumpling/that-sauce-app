@@ -3,6 +3,7 @@ import {
   GenerateContentResult,
 } from "@google/generative-ai";
 import { GEMINI_API_KEY } from "../config/env";
+import logger from "../config/logger";
 
 interface EmbeddingResponse {
   values: number[];
@@ -12,7 +13,7 @@ interface EmbeddingResponse {
 const genAI = new GoogleGenerativeAI(GEMINI_API_KEY!);
 
 const searchPrompts = {
-  creators: `Process this search query to enhance its relevance for searching creative professionals.
+  creators: `Process this search query to enhance its relevance for searching creative professionals based on their style and expertise and their work.
   Rules:
   1. KEEP ALL ORIGINAL QUERY TERMS intact
   2. Only add up to 3 highly relevant terms if necessary
@@ -20,11 +21,9 @@ const searchPrompts = {
   4. Fix any misspellings but preserve intentional slang/creative terms
   5. Keep grammar natural, don't over-formalize
   6. Return the processed query with original terms plus any additions (max 3)
-  
-  Example:
-  "photogs with cyberpunk vibes" → "photographers cyberpunk vibes digital"
-  "grafitti artists nyc" → "graffiti artists nyc street"
-  
+  7. Avoid adding generic terms like "projects, images, portfolio, website, photographers, artists, designers, etc" unless explicitly relevant.
+  8. Avoid adding names of specific apps, platforms, tools, people, etc unless explicitly relevant.
+  9. Avoid adding terms that are not relevant to the search query.
   Original query: `,
 
   projects: `Process this search query to enhance its relevance for searching creative projects.

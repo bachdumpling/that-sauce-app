@@ -5,8 +5,8 @@ import logger from "../config/logger";
 
 interface SearchQueryParams {
   q: string;
-  limit?: string;
-  page?: string;
+  limit?: number;
+  page?: number;
 }
 
 export class SearchController {
@@ -16,8 +16,8 @@ export class SearchController {
   ) {
     try {
       const { q: query } = req.query;
-      const limit = parseInt(req.query.limit || "10");
-      const page = parseInt(req.query.page || "1");
+      const limit = req.query.limit || 5;
+      const page = req.query.page || 1;
       const offset = (page - 1) * limit;
 
       if (!query) {
@@ -36,8 +36,8 @@ export class SearchController {
           success: false,
           data: {
             results: [],
-            page: 1,
-            limit: 10,
+            page: page,
+            limit: limit,
             total: 0,
             query,
           },
@@ -49,11 +49,13 @@ export class SearchController {
         "match_portfolios",
         {
           query_embedding: queryEmbedding.values,
-          match_threshold: 0.2,
+          match_threshold: 0.3,
           match_limit: limit,
         }
       );
-      
+
+      // console.log("Matches:", matches[0]);
+
       if (matchError) {
         logger.error("Portfolio match error:", matchError);
         throw matchError;
@@ -94,6 +96,8 @@ export class SearchController {
             }
           );
 
+          // console.log("Projects:", projects[0]);
+
           if (projectsError) {
             logger.error("Projects fetch error:", projectsError);
             throw projectsError;
@@ -107,9 +111,11 @@ export class SearchController {
                 {
                   project_ids: [project.id],
                   query_embedding: queryEmbedding.values,
-                  image_limit: 5,
+                  image_limit: 3,
                 }
               );
+
+              // console.log("Images:", images[0]);
 
               if (imagesError) {
                 logger.error("Images fetch error:", imagesError);
@@ -126,7 +132,7 @@ export class SearchController {
           return {
             profile: creator,
             projects: projectsWithImages || [],
-            score: match.score,
+            score: match.similarity_score,
           };
         })
       );

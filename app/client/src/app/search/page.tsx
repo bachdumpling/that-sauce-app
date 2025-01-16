@@ -11,8 +11,8 @@ import { CreatorCard } from "@/components/CreatorCard";
 
 const EXAMPLE_QUERIES = [
   "high fashion photographers",
-  "portrait photographers with monochrome aesthetic",
-  "editorial photographers specializing in jewelry",
+  "portrait photographers monochrome aesthetic",
+  "film photographers street style nyc architecture",
 ];
 
 interface SearchResults {
@@ -33,6 +33,7 @@ interface SearchResults {
         title: string;
         behance_url?: string;
         images: Array<{
+          id: string;
           url: string;
           alt_text: string;
           resolutions: {
@@ -67,6 +68,7 @@ export default function SearchPage() {
         q: query,
       });
       setResults(data);
+      console.log(data);
     } catch (err) {
       console.error("Search error:", err);
     } finally {
@@ -149,9 +151,7 @@ export default function SearchPage() {
         {/* Results */}
         <div className="space-y-6">
           {isLoading ? (
-            Array(3)
-              .fill(0)
-              .map((_, i) => <LoadingSkeleton key={i} />)
+            <LoadingSkeleton />
           ) : results?.data.results.length ? (
             results.data.results.map((result) => (
               <CreatorCard key={result.profile.id} result={result} />

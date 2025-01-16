@@ -35,7 +35,7 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({ project }) => {
         </div>
 
         {/* Main Image */}
-        <div className="aspect-auto overflow-hidden rounded-lg bg-secondary/50 relative h-[500px]">
+        <div className="aspect-auto overflow-hidden rounded-lg bg-secondary/50 relative h-[500px] w-full">
           {project.images?.[0] ? (
             <Image
               src={
@@ -56,11 +56,11 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({ project }) => {
 
       {/* Thumbnail Gallery */}
       {project.images && project.images.length > 1 && (
-        <div className="grid grid-cols-3 gap-2 mt-2">
-          {project.images.slice(1, 4).map((image) => (
+        <div className="grid grid-cols-2 gap-2 mt-2">
+          {project.images.slice(1, 3).map((image) => (
             <div
               key={image.id.toString()}
-              className="aspect-auto overflow-hidden rounded-lg bg-secondary/50 relative h-[150px]"
+              className="aspect-auto overflow-hidden rounded-lg bg-secondary/50 relative h-[300px]"
             >
               {image ? (
                 <Image
@@ -68,7 +68,7 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({ project }) => {
                   alt={image.alt_text || `${project.title} thumbnail`}
                   fill
                   sizes="(max-width: 768px) 33vw, 20vw"
-                  className="object-cover"
+                  className="object-cover object-center"
                   loading="lazy"
                   quality={100}
                 />
