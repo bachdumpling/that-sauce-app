@@ -8,7 +8,7 @@ import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/lib/supabase";
-import { ProjectCard } from "@/components/ProjectCard";
+import { ProfileProjectCard } from "@/components/ProjectCard";
 
 interface Project {
   id: string;
@@ -218,7 +218,7 @@ export default function ProfilePage() {
 
               <div className="space-y-4">
                 {projects.map((project) => (
-                  <ProjectCard
+                  <ProfileProjectCard
                     key={project.id}
                     project={project}
                     onUploadComplete={handleUploadComplete}

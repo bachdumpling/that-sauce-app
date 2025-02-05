@@ -1,12 +1,25 @@
 // src/components/ProjectCard.tsx
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { FileUpload } from "@/components/FileUpload";
-import { Upload, Image as ImageIcon } from "lucide-react";
+import {
+  Image as ImageIcon,
+  ChevronDown,
+  ChevronUp,
+  ExternalLink,
+} from "lucide-react";
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import Image from "next/image";
+import { cn } from "@/lib/utils";
 
+// Common interfaces
 interface MediaEntry {
   id: string;
   user_id: string;
@@ -29,7 +42,97 @@ interface ProjectMedia {
   };
 }
 
-interface ProjectCardProps {
+// Search result project card
+interface SearchProjectCardProps {
+  project: {
+    id: string;
+    title: string;
+    description?: string | null;
+    behance_url?: string;
+    images?: Array<{
+      id: string;
+      url: string;
+      alt_text: string;
+      resolutions: {
+        high_res?: string;
+        low_res?: string;
+      };
+    }>;
+  };
+  className?: string;
+}
+
+export function SearchProjectCard({
+  project,
+  className,
+}: SearchProjectCardProps) {
+  const mediaItems =
+    project.images?.map((img) => ({
+      id: img.id,
+      storage_url: img.resolutions.high_res || img.url,
+      file_type: "image" as const,
+      metadata: { original_name: img.alt_text },
+    })) || [];
+
+  return (
+    <Card
+      className={cn(
+        "group transition-all duration-200 hover:shadow-md overflow-hidden",
+        className
+      )}
+    >
+      <div className="space-y-4">
+        {/* Project Info */}
+        <div className="px-4 pt-4 flex items-start justify-between gap-4">
+          <div className="space-y-1">
+            <h3 className="font-semibold leading-none">{project.title}</h3>
+            {project.description && (
+              <p className="text-sm text-muted-foreground line-clamp-2">
+                {project.description}
+              </p>
+            )}
+          </div>
+          {project.behance_url && (
+            <a
+              href={project.behance_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-muted-foreground hover:text-foreground transition-colors shrink-0"
+            >
+              <ExternalLink className="h-4 w-4" />
+            </a>
+          )}
+        </div>
+
+        {/* Media Grid */}
+        {mediaItems.length > 0 && (
+          <div className="px-4 pb-4">
+            <div className="columns-1 md:columns-2 gap-4 [&>*]:mb-4">
+              {mediaItems.map((item) => (
+                <div
+                  key={item.id}
+                  className="relative w-full break-inside-avoid rounded-lg overflow-hidden bg-muted"
+                >
+                  <Image
+                    src={item.storage_url}
+                    alt={item.metadata.original_name}
+                    width={1200}
+                    height={800}
+                    className="w-full h-auto transition-transform duration-300 hover:scale-105"
+                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    </Card>
+  );
+}
+
+// Profile project card with upload functionality
+interface ProfileProjectCardProps {
   project: {
     id: string;
     title: string;
@@ -37,13 +140,15 @@ interface ProjectCardProps {
   };
   onUploadComplete: (url: string, mediaEntry: MediaEntry) => void;
   onError: (error: string) => void;
+  className?: string;
 }
 
-export function ProjectCard({
+export function ProfileProjectCard({
   project,
   onUploadComplete,
   onError,
-}: ProjectCardProps) {
+  className,
+}: ProfileProjectCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [media, setMedia] = useState<ProjectMedia[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -77,78 +182,111 @@ export function ProjectCard({
     fetchProjectMedia(); // Refresh media after upload
   };
 
-  const toggleExpand = () => {
-    setIsExpanded(!isExpanded);
-  };
-
   return (
-    <Card className="hover:border-primary/50 transition-colors">
-      <CardHeader className="cursor-pointer" onClick={toggleExpand}>
-        <div className="flex flex-row items-center justify-between">
-          <div>
-            <h3 className="font-medium">{project.title}</h3>
+    <Card
+      className={cn(
+        "group transition-all duration-200 hover:shadow-md",
+        isExpanded && "ring-1 ring-primary/20",
+        className
+      )}
+    >
+      <CardHeader
+        className={cn(
+          "cursor-pointer select-none",
+          "transition-colors duration-200",
+          "hover:bg-muted/50"
+        )}
+        onClick={() => setIsExpanded(!isExpanded)}
+      >
+        <div className="flex items-start justify-between gap-4">
+          <div className="space-y-1.5">
+            <CardTitle className="text-lg font-semibold leading-none">
+              {project.title}
+            </CardTitle>
             {project.description && (
-              <p className="text-sm text-muted-foreground mt-1">
+              <CardDescription className="line-clamp-2">
                 {project.description}
-              </p>
+              </CardDescription>
             )}
           </div>
           <Button
             variant="ghost"
             size="icon"
+            className="h-8 w-8"
             onClick={(e) => {
-              e.stopPropagation(); // Prevent header click
-              toggleExpand();
+              e.stopPropagation();
+              setIsExpanded(!isExpanded);
             }}
           >
-            <Upload
-              className={`h-4 w-4 transition-transform ${
-                isExpanded ? "rotate-180" : ""
-              }`}
-            />
+            {isExpanded ? (
+              <ChevronUp className="h-4 w-4 transition-transform" />
+            ) : (
+              <ChevronDown className="h-4 w-4 transition-transform" />
+            )}
           </Button>
         </div>
       </CardHeader>
+
       {isExpanded && (
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-6 pt-2">
           {isLoading ? (
-            <div className="text-center py-4">Loading media...</div>
+            <div className="flex items-center justify-center py-8">
+              <div className="animate-pulse space-y-4 w-full">
+                <div className="columns-1 md:columns-2 gap-4 [&>*]:mb-4">
+                  {[1, 2, 3].map((n) => (
+                    <div
+                      key={n}
+                      className="w-full break-inside-avoid bg-muted rounded-lg"
+                      style={{ paddingBottom: "66.67%" }}
+                    />
+                  ))}
+                </div>
+              </div>
+            </div>
           ) : (
             <>
-              {media.length > 0 && (
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              {media.length > 0 ? (
+                <div className="columns-1 md:columns-2 gap-4 [&>*]:mb-4">
                   {media.map((item) => (
-                    <div key={item.id} className="relative aspect-square">
+                    <div
+                      key={item.id}
+                      className="relative w-full break-inside-avoid rounded-lg overflow-hidden bg-muted"
+                    >
                       {item.file_type === "image" ? (
-                        <div className="relative w-full h-full">
-                          <Image
-                            src={item.storage_url}
-                            alt={item.metadata.original_name}
-                            fill
-                            className="object-cover rounded-lg"
-                            sizes="(max-width: 768px) 50vw, 33vw"
-                          />
-                        </div>
+                        <Image
+                          src={item.storage_url}
+                          alt={item.metadata.original_name}
+                          width={1200}
+                          height={800}
+                          className="w-full h-auto transition-transform duration-300 hover:scale-105"
+                          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                        />
                       ) : item.file_type === "video" ? (
-                        <div className="relative w-full h-full">
-                          <video
-                            src={item.storage_url}
-                            className="w-full h-full object-cover rounded-lg"
-                            controls
-                            preload="metadata"
-                          >
-                            Your browser does not support the video tag.
-                          </video>
-                        </div>
+                        <video
+                          src={item.storage_url}
+                          className="w-full h-auto rounded-lg"
+                          controls
+                          preload="metadata"
+                        >
+                          Your browser does not support the video tag.
+                        </video>
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center bg-gray-100 rounded-lg">
-                          <ImageIcon className="w-8 h-8 text-gray-400" />
+                        <div
+                          className="w-full flex items-center justify-center bg-muted"
+                          style={{ paddingBottom: "66.67%" }}
+                        >
+                          <ImageIcon className="absolute w-8 h-8 text-muted-foreground" />
                         </div>
                       )}
                     </div>
                   ))}
                 </div>
+              ) : (
+                <div className="py-8 text-center text-muted-foreground">
+                  No media available
+                </div>
               )}
+
               <FileUpload
                 projectId={project.id}
                 onUploadComplete={handleUploadComplete}

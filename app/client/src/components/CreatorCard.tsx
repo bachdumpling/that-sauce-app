@@ -2,7 +2,7 @@
 import { Globe } from "lucide-react";
 import Link from "next/link";
 import { SocialIcon } from "@/components/ui/SocialIcon";
-import { ProjectCard } from "@/components/ProjectCard";
+import { SearchProjectCard } from "@/components/ProjectCard";
 
 interface CreatorCardProps {
   result: {
@@ -103,7 +103,7 @@ export const CreatorCard: React.FC<CreatorCardProps> = ({ result }) => {
         {projects.length > 0 && (
           <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
             {projects.map((project) => (
-              <ProjectCard key={project.id} project={project} />
+              <SearchProjectCard key={project.id} project={project} />
             ))}
           </div>
         )}
