@@ -1,8 +1,13 @@
+"use client";
+
 import React from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/lib/context/auth-context";
 
 export function Header() {
+  const { user } = useAuth();
+
   return (
     <header className="border-b">
       <div className="container mx-auto px-4 h-16 flex items-center justify-between">
@@ -14,7 +19,11 @@ export function Header() {
             <Link href="/search">Search</Link>
           </Button>
           <Button asChild>
-            <Link href="/auth/login">Sign In</Link>
+            {user ? (
+              <Link href="/profile">Profile </Link>
+            ) : (
+              <Link href="/auth/login">Sign In</Link>
+            )}
           </Button>
         </nav>
       </div>

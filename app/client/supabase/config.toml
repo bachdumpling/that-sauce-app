@@ -1,0 +1,3 @@
+[functions]
+  [functions.process-upload]
+    verify_jwt = false
