@@ -117,21 +117,6 @@ export default function ProfilePage() {
   const fetchProjects = async () => {
     if (!creator) return;
 
-    console.log("Fetching projects for creator:", {
-      creator_id: creator.id,
-      profile_id: creator.profile_id,
-      auth_id: user?.id,
-    });
-
-    // First check if we can access the creators table
-    const { data: creatorCheck, error: creatorError } = await supabase
-      .from("creators")
-      .select("*")
-      .eq("id", creator.id)
-      .single();
-
-    console.log("Creator check:", { creatorCheck, error: creatorError });
-
     // Then check if we can access the portfolios table
     const { data: portfolio, error: portfolioError } = await supabase
       .from("portfolios")
@@ -150,8 +135,6 @@ export default function ProfilePage() {
       .eq("creator_id", creator.id)
       .single();
 
-    console.log("Portfolio check:", { portfolio, error: portfolioError });
-
     if (portfolio && portfolio.projects) {
       setProjects(portfolio.projects);
       return;
@@ -163,8 +146,6 @@ export default function ProfilePage() {
       .select("id, title, description")
       .eq("creator_id", creator.id)
       .order("created_at", { ascending: false });
-
-    console.log("Projects query result:", { data, error });
 
     if (error) {
       console.error("Error fetching projects:", error);
@@ -204,7 +185,7 @@ export default function ProfilePage() {
   };
 
   return (
-    <div className="container mx-auto max-w-2xl px-4 py-8">
+    <div className="container mx-auto max-w-5xl px-4 py-8">
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Profile</CardTitle>

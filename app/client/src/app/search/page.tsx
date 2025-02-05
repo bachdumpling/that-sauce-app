@@ -68,7 +68,6 @@ export default function SearchPage() {
         q: query,
       });
       setResults(data);
-      console.log(data);
     } catch (err) {
       console.error("Search error:", err);
     } finally {

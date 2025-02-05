@@ -2,7 +2,6 @@ import { useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/context/auth-context";
 import { Upload } from "lucide-react";
-import { PostgrestError } from "@supabase/supabase-js";
 
 interface MediaEntry {
   id: string;
@@ -14,6 +13,7 @@ interface MediaEntry {
   size_bytes: number;
   metadata: {
     original_name: string;
+    project_id: string;
   };
 }
 
@@ -31,17 +31,21 @@ export function FileUpload({
   onStatusChange,
 }: FileUploadProps) {
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadStep, setUploadStep] = useState<string>("");
   const { user } = useAuth();
+  const inputId = `file-upload-${projectId}`;
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !user) return;
 
     setIsUploading(true);
+    setUploadStep("Starting upload...");
     onStatusChange?.("uploading");
 
     try {
       // Upload file to storage
+      setUploadStep("Uploading to storage...");
       const fileExt = file.name.split(".").pop();
       const filePath = `${user.id}/${projectId}/${Math.random()}.${fileExt}`;
 
@@ -51,11 +55,13 @@ export function FileUpload({
 
       if (uploadError) throw uploadError;
 
-      const { data: { publicUrl } } = supabase.storage
-        .from("media")
-        .getPublicUrl(filePath);
+      setUploadStep("Getting public URL...");
+      const {
+        data: { publicUrl },
+      } = supabase.storage.from("media").getPublicUrl(filePath);
 
       // Create media entry
+      setUploadStep("Creating media entry...");
       const { data: mediaEntry, error: mediaError } = await supabase
         .from("media")
         .insert({
@@ -67,6 +73,7 @@ export function FileUpload({
           size_bytes: file.size,
           metadata: {
             original_name: file.name,
+            project_id: projectId,
           },
         })
         .select()
@@ -75,24 +82,45 @@ export function FileUpload({
       if (mediaError) throw mediaError;
 
       // Create queue entry for processing
-      const { error: queueError } = await supabase
-        .from("media_queue")
-        .insert({
-          media_id: mediaEntry.id,
-          file_path: filePath,
-          file_type: file.type.startsWith("image/") ? "image" : "video",
-        });
+      setUploadStep("Creating queue entry...");
+      const { error: queueError } = await supabase.from("media_queue").insert({
+        media_id: mediaEntry.id,
+        file_path: filePath,
+        file_type: file.type.startsWith("image/") ? "image" : "video",
+        metadata: {
+          project_id: projectId,
+        },
+      });
 
       if (queueError) throw queueError;
 
+      // Update project's media array
+      setUploadStep("Updating project...");
+      const { error: projectError } = await supabase.rpc(
+        "add_media_to_project",
+        {
+          p_project_id: projectId,
+          p_media_id: mediaEntry.id,
+          p_media_type: file.type.startsWith("image/") ? "image" : "video",
+        }
+      );
+
+      if (projectError) {
+        console.error("Error updating project media:", projectError);
+      }
+
+      setUploadStep("Upload complete!");
       onUploadComplete?.(publicUrl, mediaEntry);
       onStatusChange?.("completed");
     } catch (error) {
-      console.error("Upload error:", error);
-      onError?.(error instanceof Error ? error.message : "Upload failed");
+      console.error("Upload error at step:", uploadStep, error);
+      const errorMessage =
+        error instanceof Error ? error.message : "Upload failed";
+      onError?.(`Error at ${uploadStep}: ${errorMessage}`);
       onStatusChange?.("error");
     } finally {
       setIsUploading(false);
+      setUploadStep("");
       // Reset file input
       e.target.value = "";
     }
@@ -102,7 +130,7 @@ export function FileUpload({
     <div className="space-y-4">
       <div className="flex items-center justify-center w-full">
         <label
-          htmlFor="file-upload"
+          htmlFor={inputId}
           className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer bg-gray-50 dark:hover:bg-bray-800 dark:bg-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:hover:border-gray-500 dark:hover:bg-gray-600"
         >
           <div className="flex flex-col items-center justify-center pt-5 pb-6">
@@ -116,7 +144,7 @@ export function FileUpload({
             </p>
           </div>
           <input
-            id="file-upload"
+            id={inputId}
             type="file"
             className="hidden"
             accept="image/*,video/*"
@@ -126,8 +154,9 @@ export function FileUpload({
         </label>
       </div>
       {isUploading && (
-        <div className="text-center">
+        <div className="text-center space-y-2">
           <p className="text-sm text-gray-500">Uploading...</p>
+          <p className="text-xs text-gray-400">{uploadStep}</p>
         </div>
       )}
     </div>

@@ -8,7 +8,6 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
-  // Handle CORS
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
@@ -19,9 +18,24 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
-    // Get webhook payload
     const payload = await req.json();
     const { record } = payload;
+
+    // Get creator ID from user's auth ID
+    const { data: creator, error: creatorError } = await supabase
+      .from("creators")
+      .select("id")
+      .eq("profile_id", record.user_id)
+      .single();
+
+    if (creatorError || !creator) {
+      throw new Error(`Creator not found for user ${record.user_id}`);
+    }
+
+    const projectId = record.metadata?.project_id;
+    if (!projectId) {
+      throw new Error("No project ID found in metadata");
+    }
 
     // Create queue entry
     const { data: queueEntry, error: queueError } = await supabase
@@ -35,6 +49,7 @@ serve(async (req) => {
           mime_type: record.mime_type,
           size_bytes: record.size_bytes,
           storage_url: record.storage_url,
+          project_id: projectId,
         },
       })
       .select()
@@ -42,17 +57,17 @@ serve(async (req) => {
 
     if (queueError) throw queueError;
 
-    // For testing: Create appropriate entry based on file type
     let referenceId;
+
     if (record.file_type === "image") {
       // Create image entry
       const { data: image, error: imageError } = await supabase
         .from("images")
         .insert({
-          project_id: "00000000-0000-0000-0000-000000000000", // Placeholder project ID
-          creator_id: record.user_id,
+          project_id: projectId,
+          creator_id: creator.id, // Use resolved creator.id
           url: record.storage_url,
-          alt_text: "Test image",
+          alt_text: record.metadata.original_name || "Uploaded image",
         })
         .select()
         .single();
@@ -60,15 +75,17 @@ serve(async (req) => {
       if (imageError) throw imageError;
       referenceId = { image_id: image.id };
     } else {
-      // Create video entry
+      // Create video entry with random vimeo_id and actual storage url
       const { data: video, error: videoError } = await supabase
         .from("videos")
         .insert({
-          project_id: "00000000-0000-0000-0000-000000000000", // Placeholder project ID
-          creator_id: record.user_id,
-          vimeo_id: "test_" + Date.now(), // Placeholder vimeo ID
-          title: "Test video",
-          description: "Test upload",
+          project_id: projectId,
+          creator_id: creator.id, // Use resolved creator.id
+          vimeo_id: null,
+          url: record.storage_url,
+          title: record.metadata.original_name || "Uploaded video",
+          description: "Uploaded via project",
+          categories: [],
         })
         .select()
         .single();
@@ -114,9 +131,15 @@ serve(async (req) => {
     );
   } catch (error) {
     console.error("Error:", error.message);
-    return new Response(JSON.stringify({ error: error.message }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-      status: 400,
-    });
+    return new Response(
+      JSON.stringify({
+        error: error.message,
+        details: error instanceof Error ? error.stack : undefined,
+      }),
+      {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 400,
+      }
+    );
   }
 });
