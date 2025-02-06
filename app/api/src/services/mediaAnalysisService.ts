@@ -237,17 +237,46 @@ Return: VideoAnalysis`;
     ]);
 
     const responseText = await result.response.text();
+
+    // Clean and sanitize the response text
     const cleanedText = responseText
-      .replace(/```json\n/g, "")
-      .replace(/```\n/g, "")
-      .replace(/\n```/g, "")
+      .replace(/```json\n?/g, "") // Remove JSON code blocks
+      .replace(/```\n?/g, "") // Remove any remaining code blocks
+      .replace(/[\x00-\x1F\x7F-\x9F]/g, "") // Remove all control characters
       .trim();
 
-    const analysisObj = JSON.parse(cleanedText);
-    const analysis = analysisObj.description;
-    const embedding = await generateEmbedding(analysis);
+    logger.info("Cleaned response text:", cleanedText);
 
-    return { analysis, embedding };
+    try {
+      const analysisObj = JSON.parse(cleanedText);
+      const analysis = analysisObj.description;
+
+      if (!analysis || typeof analysis !== "string") {
+        throw new Error("Invalid analysis format from Gemini API");
+      }
+
+      // Clean the analysis text as well
+      const cleanedAnalysis = analysis
+        .replace(/[\x00-\x1F\x7F-\x9F]/g, "") // Remove control characters
+        .replace(/\n+/g, " ") // Replace multiple newlines with space
+        .trim();
+
+      const embedding = await generateEmbedding(cleanedAnalysis);
+
+      if (!embedding) {
+        throw new Error("Failed to generate embedding for video analysis");
+      }
+
+      return { analysis: cleanedAnalysis, embedding };
+    } catch (error: any) {
+      logger.error("Failed to parse Gemini API response:", {
+        error,
+        responseText: cleanedText,
+      });
+      throw new Error(
+        `Failed to parse Gemini API response: ${error?.message || "Unknown error"}`
+      );
+    }
   } catch (error) {
     logger.error("Video analysis failed:", error);
     throw error;
