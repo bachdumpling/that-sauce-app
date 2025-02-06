@@ -38,11 +38,14 @@ export default function OnboardingPage() {
 
       await setupCreator(user.id, username.trim());
       router.push("/profile"); // Or wherever you want to redirect after setup
-    } catch (err: any) {
-      if (err.message.includes("creators_username_key")) {
+    } catch (err: unknown) {
+      if (
+        err instanceof Error &&
+        err.message.includes("creators_username_key")
+      ) {
         setError("This username is already taken");
       } else {
-        setError(err.message);
+        setError(err instanceof Error ? err.message : "An error occurred");
       }
     }
   };

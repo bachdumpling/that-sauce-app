@@ -27,8 +27,8 @@ export default function LoginPage() {
     try {
       await login(email);
       // Show success message - magic link sent
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "An error occurred");
     } finally {
       setIsLoading(false);
     }
@@ -37,8 +37,8 @@ export default function LoginPage() {
   const handleGoogleLogin = async () => {
     try {
       await googleLogin();
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "An error occurred");
     }
   };
 
