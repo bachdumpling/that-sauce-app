@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Muse API | Creative Portfolio Search</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --primary: #6366f1;
+        --primary-dark: #4f46e5;
+        --text: #1f2937;
+        --text-light: #6b7280;
+        --bg: #ffffff;
+        --bg-alt: #f9fafb;
+        --border: #e5e7eb;
+      }
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family:
+          "Inter",
+          -apple-system,
+          BlinkMacSystemFont,
+          sans-serif;
+        line-height: 1.5;
+        color: var(--text);
+        background: var(--bg);
+      }
+
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 2rem;
+      }
+
+      nav {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1rem 0;
+        border-bottom: 1px solid var(--border);
+        margin-bottom: 4rem;
+      }
+
+      .logo {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--primary);
+        text-decoration: none;
+      }
+
+      .nav-links a {
+        color: var(--text);
+        text-decoration: none;
+        margin-left: 2rem;
+        font-weight: 500;
+      }
+
+      .nav-links a:hover {
+        color: var(--primary);
+      }
+
+      .hero {
+        text-align: center;
+        padding: 4rem 0;
+      }
+
+      h1 {
+        font-size: 3rem;
+        font-weight: 700;
+        margin-bottom: 1rem;
+        background: linear-gradient(
+          to right,
+          var(--primary),
+          var(--primary-dark)
+        );
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+
+      .subtitle {
+        font-size: 1.25rem;
+        color: var(--text-light);
+        margin-bottom: 2rem;
+      }
+
+      .endpoints {
+        background: var(--bg-alt);
+        border-radius: 1rem;
+        padding: 2rem;
+        margin-top: 4rem;
+      }
+
+      .endpoint {
+        background: var(--bg);
+        border: 1px solid var(--border);
+        border-radius: 0.5rem;
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+      }
+
+      .endpoint:last-child {
+        margin-bottom: 0;
+      }
+
+      .method {
+        display: inline-block;
+        padding: 0.25rem 0.75rem;
+        border-radius: 0.25rem;
+        font-size: 0.875rem;
+        font-weight: 600;
+        margin-right: 0.5rem;
+      }
+
+      .get {
+        background: #dbeafe;
+        color: #1e40af;
+      }
+
+      .post {
+        background: #dcfce7;
+        color: #166534;
+      }
+
+      .path {
+        font-family: monospace;
+        font-size: 1rem;
+      }
+
+      .description {
+        color: var(--text-light);
+        margin-top: 0.5rem;
+      }
+
+      footer {
+        text-align: center;
+        padding: 2rem 0;
+        color: var(--text-light);
+        border-top: 1px solid var(--border);
+        margin-top: 4rem;
+      }
+
+      @media (max-width: 768px) {
+        .container {
+          padding: 1rem;
+        }
+
+        h1 {
+          font-size: 2rem;
+        }
+
+        .nav-links {
+          display: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <nav>
+        <a href="/" class="logo">Muse API</a>
+        <div class="nav-links">
+          <a href="/">Documentation</a>
+          <a href="https://github.com/your-repo" target="_blank">GitHub</a>
+        </div>
+      </nav>
+
+      <main>
+        <div class="hero">
+          <h1>Creative Portfolio Search API</h1>
+          <p class="subtitle">
+            Discover creative talent through AI-powered vector search
+          </p>
+        </div>
+
+        <div class="endpoints">
+          <div class="endpoint">
+            <span class="method get">GET</span>
+            <span class="path">/api/search/creators?q={query}</span>
+            <p class="description">
+              Search for creators using AI-powered vector search
+            </p>
+          </div>
+
+          <div class="endpoint">
+            <span class="method post">POST</span>
+            <span class="path">/api/media/analyze</span>
+            <p class="description">
+              Analyze media content using AI (images and videos)
+            </p>
+          </div>
+
+          <div class="endpoint">
+            <span class="method get">GET</span>
+            <span class="path">/api/search/projects?q={query}</span>
+            <p class="description">
+              Search for creative projects using vector similarity
+            </p>
+          </div>
+        </div>
+      </main>
+
+      <footer>
+        <p>© 2024 Muse API. All rights reserved.</p>
+      </footer>
+    </div>
+  </body>
+</html>

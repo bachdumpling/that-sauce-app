@@ -1,11 +1,11 @@
 import express from "express";
-import { setupCors } from "./middleware/cors";
-import { setupSecurity } from "./middleware/security";
-import { PORT } from "./config/env";
-import logger from "./config/logger";
-import supabase from "./lib/supabase";
-import searchRouter from "./routes/search";
-import mediaAnalysisRouter from "./routes/mediaAnalysis";
+import { setupCors } from "../src/middleware/cors";
+import { setupSecurity } from "../src/middleware/security";
+import { PORT } from "../src/config/env";
+import logger from "../src/config/logger";
+import supabase from "../src/lib/supabase";
+import searchRouter from "../src/routes/search";
+import mediaAnalysisRouter from "../src/routes/mediaAnalysis";
 const app = express();
 const port = PORT || 8000;
 
@@ -66,7 +66,7 @@ app.use(
 
 // Routes
 app.use("/api/search", searchRouter);
-app.use("/api/media", mediaAnalysisRouter); 
+app.use("/api/media", mediaAnalysisRouter);
 
 // Start server
 app.listen(port, () => {
