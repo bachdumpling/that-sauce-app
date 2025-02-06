@@ -9,6 +9,16 @@ import mediaAnalysisRouter from "../src/routes/mediaAnalysis";
 const app = express();
 const port = PORT || 8000;
 
+// Set timeout for long-running requests (10 minutes)
+app.use((req, res, next) => {
+  // Only set long timeout for media analysis endpoint
+  if (req.path.includes('/api/media/analyze')) {
+    req.setTimeout(600000); // 10 minutes
+    res.setTimeout(600000); // 10 minutes
+  }
+  next();
+});
+
 // Setup middleware
 setupCors(app);
 setupSecurity(app);
