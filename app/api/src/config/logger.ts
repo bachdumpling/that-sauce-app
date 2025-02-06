@@ -2,15 +2,15 @@
 import pino from "pino";
 
 const logger = pino({
-  transport: {
-    target: "pino-pretty",
-    options: {
-      colorize: true,
-      levelFirst: true,
-      translateTime: "UTC:yyyy-mm-dd HH:MM:ss.l",
-    },
-  },
-  level: "debug", // Force debug level for now to see all logs
+  level: process.env.NODE_ENV === "development" ? "debug" : "info",
+  transport: process.env.NODE_ENV === "development" 
+    ? {
+        target: "pino-pretty",
+        options: {
+          colorize: true,
+        },
+      }
+    : undefined,
 });
 
 // Test the logger
