@@ -1,7 +1,7 @@
 {
-  "name": "muse-api",
+  "name": "that-sauce-api",
   "version": "1.0.0",
-  "main": "index.js",
+  "main": "api/app.ts",
   "scripts": {
     "dev": "nodemon",
     "start": "ts-node api/app.ts",
