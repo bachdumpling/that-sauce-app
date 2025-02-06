@@ -1,3 +1,23 @@
+# Project ID from your Supabase project settings
+project_id = "tzkhvlquyavzxlrvujhy"
+
+[api]
+enabled = true
+port = 54321
+
+[db]
+port = 54322
+
+[studio]
+enabled = true
+port = 54323
+
+[inbucket]
+enabled = true
+port = 54324
+
 [functions]
-  [functions.process-upload]
-    verify_jwt = false
+[functions.process-upload]
+verify_jwt = false
+[functions.analyze-media]
+verify_jwt = false

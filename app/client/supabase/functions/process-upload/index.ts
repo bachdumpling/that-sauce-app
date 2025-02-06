@@ -105,6 +105,17 @@ serve(async (req) => {
 
     if (mediaError) throw mediaError;
 
+    // Trigger media analysis
+    await supabase.functions.invoke("analyze-media", {
+      body: {
+        record: {
+          ...record,
+          image_id: referenceId?.image_id,
+          video_id: referenceId?.video_id,
+        },
+      },
+    });
+
     // Update queue status to completed
     const { error: updateError } = await supabase
       .from("media_queue")

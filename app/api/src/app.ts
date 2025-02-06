@@ -5,6 +5,7 @@ import { PORT } from "./config/env";
 import logger from "./config/logger";
 import supabase from "./lib/supabase";
 import searchRouter from "./routes/search";
+import mediaAnalysisRouter from "./routes/mediaAnalysis";
 const app = express();
 const port = PORT || 8000;
 
@@ -65,6 +66,7 @@ app.use(
 
 // Routes
 app.use("/api/search", searchRouter);
+app.use("/api/media", mediaAnalysisRouter); 
 
 // Start server
 app.listen(port, () => {

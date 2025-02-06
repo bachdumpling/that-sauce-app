@@ -42,3 +42,6 @@ client/dist/
 
 # Custom exclusions
 custom_folder_to_ignore/
+
+# http
+*.http

@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LogOut, Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/lib/supabase";
 import { ProfileProjectCard } from "@/components/ProjectCard";
@@ -114,7 +114,7 @@ export default function ProfilePage() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchProjects = async () => {
+  const fetchProjects = useCallback(async () => {
     if (!creator) return;
 
     // Then check if we can access the portfolios table
@@ -153,13 +153,13 @@ export default function ProfilePage() {
     }
 
     setProjects(data || []);
-  };
+  }, [creator]);
 
   useEffect(() => {
     if (creator) {
       fetchProjects();
     }
-  }, [creator]);
+  }, [creator, fetchProjects]);
 
   if (isLoading) {
     return (
