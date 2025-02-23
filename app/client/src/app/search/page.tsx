@@ -2,12 +2,13 @@
 "use client";
 
 import { useState } from "react";
-import { Search, X } from "lucide-react";
+import { Search, X, Video } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { searchCreators } from "@/lib/utils/api";
 import { LoadingSkeleton } from "@/components/ui/loading-skeleton";
 import { CreatorCard } from "@/components/CreatorCard";
+import { Toggle } from "@/components/ui/toggle";
 
 const EXAMPLE_QUERIES = [
   "high fashion photographers",
@@ -32,7 +33,7 @@ interface SearchResults {
         id: string;
         title: string;
         behance_url?: string;
-        images: Array<{
+        images?: Array<{
           id: string;
           url: string;
           alt_text: string;
@@ -41,11 +42,18 @@ interface SearchResults {
             low_res?: string;
           };
         }>;
+        videos?: Array<{
+          id: string;
+          title: string;
+          vimeo_id: string;
+          similarity_score: number;
+        }>;
       }>;
     }>;
     page: number;
     limit: number;
     total: number;
+    content_type: "all" | "videos";
   };
 }
 
@@ -53,6 +61,7 @@ export default function SearchPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [results, setResults] = useState<SearchResults | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [showVideosOnly, setShowVideosOnly] = useState(false);
 
   const handleExampleClick = (query: string) => {
     setSearchQuery(query);
@@ -66,8 +75,10 @@ export default function SearchPage() {
     try {
       const data = await searchCreators({
         q: query,
+        contentType: showVideosOnly ? "videos" : "all",
       });
       setResults(data);
+      // console.log(data);
     } catch (err) {
       console.error("Search error:", err);
     } finally {
@@ -119,13 +130,27 @@ export default function SearchPage() {
               </button>
             )}
           </div>
-          <Button
-            type="submit"
-            className="h-12"
-            disabled={isLoading || !searchQuery.trim()}
-          >
-            {isLoading ? "Searching..." : "Search"}
-          </Button>
+          <div className="flex gap-2">
+            <Toggle
+              pressed={showVideosOnly}
+              onPressedChange={(pressed) => {
+                setShowVideosOnly(pressed);
+                if (searchQuery) performSearch(searchQuery);
+              }}
+              className="h-12 px-4"
+              aria-label="Toggle video results"
+            >
+              <Video className="h-4 w-4 mr-2" />
+              Videos Only
+            </Toggle>
+            <Button
+              type="submit"
+              className="h-12"
+              disabled={isLoading || !searchQuery.trim()}
+            >
+              {isLoading ? "Searching..." : "Search"}
+            </Button>
+          </div>
         </form>
 
         {/* Example Queries */}
@@ -153,7 +178,12 @@ export default function SearchPage() {
             <LoadingSkeleton />
           ) : results?.data.results.length ? (
             results.data.results.map((result) => (
-              <CreatorCard key={result.profile.id} result={result} />
+              <div key={result.profile.id}>
+                <CreatorCard
+                  result={result}
+                  showScores={results.data.content_type === "videos"}
+                />
+              </div>
             ))
           ) : searchQuery ? (
             <div className="text-center py-8 text-muted-foreground">

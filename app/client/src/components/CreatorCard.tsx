@@ -19,7 +19,7 @@ interface CreatorCardProps {
       id: string;
       title: string;
       behance_url?: string;
-      images: Array<{
+      images?: Array<{
         id: string;
         url: string;
         alt_text: string;
@@ -28,11 +28,18 @@ interface CreatorCardProps {
           low_res?: string;
         };
       }>;
+      videos?: Array<{
+        id: string;
+        title: string;
+        vimeo_id: string;
+        similarity_score: number;
+      }>;
     }>;
   };
+  showScores?: boolean;
 }
 
-export const CreatorCard: React.FC<CreatorCardProps> = ({ result }) => {
+export const CreatorCard: React.FC<CreatorCardProps> = ({ result, showScores }) => {
   const { profile, score, projects } = result;
 
   return (
@@ -47,9 +54,11 @@ export const CreatorCard: React.FC<CreatorCardProps> = ({ result }) => {
               >
                 {profile.username}
               </Link>
-              <span className="text-sm text-muted-foreground">
-                Match: {score ? (score * 100).toFixed(0) : "N/A"}%
-              </span>
+              {score !== undefined && (
+                <span className="text-sm text-muted-foreground">
+                  Match: {(score * 100).toFixed(0)}%
+                </span>
+              )}
             </div>
             {profile.location && (
               <p className="text-sm text-muted-foreground flex items-center gap-2">
@@ -101,9 +110,13 @@ export const CreatorCard: React.FC<CreatorCardProps> = ({ result }) => {
         </div>
 
         {projects.length > 0 && (
-          <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="mt-6 grid grid-cols-1 gap-6">
             {projects.map((project) => (
-              <SearchProjectCard key={project.id} project={project} />
+              <SearchProjectCard 
+                key={project.id} 
+                project={project} 
+                showScores={showScores}
+              />
             ))}
           </div>
         )}

@@ -1,19 +1,23 @@
-import { apiClient } from "@/lib/api/client";
-import { API_ENDPOINTS } from "@/config/api";
+import { API_BASE_URL, API_ENDPOINTS } from "@/config/api";
 
-export interface SearchParams {
+interface SearchParams {
   q: string;
-  page?: number;
   limit?: number;
+  page?: number;
+  contentType?: "all" | "videos";
 }
 
-export const searchCreators = async (params: SearchParams) => {
-  const { data } = await apiClient.get(`${API_ENDPOINTS.search}/creators`, {
-    params: {
-      q: params.q,
-      page: params.page || 1,
-      limit: params.limit || 10,
-    },
+export async function searchCreators(params: SearchParams) {
+  const queryParams = new URLSearchParams({
+    q: params.q,
+    ...(params.limit && { limit: params.limit.toString() }),
+    ...(params.page && { page: params.page.toString() }),
+    ...(params.contentType && { contentType: params.contentType }),
   });
-  return data;
-};
+
+  const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.search}/creators?${queryParams.toString()}`);
+  if (!response.ok) {
+    throw new Error('Search request failed');
+  }
+  return response.json();
+}

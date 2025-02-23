@@ -18,6 +18,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
+import { VimeoEmbed } from "@/components/VimeoEmbed";
 
 // Common interfaces
 interface MediaEntry {
@@ -49,6 +50,10 @@ interface SearchProjectCardProps {
     title: string;
     description?: string | null;
     behance_url?: string;
+    video_count?: number;
+    vector_score?: number;
+    video_score?: number;
+    final_score?: number;
     images?: Array<{
       id: string;
       url: string;
@@ -58,21 +63,41 @@ interface SearchProjectCardProps {
         low_res?: string;
       };
     }>;
+    videos?: Array<{
+      id: string;
+      title: string;
+      vimeo_id: string;
+      similarity_score: number;
+      description?: string | null;
+    }>;
   };
   className?: string;
+  showScores?: boolean;
 }
 
 export function SearchProjectCard({
   project,
   className,
+  showScores = false,
 }: SearchProjectCardProps) {
-  const mediaItems =
-    project.images?.map((img) => ({
+  // Process both images and videos
+  const mediaItems = [
+    ...(project.images?.map((img) => ({
       id: img.id,
+      type: "image" as const,
       storage_url: img.resolutions.high_res || img.url,
-      file_type: "image" as const,
       metadata: { original_name: img.alt_text },
-    })) || [];
+    })) || []),
+    ...(project.videos?.map((video) => ({
+      id: video.id,
+      type: "video" as const,
+      vimeo_id: video.vimeo_id,
+      title: video.title,
+      similarity_score: video.similarity_score,
+    })) || []),
+  ];
+
+  const hasOnlyVideos = project.videos?.length && !project.images?.length;
 
   return (
     <Card
@@ -83,47 +108,84 @@ export function SearchProjectCard({
     >
       <div className="space-y-4">
         {/* Project Info */}
-        <div className="px-4 pt-4 flex items-start justify-between gap-4">
-          <div className="space-y-1">
-            <h3 className="font-semibold leading-none">{project.title}</h3>
-            {project.description && (
-              <p className="text-sm text-muted-foreground line-clamp-2">
-                {project.description}
-              </p>
+        <div className="px-4 pt-4">
+          <div className="flex items-start justify-between gap-4">
+            <div className="space-y-1">
+              <h3 className="font-semibold leading-none">{project.title}</h3>
+              {project.description && (
+                <p className="text-sm text-muted-foreground line-clamp-2">
+                  {project.description}
+                </p>
+              )}
+              {showScores && hasOnlyVideos && (
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {project.vector_score !== undefined && (
+                    <span className="text-xs text-muted-foreground bg-secondary/30 px-2 py-1 rounded-md">
+                      Content Match: {(project.vector_score * 100).toFixed(1)}%
+                    </span>
+                  )}
+                  {project.video_score !== undefined && (
+                    <span className="text-xs text-muted-foreground bg-secondary/30 px-2 py-1 rounded-md">
+                      Video Score: {(project.video_score * 100).toFixed(1)}%
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
+            {project.behance_url && (
+              <a
+                href={project.behance_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-muted-foreground hover:text-foreground transition-colors shrink-0"
+              >
+                <ExternalLink className="h-4 w-4" />
+              </a>
             )}
           </div>
-          {project.behance_url && (
-            <a
-              href={project.behance_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-muted-foreground hover:text-foreground transition-colors shrink-0"
-            >
-              <ExternalLink className="h-4 w-4" />
-            </a>
-          )}
         </div>
 
-        {/* Media Grid */}
+        {/* Media Content */}
         {mediaItems.length > 0 && (
           <div className="px-4 pb-4">
-            <div className="columns-1 md:columns-2 gap-4 [&>*]:mb-4">
-              {mediaItems.map((item) => (
-                <div
-                  key={item.id}
-                  className="relative w-full break-inside-avoid rounded-lg overflow-hidden bg-muted"
-                >
-                  <Image
-                    src={item.storage_url}
-                    alt={item.metadata.original_name}
-                    width={1200}
-                    height={800}
-                    className="w-full h-auto transition-transform duration-300 hover:scale-105"
-                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                  />
-                </div>
-              ))}
-            </div>
+            {/* Videos - Single Column */}
+            {project.videos && project.videos.length > 0 && (
+              <div className="space-y-4">
+                {project.videos.map((video) => (
+                  <div key={video.id} className="space-y-2">
+                    <VimeoEmbed vimeoId={video.vimeo_id} title={video.title} />
+                    {showScores && video.similarity_score && (
+                      <div className="flex justify-end">
+                        <span className="text-xs text-muted-foreground bg-secondary/30 px-2 py-1 rounded-md">
+                          Match: {(video.similarity_score * 100).toFixed(1)}%
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Images - Grid Layout */}
+            {project.images && project.images.length > 0 && (
+              <div className="columns-1 md:columns-2 gap-4 [&>*]:mb-4">
+                {project.images.map((image) => (
+                  <div
+                    key={image.id}
+                    className="relative w-full break-inside-avoid rounded-lg overflow-hidden bg-muted"
+                  >
+                    <Image
+                      src={image.resolutions.high_res || image.url}
+                      alt={image.alt_text}
+                      width={1200}
+                      height={800}
+                      className="w-full h-auto transition-transform duration-300 hover:scale-105"
+                      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>
