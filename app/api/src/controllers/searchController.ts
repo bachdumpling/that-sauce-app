@@ -54,8 +54,6 @@ export class SearchController {
         }
       );
 
-      // console.log("Matches:", matches[0]);
-
       if (matchError) {
         logger.error("Portfolio match error:", matchError);
         throw matchError;
@@ -63,78 +61,80 @@ export class SearchController {
 
       // Get full creator and project data for matches
       const results = await Promise.all(
-        (matches || []).map(async (match: any) => {
-          // Get creator data
-          const { data: creator, error: creatorError } = await supabase
-            .from("creators")
-            .select(
-              `
-            id,
-            username,
-            location,
-            bio,
-            primary_role,
-            creative_fields,
-            social_links
-          `
-            )
-            .eq("id", match.creator_id)
-            .single();
+        (matches || []).map(
+          async (match: {
+            id: string;
+            creator_id: string;
+            final_score: number;
+          }) => {
+            // Get creator data
+            const { data: creator, error: creatorError } = await supabase
+              .from("creators")
+              .select(
+                `
+              id,
+              username,
+              location,
+              bio,
+              primary_role,
+              creative_fields,
+              social_links
+            `
+              )
+              .eq("id", match.creator_id)
+              .single();
 
-          if (creatorError) {
-            logger.error("Creator fetch error:", creatorError);
-            throw creatorError;
-          }
-
-          // Get relevant projects with vector similarity
-          const { data: projects, error: projectsError } = await supabase.rpc(
-            "match_projects_for_portfolios",
-            {
-              portfolio_ids: [match.id],
-              query_embedding: queryEmbedding.values,
-              project_limit: 4,
+            if (creatorError) {
+              logger.error("Creator fetch error:", creatorError);
+              throw creatorError;
             }
-          );
 
-          // console.log("Projects:", projects[0]);
-
-          if (projectsError) {
-            logger.error("Projects fetch error:", projectsError);
-            throw projectsError;
-          }
-
-          // Get relevant images for each project
-          const projectsWithImages = await Promise.all(
-            (projects || []).map(async (project: any) => {
-              const { data: images, error: imagesError } = await supabase.rpc(
-                "match_images_for_projects",
-                {
-                  project_ids: [project.id],
-                  query_embedding: queryEmbedding.values,
-                  image_limit: 3,
-                }
-              );
-
-              // console.log("Images:", images[0]);
-
-              if (imagesError) {
-                logger.error("Images fetch error:", imagesError);
-                throw imagesError;
+            // Get relevant projects with vector similarity
+            const { data: projects, error: projectsError } = await supabase.rpc(
+              "match_portfolio_projects",
+              {
+                query_embedding: queryEmbedding.values,
+                target_portfolio_id: match.id,
+                match_limit: 4,
               }
+            );
 
-              return {
-                ...project,
-                images: images || [],
-              };
-            })
-          );
+            if (projectsError) {
+              logger.error("Projects fetch error:", projectsError);
+              throw projectsError;
+            }
 
-          return {
-            profile: creator,
-            projects: projectsWithImages || [],
-            score: match.similarity_score,
-          };
-        })
+            // Get relevant images for each project
+            const projectsWithImages = await Promise.all(
+              (projects || []).map(async (project: { id: string }) => {
+                const { data: images, error: imagesError } = await supabase.rpc(
+                  "match_project_images",
+                  {
+                    query_embedding: queryEmbedding.values,
+                    target_project_id: project.id,
+                    match_limit: 3,
+                  }
+                );
+
+                if (imagesError) {
+                  logger.error("Images fetch error:", imagesError);
+                  throw imagesError;
+                }
+
+                return {
+                  ...project,
+                  images: images || [],
+                };
+              })
+            );
+
+            return {
+              profile: creator,
+              projects: projectsWithImages || [],
+              score: match.final_score,
+            };
+          }
+        )
       );
 
       res.json({

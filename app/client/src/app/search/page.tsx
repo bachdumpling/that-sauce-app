@@ -11,8 +11,8 @@ import { CreatorCard } from "@/components/CreatorCard";
 
 const EXAMPLE_QUERIES = [
   "high fashion photographers",
-  "portrait photographers monochrome aesthetic",
-  "film photographers street style nyc architecture",
+  "glitchy vaporwave aesthetics",
+  "film street style architecture",
 ];
 
 interface SearchResults {
