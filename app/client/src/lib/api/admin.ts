@@ -4,9 +4,16 @@ import { apiClient } from "./client";
 /**
  * Fetch creators with pagination
  */
-export const fetchCreators = async (page = 1, limit = 10) => {
+export const fetchCreators = async (page = 1, limit = 10, search?: string) => {
+  const params: Record<string, any> = { page, limit };
+  
+  // Add search parameter if provided
+  if (search && search.trim() !== '') {
+    params.search = search.trim();
+  }
+  
   const response = await apiClient.get(`/admin/creators`, {
-    params: { page, limit },
+    params
   });
   return response.data;
 };

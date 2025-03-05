@@ -35,24 +35,31 @@ export class AdminController {
       const page = parseInt(req.query.page as string) || 1;
       const limit = parseInt(req.query.limit as string) || 10;
       const offset = (page - 1) * limit;
+      const searchQuery = req.query.search as string;
 
-      // Step 1: Fetch creators first (without nested data)
-      const {
-        data: creators,
-        error,
-        count,
-      } = await supabase
-        .from("creators")
-        .select(
-          `
+      // Build the query
+      let query = supabase.from("creators").select(
+        `
           id,
           username,
           location,
           primary_role,
           creative_fields
         `,
-          { count: "exact" }
-        )
+        { count: "exact" }
+      );
+
+      // Apply search filter if provided
+      if (searchQuery && searchQuery.trim() !== "") {
+        query = query.ilike("username", `%${searchQuery}%`);
+      }
+
+      // Apply pagination and ordering
+      const {
+        data: creators,
+        error,
+        count,
+      } = await query
         .range(offset, offset + limit - 1)
         .order("username", { ascending: true });
 
@@ -85,7 +92,7 @@ export class AdminController {
             if (!creatorToProjects[project.creator_id]) {
               creatorToProjects[project.creator_id] = [];
             }
-            
+
             if (creatorToProjects[project.creator_id].length < 4) {
               creatorToProjects[project.creator_id].push(project);
             }
@@ -94,8 +101,8 @@ export class AdminController {
 
         // Get all project IDs to fetch images
         const projectIds: string[] = [];
-        Object.values(creatorToProjects).forEach(projects => {
-          projects.forEach(project => {
+        Object.values(creatorToProjects).forEach((projects) => {
+          projects.forEach((project) => {
             projectIds.push(project.id);
           });
         });
@@ -128,7 +135,7 @@ export class AdminController {
           }
 
           // Assign images to projects
-          Object.values(creatorToProjects).forEach(projects => {
+          Object.values(creatorToProjects).forEach((projects) => {
             projects.forEach((project: Project) => {
               const image = projectToImage[project.id];
               if (image) {

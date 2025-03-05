@@ -33,12 +33,12 @@ const CreatorManagementPage = () => {
   const searchParams = useSearchParams();
 
   // Fetch creators from the API
-  const loadCreators = async (page = 1) => {
+  const loadCreators = async (page = 1, search = searchQuery) => {
     setLoading(true);
     setError(null);
 
     try {
-      const response = await fetchCreators(page, pagination.limit);
+      const response = await fetchCreators(page, pagination.limit, search);
 
       if (response.success) {
         setCreators(response.data.creators);
@@ -58,11 +58,18 @@ const CreatorManagementPage = () => {
   // Initial data load
   useEffect(() => {
     const page = parseInt(searchParams.get("page") || "1");
+    const urlSearchQuery = searchParams.get("search") || "";
+
+    if (urlSearchQuery) {
+      setSearchQuery(urlSearchQuery);
+    }
+
     setPagination((prev) => ({
       ...prev,
       page,
     }));
-    loadCreators(page);
+
+    loadCreators(page, urlSearchQuery);
   }, []);
 
   // Handle page change
@@ -76,6 +83,12 @@ const CreatorManagementPage = () => {
     // Update URL with the new page parameter
     const url = new URL(window.location.href);
     url.searchParams.set("page", newPage.toString());
+
+    // Keep search parameter if it exists
+    if (searchQuery) {
+      url.searchParams.set("search", searchQuery);
+    }
+
     router.push(url.pathname + url.search);
 
     // Scroll to top when changing pages
@@ -85,27 +98,34 @@ const CreatorManagementPage = () => {
   // Handle search
   const handleSearch = (e) => {
     e.preventDefault();
-    // Implement search with backend (this would require a new API endpoint)
-    console.log("Searching for:", searchQuery);
 
-    // Update URL to page 1 when searching
+    // Update URL with search parameter and reset to page 1
     const url = new URL(window.location.href);
     url.searchParams.set("page", "1");
+
+    if (searchQuery.trim() !== "") {
+      url.searchParams.set("search", searchQuery);
+    } else {
+      url.searchParams.delete("search");
+    }
+
     router.push(url.pathname + url.search);
 
-    loadCreators(1); // Reset to first page when searching
+    // Load creators with search parameter
+    loadCreators(1, searchQuery);
   };
 
   // Clear search
   const clearSearch = () => {
     setSearchQuery("");
 
-    // Update URL to page 1 when clearing search
+    // Update URL to remove search parameter and reset to page 1
     const url = new URL(window.location.href);
     url.searchParams.set("page", "1");
+    url.searchParams.delete("search");
     router.push(url.pathname + url.search);
 
-    loadCreators(1);
+    loadCreators(1, "");
   };
 
   // Navigate to creator detail page
