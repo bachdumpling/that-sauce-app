@@ -6,13 +6,14 @@ import logger from "../src/config/logger";
 import supabase from "../src/lib/supabase";
 import searchRouter from "../src/routes/search";
 import mediaAnalysisRouter from "../src/routes/mediaAnalysis";
+import adminRouter from "../src/routes/admin";
 const app = express();
 const port = PORT || 8000;
 
 // Set timeout for long-running requests (10 minutes)
 app.use((req, res, next) => {
   // Only set long timeout for media analysis endpoint
-  if (req.path.includes('/api/media/analyze')) {
+  if (req.path.includes("/api/media/analyze")) {
     req.setTimeout(600000); // 10 minutes
     res.setTimeout(600000); // 10 minutes
   }
@@ -77,6 +78,7 @@ app.use(
 // Routes
 app.use("/api/search", searchRouter);
 app.use("/api/media", mediaAnalysisRouter);
+app.use("/api/admin", adminRouter);
 
 // Start server
 app.listen(port, () => {

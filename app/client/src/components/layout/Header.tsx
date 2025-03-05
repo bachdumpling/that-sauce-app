@@ -18,6 +18,11 @@ export function Header() {
           <Button variant="ghost" asChild>
             <Link href="/search">Search</Link>
           </Button>
+          {user?.role === "admin" && (
+            <Button asChild>
+              <Link href="/admin">Admin</Link>
+            </Button>
+          )}
           <Button asChild>
             {user ? (
               <Link href="/profile">Profile </Link>
