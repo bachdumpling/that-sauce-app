@@ -1,7 +1,8 @@
 import { Request, Response } from "express";
-import supabase from "../lib/supabase";
+import { supabase } from "../lib/supabase";
 import { generateEmbedding } from "../lib/embedding";
 import logger from "../config/logger";
+import { AuthenticatedRequest } from "../middleware/extractUser";
 
 interface SearchQueryParams {
   q: string;
@@ -12,7 +13,7 @@ interface SearchQueryParams {
 
 export class SearchController {
   async searchCreators(
-    req: Request<{}, {}, {}, SearchQueryParams>,
+    req: AuthenticatedRequest<{}, any, any, SearchQueryParams>,
     res: Response
   ) {
     try {

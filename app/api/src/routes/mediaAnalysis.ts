@@ -2,9 +2,11 @@
 import express from "express";
 import { analyzeMediaController } from "../controllers/mediaAnalysisController";
 import logger from "../config/logger";
+import { extractUser } from "../middleware/extractUser";
 
 const router = express.Router();
 
+router.use(extractUser);
 router.post("/analyze", analyzeMediaController);
 
 // Error handler specific to media analysis routes

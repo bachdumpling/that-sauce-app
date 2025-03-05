@@ -13,12 +13,16 @@ import {
   ChevronDown,
   ChevronUp,
   ExternalLink,
+  AlertCircle,
+  RefreshCw,
 } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { VimeoEmbed } from "@/components/VimeoEmbed";
+import { LoadingSkeleton } from "@/components/ui/loading-skeleton";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 // Common interfaces
 interface MediaEntry {
@@ -80,6 +84,9 @@ export function SearchProjectCard({
   className,
   showScores = false,
 }: SearchProjectCardProps) {
+  const [isMediaLoading, setIsMediaLoading] = useState(true);
+  const [mediaError, setMediaError] = useState(false);
+
   // Process both images and videos
   const mediaItems = [
     ...(project.images?.map((img) => ({
@@ -98,6 +105,17 @@ export function SearchProjectCard({
   ];
 
   const hasOnlyVideos = project.videos?.length && !project.images?.length;
+
+  const firstMedia = mediaItems[0];
+
+  const handleMediaLoad = () => {
+    setIsMediaLoading(false);
+  };
+
+  const handleMediaError = () => {
+    setIsMediaLoading(false);
+    setMediaError(true);
+  };
 
   return (
     <Card
@@ -179,8 +197,12 @@ export function SearchProjectCard({
                       alt={image.alt_text}
                       width={1200}
                       height={800}
-                      className="w-full h-auto transition-transform duration-300 hover:scale-105"
+                      className={`w-full h-auto transition-transform duration-300 hover:scale-105 ${
+                        isMediaLoading ? "opacity-0" : "opacity-100"
+                      }`}
                       sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                      onLoad={handleMediaLoad}
+                      onError={handleMediaError}
                     />
                   </div>
                 ))}
@@ -214,9 +236,13 @@ export function ProfileProjectCard({
   const [isExpanded, setIsExpanded] = useState(false);
   const [media, setMedia] = useState<ProjectMedia[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isMediaLoading, setIsMediaLoading] = useState(true);
+  const [mediaError, setMediaError] = useState(false);
+  const [fetchError, setFetchError] = useState<string | null>(null);
 
-  const fetchProjectMedia = async () => {
+  const fetchProjectMedia = useCallback(async () => {
     setIsLoading(true);
+    setFetchError(null);
     try {
       const { data, error } = await supabase
         .from("media")
@@ -226,136 +252,148 @@ export function ProfileProjectCard({
 
       if (error) throw error;
       setMedia(data || []);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error fetching project media:", error);
+      setFetchError(error.message || "Failed to load project media");
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [project.id]);
 
   useEffect(() => {
-    if (isExpanded) {
-      fetchProjectMedia();
-    }
-  }, [isExpanded, project.id]);
+    fetchProjectMedia();
+  }, [fetchProjectMedia]);
 
   const handleUploadComplete = (url: string, mediaEntry: MediaEntry) => {
     onUploadComplete(url, mediaEntry);
     fetchProjectMedia(); // Refresh media after upload
   };
 
+  const handleMediaLoad = () => {
+    setIsMediaLoading(false);
+  };
+
+  const handleMediaError = () => {
+    setIsMediaLoading(false);
+    setMediaError(true);
+  };
+
+  const handleRetry = () => {
+    setFetchError(null);
+    setMediaError(false);
+    setIsMediaLoading(true);
+    fetchProjectMedia();
+  };
+
   return (
-    <Card
-      className={cn(
-        "group transition-all duration-200 hover:shadow-md",
-        isExpanded && "ring-1 ring-primary/20",
-        className
-      )}
-    >
-      <CardHeader
-        className={cn(
-          "cursor-pointer select-none",
-          "transition-colors duration-200",
-          "hover:bg-muted/50"
-        )}
-        onClick={() => setIsExpanded(!isExpanded)}
-      >
-        <div className="flex items-start justify-between gap-4">
-          <div className="space-y-1.5">
-            <CardTitle className="text-lg font-semibold leading-none">
-              {project.title}
-            </CardTitle>
-            {project.description && (
-              <CardDescription className="line-clamp-2">
-                {project.description}
-              </CardDescription>
-            )}
-          </div>
+    <Card className={cn("overflow-hidden", className)}>
+      <CardHeader className="pb-2">
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-lg">{project.title}</CardTitle>
           <Button
             variant="ghost"
-            size="icon"
-            className="h-8 w-8"
-            onClick={(e) => {
-              e.stopPropagation();
-              setIsExpanded(!isExpanded);
-            }}
+            size="sm"
+            onClick={() => setIsExpanded(!isExpanded)}
+            className="h-8 w-8 p-0"
           >
             {isExpanded ? (
-              <ChevronUp className="h-4 w-4 transition-transform" />
+              <ChevronUp className="h-4 w-4" />
             ) : (
-              <ChevronDown className="h-4 w-4 transition-transform" />
+              <ChevronDown className="h-4 w-4" />
             )}
           </Button>
         </div>
+        {project.description && (
+          <CardDescription className="line-clamp-2">
+            {project.description}
+          </CardDescription>
+        )}
       </CardHeader>
 
       {isExpanded && (
-        <CardContent className="space-y-6 pt-2">
-          {isLoading ? (
-            <div className="flex items-center justify-center py-8">
-              <div className="animate-pulse space-y-4 w-full">
-                <div className="columns-1 md:columns-2 gap-4 [&>*]:mb-4">
-                  {[1, 2, 3].map((n) => (
-                    <div
-                      key={n}
-                      className="w-full break-inside-avoid bg-muted rounded-lg"
-                      style={{ paddingBottom: "66.67%" }}
-                    />
-                  ))}
-                </div>
+        <CardContent className="pb-4">
+          {fetchError && (
+            <Alert variant="destructive" className="mb-4">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription className="flex items-center justify-between">
+                <span>{fetchError}</span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleRetry}
+                  className="ml-2"
+                >
+                  <RefreshCw className="h-3 w-3 mr-1" /> Retry
+                </Button>
+              </AlertDescription>
+            </Alert>
+          )}
+
+          <div className="space-y-4">
+            <FileUpload
+              projectId={project.id}
+              onComplete={handleUploadComplete}
+              onError={onError}
+            />
+
+            {isLoading && !fetchError ? (
+              <div className="space-y-4">
+                <LoadingSkeleton />
+                <LoadingSkeleton />
               </div>
-            </div>
-          ) : (
-            <>
-              {media.length > 0 ? (
-                <div className="columns-1 md:columns-2 gap-4 [&>*]:mb-4">
-                  {media.map((item) => (
-                    <div
-                      key={item.id}
-                      className="relative w-full break-inside-avoid rounded-lg overflow-hidden bg-muted"
-                    >
-                      {item.file_type === "image" ? (
-                        <Image
-                          src={item.storage_url}
-                          alt={item.metadata.original_name}
-                          width={1200}
-                          height={800}
-                          className="w-full h-auto transition-transform duration-300 hover:scale-105"
-                          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                        />
-                      ) : item.file_type === "video" ? (
+            ) : media.length > 0 ? (
+              <div className="columns-1 md:columns-2 gap-4 [&>*]:mb-4">
+                {media.map((item) => (
+                  <div
+                    key={item.id}
+                    className="relative w-full break-inside-avoid rounded-lg overflow-hidden bg-muted"
+                  >
+                    {item.file_type === "image" ? (
+                      <Image
+                        src={item.storage_url}
+                        alt={item.metadata?.original_name || "Project image"}
+                        width={1200}
+                        height={800}
+                        className={`w-full h-auto transition-transform duration-300 hover:scale-105 ${
+                          isMediaLoading ? "opacity-0" : "opacity-100"
+                        }`}
+                        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                        onLoad={handleMediaLoad}
+                        onError={handleMediaError}
+                      />
+                    ) : item.file_type === "video" ? (
+                      <div className="aspect-video bg-black flex items-center justify-center">
                         <video
                           src={item.storage_url}
-                          className="w-full h-auto rounded-lg"
                           controls
-                          preload="metadata"
-                        >
-                          Your browser does not support the video tag.
-                        </video>
-                      ) : (
-                        <div
-                          className="w-full flex items-center justify-center bg-muted"
-                          style={{ paddingBottom: "66.67%" }}
-                        >
-                          <ImageIcon className="absolute w-8 h-8 text-muted-foreground" />
+                          className="max-h-full max-w-full"
+                          onLoadedData={handleMediaLoad}
+                          onError={handleMediaError}
+                        />
+                      </div>
+                    ) : (
+                      <div className="aspect-video bg-muted flex items-center justify-center p-4">
+                        <div className="text-center">
+                          <ImageIcon className="h-8 w-8 mx-auto text-muted-foreground" />
+                          <p className="text-sm text-muted-foreground mt-2">
+                            {item.metadata?.original_name ||
+                              "Unknown file type"}
+                          </p>
                         </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="py-8 text-center text-muted-foreground">
-                  No media available
-                </div>
-              )}
-
-              <FileUpload
-                projectId={project.id}
-                onUploadComplete={handleUploadComplete}
-                onError={onError}
-              />
-            </>
-          )}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="rounded-lg border border-dashed p-8 text-center">
+                <ImageIcon className="h-8 w-8 mx-auto text-muted-foreground" />
+                <p className="mt-2 text-sm text-muted-foreground">
+                  No media uploaded yet. Add images or videos to your project.
+                </p>
+              </div>
+            )}
+          </div>
         </CardContent>
       )}
     </Card>

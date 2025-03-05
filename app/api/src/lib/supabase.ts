@@ -1,15 +1,20 @@
 import { createClient } from "@supabase/supabase-js";
-import {
-  SUPABASE_URL,
-  SUPABASE_ANON_KEY,
-  SUPABASE_SERVICE_KEY,
-} from "../config/env";
+import dotenv from "dotenv";
 
-if (!SUPABASE_URL || !SUPABASE_ANON_KEY || !SUPABASE_SERVICE_KEY) {
-  throw new Error("Missing Supabase credentials");
+// Load environment variables
+dotenv.config();
+
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_SERVICE_KEY;
+
+if (!supabaseUrl || !supabaseKey) {
+  throw new Error("Missing Supabase environment variables");
 }
 
-// const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
-
-export default supabase;
+// Create Supabase client with service key for admin access
+export const supabase = createClient(supabaseUrl, supabaseKey, {
+  auth: {
+    autoRefreshToken: false,
+    persistSession: false,
+  },
+});

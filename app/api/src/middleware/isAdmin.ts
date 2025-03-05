@@ -1,15 +1,16 @@
 // src/middleware/isAdmin.ts
-import { Request, Response, NextFunction } from "express";
-import supabase from "../lib/supabase";
+import { Response, NextFunction } from "express";
+import { supabase } from "../lib/supabase";
 import logger from "../config/logger";
+import { AuthenticatedRequest } from "./extractUser";
 
 export const isAdmin = async (
-  req: Request,
+  req: AuthenticatedRequest,
   res: Response,
   next: NextFunction
 ) => {
   try {
-    const user = (req as any).user;
+    const { user } = req;
 
     if (!user) {
       return res.status(401).json({

@@ -1,8 +1,9 @@
 // src/controllers/adminController.ts
 import { Request, Response } from "express";
-import supabase from "../lib/supabase";
+import { supabase } from "../lib/supabase";
 import logger from "../config/logger";
 import { cache, invalidateCache } from "../lib/cache";
+import { AuthenticatedRequest } from "../middleware/extractUser";
 
 // Define interfaces for the data structures
 interface Project {
@@ -30,7 +31,7 @@ export class AdminController {
    * List all creators with pagination
    * GET /api/admin/creators
    */
-  async listCreators(req: Request, res: Response) {
+  async listCreators(req: AuthenticatedRequest, res: Response) {
     try {
       const page = parseInt(req.query.page as string) || 1;
       const limit = parseInt(req.query.limit as string) || 10;
@@ -183,7 +184,7 @@ export class AdminController {
    * Get detailed information about a creator
    * GET /api/admin/creators/:id
    */
-  async getCreatorDetails(req: Request, res: Response) {
+  async getCreatorDetails(req: AuthenticatedRequest, res: Response) {
     try {
       const { id } = req.params;
 
@@ -256,11 +257,18 @@ export class AdminController {
    * Reject a creator (move to unqualified tables)
    * POST /api/admin/creators/:id/reject
    */
-  async rejectCreator(req: Request, res: Response) {
+  async rejectCreator(req: AuthenticatedRequest, res: Response) {
     try {
       const { id } = req.params;
       const { reason } = req.body;
-      const { user } = req as any; // User from auth middleware
+      const { user } = req;
+
+      if (!user) {
+        return res.status(401).json({
+          success: false,
+          error: "Authentication required",
+        });
+      }
 
       if (!reason) {
         return res.status(400).json({
@@ -301,7 +309,7 @@ export class AdminController {
    * List rejected creators with pagination
    * GET /api/admin/unqualified/creators
    */
-  async listRejectedCreators(req: Request, res: Response) {
+  async listRejectedCreators(req: AuthenticatedRequest, res: Response) {
     try {
       const page = parseInt(req.query.page as string) || 1;
       const limit = parseInt(req.query.limit as string) || 10;

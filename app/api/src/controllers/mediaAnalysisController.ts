@@ -2,9 +2,13 @@
 import { Request, Response } from "express";
 import { analyzeMedia } from "../services/mediaAnalysisService";
 import logger from "../config/logger";
-import supabase from "../lib/supabase";
+import { supabase } from "../lib/supabase";
+import { AuthenticatedRequest } from "../middleware/extractUser";
 
-export const analyzeMediaController = async (req: Request, res: Response) => {
+export const analyzeMediaController = async (
+  req: AuthenticatedRequest,
+  res: Response
+) => {
   try {
     const { storage_url, file_type, mime_type, record } = req.body;
 

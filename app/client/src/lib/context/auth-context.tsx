@@ -1,5 +1,5 @@
 "use client";
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { User } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase";
@@ -19,6 +19,7 @@ interface AuthContextType {
   logout: () => Promise<void>;
   checkCreator: () => Promise<Creator | null>;
   setupCreator: (username: string) => Promise<void>;
+  refreshSession: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -30,6 +31,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
 
   const checkCreatorWithUser = async (currentUser: User) => {
+    if (!currentUser?.id) return null;
+    
     try {
       const { data, error } = await supabase
         .from("creators")
@@ -37,7 +40,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .eq("profile_id", currentUser.id)
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error("Error checking creator:", error);
+        return null;
+      }
+      
       setCreator(data);
       return data;
     } catch (error) {
@@ -47,33 +54,78 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const checkCreator = async () => {
+  const checkCreator = useCallback(async () => {
     if (!user) return null;
     return checkCreatorWithUser(user);
+  }, [user]);
+
+  const refreshSession = async () => {
+    try {
+      setIsLoading(true);
+      const { data, error } = await supabase.auth.refreshSession();
+      
+      if (error) {
+        console.error("Error refreshing session:", error);
+        return;
+      }
+      
+      const currentUser = data.session?.user ?? null;
+      if (currentUser) {
+        setUser(currentUser);
+        await checkCreatorWithUser(currentUser);
+      }
+    } catch (error) {
+      console.error("Error refreshing session:", error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const checkUser = async () => {
     try {
       const {
         data: { session },
+        error: sessionError,
       } = await supabase.auth.getSession();
+      
+      if (sessionError) {
+        console.error("Error getting session:", sessionError);
+        setUser(null);
+        setIsLoading(false);
+        return;
+      }
+      
       const currentUser = session?.user ?? null;
       setUser(currentUser);
 
       if (currentUser) {
-        // Fetch profile role
-        const { data: profile, error } = await supabase
-          .from("profiles")
-          .select("role")
-          .eq("id", currentUser.id)
-          .single();
+        try {
+          // Fetch profile role
+          const { data: profile, error } = await supabase
+            .from("profiles")
+            .select("role")
+            .eq("id", currentUser.id)
+            .single();
 
-        if (error) throw error;
-
-        setUser((prevUser) =>
-          prevUser ? { ...prevUser, role: profile.role } : null
-        );
+          if (error) {
+            console.error("Error fetching profile role:", error);
+          } else if (profile) {
+            // Create a new user object with the role
+            setUser({
+              ...currentUser,
+              role: profile.role
+            });
+          }
+          
+          // Check creator status
+          await checkCreatorWithUser(currentUser);
+        } catch (error) {
+          console.error("Error in user profile check:", error);
+        }
       }
+    } catch (error) {
+      console.error("Error checking user:", error);
+      setUser(null);
     } finally {
       setIsLoading(false);
     }
@@ -88,14 +140,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
       const currentUser = session?.user ?? null;
-      setUser(currentUser);
-
+      
       if (currentUser) {
-        const creatorData = await checkCreatorWithUser(currentUser);
-        if (event === "SIGNED_IN" && !creatorData) {
-          router.push("/onboarding");
+        setUser(currentUser);
+        
+        try {
+          // Fetch profile role on auth state change
+          const { data: profile, error } = await supabase
+            .from("profiles")
+            .select("role")
+            .eq("id", currentUser.id)
+            .single();
+
+          if (!error && profile) {
+            // Update user with role
+            setUser({
+              ...currentUser,
+              role: profile.role
+            });
+          }
+          
+          const creatorData = await checkCreatorWithUser(currentUser);
+          if (event === "SIGNED_IN" && !creatorData) {
+            router.push("/onboarding");
+          }
+        } catch (error) {
+          console.error("Error in auth state change:", error);
         }
       } else {
+        setUser(null);
         setCreator(null);
       }
 
@@ -109,6 +182,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const setupCreator = async (username: string) => {
     if (!user) throw new Error("No user found");
+    
+    if (!username.trim()) {
+      throw new Error("Username cannot be empty");
+    }
 
     try {
       const { data, error } = await supabase.rpc("setup_creator_profile", {
@@ -121,7 +198,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Refresh creator data
       await checkCreator();
     } catch (error: any) {
-      if (error.message.includes("creators_username_key")) {
+      if (error.message?.includes("creators_username_key")) {
         throw new Error("Username already taken");
       }
       throw error;
@@ -129,12 +206,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const login = async (email: string) => {
+    if (!email.trim()) {
+      throw new Error("Email cannot be empty");
+    }
+    
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: {
         emailRedirectTo: `${process.env.NEXT_PUBLIC_CLIENT_URL}/auth/callback`,
       },
     });
+    
     if (error) throw error;
   };
 
@@ -145,14 +227,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         redirectTo: `${process.env.NEXT_PUBLIC_CLIENT_URL}/auth/callback`,
       },
     });
+    
     if (error) throw error;
   };
 
   const logout = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) throw error;
-    setCreator(null);
-    router.push("/");
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+      
+      setUser(null);
+      setCreator(null);
+      router.push("/");
+    } catch (error) {
+      console.error("Error during logout:", error);
+      // Force client-side cleanup even if API call fails
+      setUser(null);
+      setCreator(null);
+      router.push("/");
+    }
   };
 
   return (
@@ -166,6 +259,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         logout,
         checkCreator,
         setupCreator,
+        refreshSession,
       }}
     >
       {children}

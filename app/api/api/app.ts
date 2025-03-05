@@ -3,10 +3,19 @@ import { setupCors } from "../src/middleware/cors";
 import { setupSecurity } from "../src/middleware/security";
 import { PORT } from "../src/config/env";
 import logger from "../src/config/logger";
-import supabase from "../src/lib/supabase";
+import fileUpload from "express-fileupload";
+import { supabase } from "../src/lib/supabase";
+import { extractUser } from "../src/middleware/extractUser";
+
+// Routes
 import searchRouter from "../src/routes/search";
 import mediaAnalysisRouter from "../src/routes/mediaAnalysis";
 import adminRouter from "../src/routes/admin";
+import projectRoutes from "../src/routes/projectRoutes";
+
+// Middleware
+import { errorHandler } from "../src/middleware/errorHandler";
+
 const app = express();
 const port = PORT || 8000;
 
@@ -24,6 +33,16 @@ app.use((req, res, next) => {
 setupCors(app);
 setupSecurity(app);
 app.use(express.json());
+app.use(
+  fileUpload({
+    limits: { fileSize: 50 * 1024 * 1024 }, // 50MB max file size
+    useTempFiles: true,
+    tempFileDir: "/tmp/",
+  })
+);
+
+// Apply extractUser middleware globally
+app.use(extractUser);
 
 logger.info({
   msg: "Starting server with configuration",
@@ -62,23 +81,14 @@ app.get("/test-db", async (req, res) => {
   }
 });
 
-// Global error handler
-app.use(
-  (
-    err: Error,
-    req: express.Request,
-    res: express.Response,
-    next: express.NextFunction
-  ) => {
-    logger.error(err);
-    res.status(500).json({ error: "Internal server error" });
-  }
-);
-
 // Routes
 app.use("/api/search", searchRouter);
 app.use("/api/media", mediaAnalysisRouter);
 app.use("/api/admin", adminRouter);
+app.use("/api/projects", projectRoutes);
+
+// Error handling middleware
+app.use(errorHandler);
 
 // Start server
 app.listen(port, () => {

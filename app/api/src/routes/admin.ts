@@ -1,7 +1,7 @@
 // src/routes/admin.ts
 import { Router } from "express";
 import { AdminController } from "../controllers/adminController";
-import { authenticateUser } from "../middleware/auth";
+import { extractUser } from "../middleware/extractUser";
 import { isAdmin } from "../middleware/isAdmin";
 import { cacheMiddleware } from "../lib/cache";
 
@@ -9,7 +9,7 @@ const router = Router();
 const adminController = new AdminController();
 
 // Secure all admin routes with authentication and admin role check
-router.use(authenticateUser, isAdmin);
+router.use(extractUser, isAdmin);
 
 // Creator management routes
 router.get(
