@@ -61,7 +61,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(currentUser);
 
       if (currentUser) {
-        return await checkCreatorWithUser(currentUser);
+        // Fetch profile role
+        const { data: profile, error } = await supabase
+          .from("profiles")
+          .select("role")
+          .eq("id", currentUser.id)
+          .single();
+
+        if (error) throw error;
+
+        setUser((prevUser) =>
+          prevUser ? { ...prevUser, role: profile.role } : null
+        );
       }
     } finally {
       setIsLoading(false);

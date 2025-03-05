@@ -54,7 +54,7 @@ export class AdminController {
           { count: "exact" }
         )
         .range(offset, offset + limit - 1)
-        .order("created_at", { ascending: false });
+        .order("username", { ascending: true });
 
       if (error) throw error;
 
@@ -62,8 +62,7 @@ export class AdminController {
       if (creators && creators.length > 0) {
         const creatorIds = creators.map((creator: Creator) => creator.id);
 
-        // Get one project per creator with its first image
-        // This query gets the first project for each creator
+        // Get up to 4 projects per creator
         const { data: projectsWithImages, error: projectError } = await supabase
           .from("projects")
           .select(
@@ -78,21 +77,28 @@ export class AdminController {
 
         if (projectError) throw projectError;
 
-        // Create a map of creator_id to their first project
-        const creatorToProject: Record<string, Project> = {};
+        // Create a map of creator_id to their first 4 projects
+        const creatorToProjects: Record<string, Project[]> = {};
         if (projectsWithImages && projectsWithImages.length > 0) {
-          // Group projects by creator_id and take the first one for each creator
+          // Group projects by creator_id and take up to 4 for each creator
           projectsWithImages.forEach((project: Project) => {
-            if (!creatorToProject[project.creator_id]) {
-              creatorToProject[project.creator_id] = project;
+            if (!creatorToProjects[project.creator_id]) {
+              creatorToProjects[project.creator_id] = [];
+            }
+            
+            if (creatorToProjects[project.creator_id].length < 4) {
+              creatorToProjects[project.creator_id].push(project);
             }
           });
         }
 
-        // Get project IDs to fetch images
-        const projectIds = Object.values(creatorToProject).map(
-          (project) => project.id
-        );
+        // Get all project IDs to fetch images
+        const projectIds: string[] = [];
+        Object.values(creatorToProjects).forEach(projects => {
+          projects.forEach(project => {
+            projectIds.push(project.id);
+          });
+        });
 
         // Fetch one image for each project
         if (projectIds.length > 0) {
@@ -122,24 +128,22 @@ export class AdminController {
           }
 
           // Assign images to projects
-          Object.values(creatorToProject).forEach((project: Project) => {
-            const image = projectToImage[project.id];
-            if (image) {
-              project.images = [image];
-            } else {
-              project.images = [];
-            }
+          Object.values(creatorToProjects).forEach(projects => {
+            projects.forEach((project: Project) => {
+              const image = projectToImage[project.id];
+              if (image) {
+                project.images = [image];
+              } else {
+                project.images = [];
+              }
+            });
           });
         }
 
         // Assign projects to creators
         creators.forEach((creator: Creator) => {
-          const project = creatorToProject[creator.id];
-          if (project) {
-            creator.projects = [project];
-          } else {
-            creator.projects = [];
-          }
+          const projects = creatorToProjects[creator.id] || [];
+          creator.projects = projects;
         });
       }
 
