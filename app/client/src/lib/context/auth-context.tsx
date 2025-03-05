@@ -1,5 +1,11 @@
 "use client";
-import { createContext, useContext, useEffect, useState, useCallback } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  useCallback,
+} from "react";
 import { useRouter } from "next/navigation";
 import { User } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase";
@@ -30,52 +36,85 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
 
-  const checkCreatorWithUser = async (currentUser: User) => {
-    if (!currentUser?.id) return null;
-    
-    try {
-      const { data, error } = await supabase
-        .from("creators")
-        .select("id, username, profile_id")
-        .eq("profile_id", currentUser.id)
-        .single();
+  const checkCreatorWithUser = useCallback(
+    async (currentUser: User) => {
+      if (!currentUser?.id) return null;
 
-      if (error) {
+      try {
+        const { data, error } = await supabase
+          .from("creators")
+          .select("id, username, profile_id")
+          .eq("profile_id", currentUser.id)
+          .single();
+
+        if (error) {
+          console.error("Error checking creator:", error);
+          return null;
+        }
+
+        setCreator(data);
+        return data;
+      } catch (error) {
         console.error("Error checking creator:", error);
+        setCreator(null);
         return null;
       }
-      
-      setCreator(data);
-      return data;
-    } catch (error) {
-      console.error("Error checking creator:", error);
-      setCreator(null);
-      return null;
-    }
-  };
+    },
+    [supabase]
+  );
 
   const checkCreator = useCallback(async () => {
     if (!user) return null;
     return checkCreatorWithUser(user);
-  }, [user]);
+  }, [user, checkCreatorWithUser]);
 
   const refreshSession = async () => {
     try {
       setIsLoading(true);
+      console.log("Refreshing session...");
+
       const { data, error } = await supabase.auth.refreshSession();
-      
+
       if (error) {
         console.error("Error refreshing session:", error);
+        setUser(null);
+        setCreator(null);
         return;
       }
-      
+
       const currentUser = data.session?.user ?? null;
       if (currentUser) {
+        console.log("Session refreshed successfully");
         setUser(currentUser);
+
+        // Fetch profile role after refresh
+        try {
+          const { data: profile, error: profileError } = await supabase
+            .from("profiles")
+            .select("role")
+            .eq("id", currentUser.id)
+            .single();
+
+          if (!profileError && profile) {
+            setUser({
+              ...currentUser,
+              role: profile.role,
+            });
+          }
+        } catch (profileError) {
+          console.error("Error fetching profile after refresh:", profileError);
+        }
+
         await checkCreatorWithUser(currentUser);
+      } else {
+        console.log("No user found after session refresh");
+        setUser(null);
+        setCreator(null);
       }
     } catch (error) {
-      console.error("Error refreshing session:", error);
+      console.error("Unexpected error refreshing session:", error);
+      setUser(null);
+      setCreator(null);
     } finally {
       setIsLoading(false);
     }
@@ -87,14 +126,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         data: { session },
         error: sessionError,
       } = await supabase.auth.getSession();
-      
+
       if (sessionError) {
         console.error("Error getting session:", sessionError);
         setUser(null);
         setIsLoading(false);
         return;
       }
-      
+
       const currentUser = session?.user ?? null;
       setUser(currentUser);
 
@@ -113,10 +152,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             // Create a new user object with the role
             setUser({
               ...currentUser,
-              role: profile.role
+              role: profile.role,
             });
           }
-          
+
           // Check creator status
           await checkCreatorWithUser(currentUser);
         } catch (error) {
@@ -140,10 +179,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
       const currentUser = session?.user ?? null;
-      
+
       if (currentUser) {
         setUser(currentUser);
-        
+
         try {
           // Fetch profile role on auth state change
           const { data: profile, error } = await supabase
@@ -156,10 +195,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             // Update user with role
             setUser({
               ...currentUser,
-              role: profile.role
+              role: profile.role,
             });
           }
-          
+
           const creatorData = await checkCreatorWithUser(currentUser);
           if (event === "SIGNED_IN" && !creatorData) {
             router.push("/onboarding");
@@ -182,7 +221,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const setupCreator = async (username: string) => {
     if (!user) throw new Error("No user found");
-    
+
     if (!username.trim()) {
       throw new Error("Username cannot be empty");
     }
@@ -209,14 +248,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!email.trim()) {
       throw new Error("Email cannot be empty");
     }
-    
+
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: {
         emailRedirectTo: `${process.env.NEXT_PUBLIC_CLIENT_URL}/auth/callback`,
       },
     });
-    
+
     if (error) throw error;
   };
 
@@ -227,7 +266,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         redirectTo: `${process.env.NEXT_PUBLIC_CLIENT_URL}/auth/callback`,
       },
     });
-    
+
     if (error) throw error;
   };
 
@@ -235,7 +274,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
-      
+
       setUser(null);
       setCreator(null);
       router.push("/");
