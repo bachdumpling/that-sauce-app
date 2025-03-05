@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,7 +16,6 @@ import { Input } from "@/components/ui/input";
 import Image from "next/image";
 import { fetchCreators } from "@/lib/api/admin";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useDebounce } from "use-debounce";
 
 const CreatorManagementPage = () => {
   const [creators, setCreators] = useState([]);
@@ -29,9 +28,9 @@ const CreatorManagementPage = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [debouncedSearchQuery] = useDebounce(searchQuery, 300);
   const [activeTab, setActiveTab] = useState("active");
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   // Fetch creators from the API
   const loadCreators = async (page = 1) => {
@@ -58,7 +57,12 @@ const CreatorManagementPage = () => {
 
   // Initial data load
   useEffect(() => {
-    loadCreators(pagination.page);
+    const page = parseInt(searchParams.get("page") || "1");
+    setPagination((prev) => ({
+      ...prev,
+      page,
+    }));
+    loadCreators(page);
   }, []);
 
   // Handle page change
@@ -68,6 +72,12 @@ const CreatorManagementPage = () => {
       page: newPage,
     }));
     loadCreators(newPage);
+
+    // Update URL with the new page parameter
+    const url = new URL(window.location.href);
+    url.searchParams.set("page", newPage.toString());
+    router.push(url.pathname + url.search);
+
     // Scroll to top when changing pages
     window.scrollTo(0, 0);
   };
@@ -77,25 +87,38 @@ const CreatorManagementPage = () => {
     e.preventDefault();
     // Implement search with backend (this would require a new API endpoint)
     console.log("Searching for:", searchQuery);
+
+    // Update URL to page 1 when searching
+    const url = new URL(window.location.href);
+    url.searchParams.set("page", "1");
+    router.push(url.pathname + url.search);
+
     loadCreators(1); // Reset to first page when searching
   };
 
   // Clear search
   const clearSearch = () => {
     setSearchQuery("");
+
+    // Update URL to page 1 when clearing search
+    const url = new URL(window.location.href);
+    url.searchParams.set("page", "1");
+    router.push(url.pathname + url.search);
+
     loadCreators(1);
   };
 
   // Navigate to creator detail page
   const viewCreator = (id) => {
-    router.push(`/admin/creators/${id}`);
+    // Include the current page in the URL when navigating to creator detail
+    router.push(`/admin/creators/${id}?page=${pagination.page}`);
   };
 
   // Switch between active and rejected creators
   const handleTabChange = (value) => {
     setActiveTab(value);
     if (value === "rejected") {
-      router.push("/admin/rejected-creators");
+      router.push("/admin/creators/rejected");
     }
   };
 
@@ -111,7 +134,7 @@ const CreatorManagementPage = () => {
         >
           <TabsList>
             <TabsTrigger value="active">Active Creators</TabsTrigger>
-            <TabsTrigger value="rejected">Rejected Creators</TabsTrigger>
+            <TabsTrigger value="rejected">Unqualified Creators</TabsTrigger>
           </TabsList>
         </Tabs>
 
@@ -266,8 +289,8 @@ const CreatorManagementPage = () => {
                     (page) =>
                       page === 1 ||
                       page === pagination.totalPages ||
-                      (page >= pagination.page - 1 &&
-                        page <= pagination.page + 1)
+                      (page >= pagination.page - 5 &&
+                        page <= pagination.page + 5)
                   )
                   .map((page) => (
                     <PaginationItem key={page}>

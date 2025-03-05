@@ -140,7 +140,7 @@ const RejectedCreatorsPage = () => {
         >
           <TabsList>
             <TabsTrigger value="active">Active Creators</TabsTrigger>
-            <TabsTrigger value="rejected">Rejected Creators</TabsTrigger>
+            <TabsTrigger value="rejected">Unqualified Creators</TabsTrigger>
           </TabsList>
         </Tabs>
 
@@ -186,7 +186,7 @@ const RejectedCreatorsPage = () => {
           ))}
         </div>
       ) : (
-        <div className="space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {creators.length > 0 ? (
             creators.map((creator) => (
               <Card key={creator.id} className="overflow-hidden">

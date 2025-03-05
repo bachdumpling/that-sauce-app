@@ -1,5 +1,5 @@
 import React, { useState, useEffect, use } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   Card,
   CardContent,
@@ -31,6 +31,8 @@ import { toast } from "sonner";
 const CreatorDetailPage = ({ params }) => {
   const unwrappedParams = use(params);
   const creatorId = unwrappedParams?.id;
+  const searchParams = useSearchParams();
+  const currentPage = searchParams.get('page') || '1';
   const [creator, setCreator] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -87,7 +89,7 @@ const CreatorDetailPage = ({ params }) => {
         });
 
         setRejectDialogOpen(false);
-        router.push("/admin/creators");
+        router.push(`/admin/creators?page=${currentPage}`);
       } else {
         throw new Error(response.error || "Failed to reject creator");
       }
@@ -102,7 +104,7 @@ const CreatorDetailPage = ({ params }) => {
   };
 
   const handleGoBack = () => {
-    router.push("/admin/creators");
+    router.push(`/admin/creators?page=${currentPage}`);
   };
 
   if (loading) {
