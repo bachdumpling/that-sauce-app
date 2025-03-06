@@ -5,6 +5,7 @@ import {
   useEffect,
   useState,
   useCallback,
+  useMemo,
 } from "react";
 import { useRouter } from "next/navigation";
 import { User } from "@supabase/supabase-js";
@@ -36,6 +37,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
 
+  // Store the last check time to prevent too frequent refreshes
+  const [lastRefresh, setLastRefresh] = useState(0);
+
   const checkCreatorWithUser = useCallback(
     async (currentUser: User) => {
       if (!currentUser?.id) return null;
@@ -52,7 +56,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           return null;
         }
 
-        setCreator(data);
+        if (data) {
+          setCreator(data);
+        }
         return data;
       } catch (error) {
         console.error("Error checking creator:", error);
@@ -60,7 +66,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return null;
       }
     },
-    [supabase]
+    [] // Remove supabase from dependencies, it doesn't change
   );
 
   const checkCreator = useCallback(async () => {
@@ -68,12 +74,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return checkCreatorWithUser(user);
   }, [user, checkCreatorWithUser]);
 
-  const refreshSession = async () => {
+  const refreshSession = useCallback(async () => {
+    // Prevent excessive refreshes (don't refresh more than once every 3 seconds)
+    const now = Date.now();
+    if (now - lastRefresh < 3000) {
+      console.log("Skipping refresh: too soon since last refresh");
+      return;
+    }
+    
+    setLastRefresh(now);
+    
     try {
       setIsLoading(true);
       console.log("Refreshing session...");
 
-      const { data, error } = await supabase.auth.refreshSession();
+      // Add a timeout to prevent getting stuck forever
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("Session refresh timeout")), 10000)
+      );
+
+      // Race the session refresh with a timeout
+      const { data, error } = await Promise.race([
+        supabase.auth.refreshSession(),
+        timeoutPromise,
+      ]);
 
       if (error) {
         console.error("Error refreshing session:", error);
@@ -85,8 +109,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const currentUser = data.session?.user ?? null;
       if (currentUser) {
         console.log("Session refreshed successfully");
-        setUser(currentUser);
-
+        
         // Fetch profile role after refresh
         try {
           const { data: profile, error: profileError } = await supabase
@@ -100,9 +123,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               ...currentUser,
               role: profile.role,
             });
+          } else {
+            // Just set the user without role if profile fetch fails
+            setUser(currentUser);
           }
         } catch (profileError) {
           console.error("Error fetching profile after refresh:", profileError);
+          // Still set the user even if profile fetch fails
+          setUser(currentUser);
         }
 
         await checkCreatorWithUser(currentUser);
@@ -116,11 +144,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(null);
       setCreator(null);
     } finally {
+      console.log("Session refresh complete, setting isLoading to false");
       setIsLoading(false);
     }
-  };
+  }, [checkCreatorWithUser, lastRefresh]);
 
-  const checkUser = async () => {
+  const checkUser = useCallback(async () => {
     try {
       const {
         data: { session },
@@ -135,8 +164,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       const currentUser = session?.user ?? null;
-      setUser(currentUser);
-
+      
       if (currentUser) {
         try {
           // Fetch profile role
@@ -148,19 +176,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
           if (error) {
             console.error("Error fetching profile role:", error);
+            setUser(currentUser); // Still set user even if profile fetch fails
           } else if (profile) {
             // Create a new user object with the role
             setUser({
               ...currentUser,
               role: profile.role,
             });
+          } else {
+            setUser(currentUser);
           }
 
           // Check creator status
           await checkCreatorWithUser(currentUser);
         } catch (error) {
           console.error("Error in user profile check:", error);
+          setUser(currentUser); // Still set user even if profile check fails
         }
+      } else {
+        setUser(null);
+        setCreator(null);
       }
     } catch (error) {
       console.error("Error checking user:", error);
@@ -168,7 +203,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [checkCreatorWithUser]);
 
   useEffect(() => {
     // Check current session
@@ -181,7 +216,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const currentUser = session?.user ?? null;
 
       if (currentUser) {
-        setUser(currentUser);
+        setUser(currentUser); // Set user immediately first to prevent flickering
 
         try {
           // Fetch profile role on auth state change
@@ -217,7 +252,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => {
       subscription.unsubscribe();
     };
-  }, [router]);
+  }, [router, checkCreatorWithUser, checkUser]);
 
   const setupCreator = async (username: string) => {
     if (!user) throw new Error("No user found");
@@ -227,7 +262,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     try {
-      const { data, error } = await supabase.rpc("setup_creator_profile", {
+      const { error } = await supabase.rpc("setup_creator_profile", {
         p_profile_id: user.id,
         p_username: username,
       });
@@ -236,8 +271,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       // Refresh creator data
       await checkCreator();
-    } catch (error: any) {
-      if (error.message?.includes("creators_username_key")) {
+    } catch (error: unknown) {
+      // Fix the any type
+      const err = error as Error;
+      if (err.message?.includes("creators_username_key")) {
         throw new Error("Username already taken");
       }
       throw error;
@@ -287,20 +324,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  // Memoize the context value to prevent unnecessary rerenders
+  const contextValue = useMemo(
+    () => ({
+      user,
+      creator,
+      isLoading,
+      login,
+      googleLogin,
+      logout,
+      checkCreator,
+      setupCreator,
+      refreshSession,
+    }),
+    [user, creator, isLoading, checkCreator, refreshSession]
+  );
+
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        creator,
-        isLoading,
-        login,
-        googleLogin,
-        logout,
-        checkCreator,
-        setupCreator,
-        refreshSession,
-      }}
-    >
+    <AuthContext.Provider value={contextValue}>
       {children}
     </AuthContext.Provider>
   );
