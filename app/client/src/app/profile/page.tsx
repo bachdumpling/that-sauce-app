@@ -28,8 +28,8 @@ import {
 } from "@/components/ui/dialog";
 
 export default function ProfilePage() {
-  const { user, creator, isLoading, logout, refreshSession } = useAuth();
-  console.log("isLoading", isLoading);
+  const { user, creator, isLoading, isCreatorLoading, logout, refreshSession } = useAuth();
+  console.log("isLoading", isLoading, "isCreatorLoading", isCreatorLoading);
   const [projects, setProjects] = useState<Project[]>([]);
   const [isProjectsLoading, setIsProjectsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -68,7 +68,8 @@ export default function ProfilePage() {
           console.log("Profile page: Auth state - ", {
             user: user ? "logged in" : "not logged in",
             creator: creator ? "has creator profile" : "no creator profile",
-            isLoading
+            isLoading,
+            isCreatorLoading
           });
         }
       } catch (error) {
@@ -83,7 +84,7 @@ export default function ProfilePage() {
     };
 
     initializeAuth();
-  }, [refreshSession, user, isLoading, router, creator]);
+  }, [refreshSession, user, isLoading, router, creator, isCreatorLoading]);
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -93,8 +94,8 @@ export default function ProfilePage() {
   }, [user, isLoading, router]);
 
   const fetchProjects = useCallback(async () => {
-    if (!creator) return;
-
+    if (!user) return;
+    
     setIsProjectsLoading(true);
     setError(null);
 
@@ -108,10 +109,17 @@ export default function ProfilePage() {
 
       // Fallback to direct Supabase query if API fails
       try {
+        const creatorId = creator?.id;
+        if (!creatorId) {
+          console.log("No creator ID available, cannot fetch projects");
+          setIsProjectsLoading(false);
+          return;
+        }
+        
         const { data: projectsData, error: projectsError } = await supabase
           .from("projects")
           .select("*")
-          .eq("creator_id", creator.id)
+          .eq("creator_id", creatorId)
           .order("created_at", { ascending: false });
 
         if (projectsError) throw projectsError;
@@ -122,13 +130,24 @@ export default function ProfilePage() {
     } finally {
       setIsProjectsLoading(false);
     }
-  }, [creator]);
+  }, [user, creator]);
 
   useEffect(() => {
-    if (creator) {
-      fetchProjects();
+    if (user) {
+      // If creator is available, fetch projects
+      if (creator) {
+        fetchProjects();
+      } 
+      // If creator is still loading, wait for it
+      else if (isCreatorLoading) {
+        console.log("Waiting for creator profile to load before fetching projects");
+      } 
+      // If creator is not loading and not available, show empty state
+      else {
+        setIsProjectsLoading(false);
+      }
     }
-  }, [creator, fetchProjects]);
+  }, [user, creator, fetchProjects, isCreatorLoading]);
 
   const createProject = async (title: string, description: string) => {
     if (!user) {
@@ -283,6 +302,24 @@ export default function ProfilePage() {
       setIsDeleting(false);
     }
   };
+
+  // Add a timeout for creator profile loading
+  useEffect(() => {
+    let timeoutId: NodeJS.Timeout;
+    
+    if (isCreatorLoading) {
+      // If creator profile is still loading after 5 seconds, show the UI anyway
+      timeoutId = setTimeout(() => {
+        console.log("Creator profile loading timeout - showing UI anyway");
+        setIsProjectsLoading(false);
+      }, 5000);
+    }
+    
+    return () => {
+      if (timeoutId) clearTimeout(timeoutId);
+    };
+  }, [isCreatorLoading]);
+
   // Replace your existing loading state with this more detailed one
   if (isLoading) {
     return (
@@ -326,7 +363,20 @@ export default function ProfilePage() {
         <div className="md:col-span-1 space-y-6">
           <div className="bg-card rounded-lg border p-6 space-y-4">
             <h2 className="text-xl font-semibold">Your Profile</h2>
-            {creator ? (
+            {isCreatorLoading ? (
+              <div className="space-y-2">
+                <p className="text-muted-foreground flex items-center">
+                  <Loader2 className="h-3 w-3 animate-spin mr-2" />
+                  Loading creator profile...
+                </p>
+                {user && (
+                  <p>
+                    <span className="text-muted-foreground">Email:</span>{" "}
+                    <span className="font-medium">{user.email}</span>
+                  </p>
+                )}
+              </div>
+            ) : creator ? (
               <div className="space-y-2">
                 <p>
                   <span className="text-muted-foreground">Username:</span>{" "}
@@ -334,7 +384,7 @@ export default function ProfilePage() {
                 </p>
                 <p>
                   <span className="text-muted-foreground">Email:</span>{" "}
-                  <span className="font-medium">{user.email}</span>
+                  <span className="font-medium">{user?.email}</span>
                 </p>
               </div>
             ) : (
@@ -353,7 +403,26 @@ export default function ProfilePage() {
           </div>
 
           <div className="bg-card rounded-lg border p-6">
-            <CreateProjectForm onSubmit={createProject} />
+            {creator ? (
+              <CreateProjectForm onSubmit={createProject} />
+            ) : isCreatorLoading ? (
+              <div className="text-center py-4">
+                <Loader2 className="h-5 w-5 animate-spin mx-auto mb-2" />
+                <p className="text-sm text-muted-foreground">Loading creator profile...</p>
+              </div>
+            ) : (
+              <div className="text-center py-4">
+                <p className="text-sm text-muted-foreground mb-2">
+                  You need a creator profile to create projects
+                </p>
+                <Button 
+                  onClick={() => router.push('/onboarding')}
+                  size="sm"
+                >
+                  Complete Onboarding
+                </Button>
+              </div>
+            )}
           </div>
         </div>
 

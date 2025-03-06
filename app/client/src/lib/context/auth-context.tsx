@@ -20,6 +20,7 @@ interface AuthContextType {
   user: User | null;
   creator: Creator | null;
   isLoading: boolean;
+  isCreatorLoading: boolean;
   login: (email: string) => Promise<void>;
   googleLogin: () => Promise<void>;
   logout: () => Promise<void>;
@@ -72,6 +73,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [creator, setCreator] = useState<Creator | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isCreatorLoading, setIsCreatorLoading] = useState(false);
   const router = useRouter();
 
   const checkCreatorWithUser = useCallback(
@@ -79,6 +81,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (!currentUser?.id) return null;
 
       try {
+        setIsCreatorLoading(true);
         const { data, error } = await supabase
           .from("creators")
           .select("id, username, profile_id")
@@ -96,6 +99,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.error("Error checking creator:", error);
         setCreator(null);
         return null;
+      } finally {
+        setIsCreatorLoading(false);
       }
     },
     [supabase]
@@ -132,6 +137,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setUser(storedSession.user);
           setCreator(storedSession.creator);
           setIsLoading(false);
+          
+          // Check creator profile asynchronously
+          setTimeout(() => checkCreatorWithUser(storedSession.user), 0);
           return;
         }
         
@@ -143,7 +151,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const currentUser = data.session?.user ?? null;
       if (currentUser) {
         console.log("Session refreshed successfully");
+        
+        // Set user immediately to unblock UI
         setUser(currentUser);
+        setIsLoading(false);
 
         // Fetch profile role after refresh
         try {
@@ -162,16 +173,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             // Store session data
             storeSessionData(userWithRole, creator);
           }
+          
+          // Check creator profile asynchronously
+          checkCreatorWithUser(currentUser).then(creatorData => {
+            if (creatorData) {
+              storeSessionData(currentUser, creatorData);
+            }
+          });
+          
         } catch (profileError) {
           console.error("Error fetching profile after refresh:", profileError);
+          // Still complete the loading state
+          setIsLoading(false);
         }
-
-        await checkCreatorWithUser(currentUser);
       } else {
         console.log("No user found after session refresh");
         setUser(null);
         setCreator(null);
         storeSessionData(null, null);
+        setIsLoading(false);
       }
     } catch (error) {
       console.error("Unexpected error refreshing session:", error);
@@ -184,8 +204,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       setUser(null);
       setCreator(null);
-    } finally {
-      console.log("Session refresh complete, setting isLoading to false");
       setIsLoading(false);
     }
   };
@@ -207,6 +225,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setUser(storedSession.user);
           setCreator(storedSession.creator);
           setIsLoading(false);
+          
+          // Check creator profile asynchronously
+          setTimeout(() => checkCreatorWithUser(storedSession.user), 0);
           return;
         }
         
@@ -216,7 +237,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       const currentUser = session?.user ?? null;
+      
+      // Set user immediately to unblock UI
       setUser(currentUser);
+      setIsLoading(false);
 
       if (currentUser) {
         try {
@@ -237,15 +261,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             };
             setUser(userWithRole);
             
-            // Store updated session data
-            const creatorData = await checkCreatorWithUser(currentUser);
-            storeSessionData(userWithRole, creatorData);
+            // Check creator profile asynchronously
+            checkCreatorWithUser(currentUser).then(creatorData => {
+              if (creatorData) {
+                storeSessionData(userWithRole, creatorData);
+              }
+            });
             return;
           }
 
-          // Check creator status
-          const creatorData = await checkCreatorWithUser(currentUser);
-          storeSessionData(currentUser, creatorData);
+          // Check creator status asynchronously
+          checkCreatorWithUser(currentUser).then(creatorData => {
+            if (creatorData) {
+              storeSessionData(currentUser, creatorData);
+            }
+          });
         } catch (error) {
           console.error("Error in user profile check:", error);
         }
@@ -257,7 +287,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.error("Error checking user:", error);
       setUser(null);
       storeSessionData(null, null);
-    } finally {
       setIsLoading(false);
     }
   };
@@ -385,6 +414,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         user,
         creator,
         isLoading,
+        isCreatorLoading,
         login,
         googleLogin,
         logout,
