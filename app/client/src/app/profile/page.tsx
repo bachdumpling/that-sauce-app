@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/lib/context/auth-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,14 +29,11 @@ import {
 
 export default function ProfilePage() {
   const { user, creator, isLoading, logout, refreshSession } = useAuth();
-  
+  console.log("isLoading", isLoading);
   const [projects, setProjects] = useState<Project[]>([]);
   const [isProjectsLoading, setIsProjectsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
-  
-  // Track if auth refresh has been attempted
-  const authRefreshAttempted = useRef(false);
 
   // Edit project state
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -50,34 +47,51 @@ export default function ProfilePage() {
   const [deletingProject, setDeletingProject] = useState<Project | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // Improved auth initialization that prevents multiple refresh attempts
+  // Add this at the beginning of your component
   useEffect(() => {
-    // Only attempt refresh if user is null and we haven't tried refreshing yet
-    if (!user && !isLoading && !authRefreshAttempted.current) {
-      authRefreshAttempted.current = true;
-      
-      // Try to refresh the session once
-      const attemptRefresh = async () => {
-        try {
+    const initializeAuth = async () => {
+      try {
+        if (!user && !isLoading) {
+          console.log("Profile page: No user detected, refreshing session");
           await refreshSession();
-          
-          // After a reasonable delay, if still no user, redirect to login
+
+          // Wait a bit and check again before redirecting
           setTimeout(() => {
             if (!user) {
+              console.log(
+                "Profile page: Still no user after refresh, redirecting to login"
+              );
               router.push("/auth/login");
             }
-          }, 2000);
-        } catch (err) {
-          console.error("Session refresh failed:", err);
+          }, 2000); // Increased from 1000ms to 2000ms to give more time
+        } else {
+          console.log("Profile page: Auth state - ", {
+            user: user ? "logged in" : "not logged in",
+            creator: creator ? "has creator profile" : "no creator profile",
+            isLoading
+          });
+        }
+      } catch (error) {
+        console.error("Profile page: Error during auth initialization", error);
+        
+        // Only redirect if we're sure there's no user
+        if (!user && !isLoading) {
+          console.log("Profile page: Redirecting to login after auth error");
           router.push("/auth/login");
         }
-      };
-      
-      attemptRefresh();
-    }
-  }, [user, isLoading, refreshSession, router]);
+      }
+    };
 
-  // Fetch projects when creator is available
+    initializeAuth();
+  }, [refreshSession, user, isLoading, router, creator]);
+
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    if (!isLoading && !user) {
+      router.push("/auth/login");
+    }
+  }, [user, isLoading, router]);
+
   const fetchProjects = useCallback(async () => {
     if (!creator) return;
 
@@ -102,7 +116,6 @@ export default function ProfilePage() {
 
         if (projectsError) throw projectsError;
         setProjects(projectsData || []);
-        setError(null); // Clear error if fallback succeeds
       } catch (fallbackErr) {
         console.error("Fallback fetch failed:", fallbackErr);
       }
@@ -270,8 +283,7 @@ export default function ProfilePage() {
       setIsDeleting(false);
     }
   };
-
-  // Simplified loading state
+  // Replace your existing loading state with this more detailed one
   if (isLoading) {
     return (
       <div className="container max-w-6xl py-8">
@@ -279,44 +291,28 @@ export default function ProfilePage() {
           <div className="flex flex-col items-center gap-2">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
             <p className="text-muted-foreground">Verifying authentication...</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Show a different loading state when we're attempting to recover the session
-  if (!user && authRefreshAttempted.current) {
-    return (
-      <div className="container max-w-6xl py-8">
-        <div className="flex justify-center items-center h-64">
-          <div className="text-center">
-            <h2 className="text-xl font-semibold mb-2">Attempting to restore your session</h2>
-            <p className="text-muted-foreground mb-4">
-              Please wait a moment...
+            <p className="text-xs text-muted-foreground">
+              Please wait while we check your login status
             </p>
-            <div className="flex justify-center">
-              <Loader2 className="h-6 w-6 animate-spin text-primary" />
-            </div>
           </div>
         </div>
       </div>
     );
   }
 
-  // No user state - only show after refresh attempt
+  // Enhance the no user state to allow time for session refresh
   if (!user) {
     return (
       <div className="container max-w-6xl py-8">
         <div className="flex justify-center items-center h-64">
           <div className="text-center">
-            <h2 className="text-xl font-semibold mb-2">Session Expired</h2>
+            <h2 className="text-xl font-semibold mb-2">Verifying Login</h2>
             <p className="text-muted-foreground mb-4">
-              Your login session may have expired.
+              Checking your authentication status...
             </p>
-            <Button onClick={() => router.push("/auth/login")}>
-              Go to Login
-            </Button>
+            <div className="flex justify-center">
+              <Loader2 className="h-6 w-6 animate-spin text-primary" />
+            </div>
           </div>
         </div>
       </div>

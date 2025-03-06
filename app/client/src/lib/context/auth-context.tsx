@@ -5,7 +5,6 @@ import {
   useEffect,
   useState,
   useCallback,
-  useMemo,
 } from "react";
 import { useRouter } from "next/navigation";
 import { User } from "@supabase/supabase-js";
@@ -31,14 +30,49 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// Session storage helpers for resilience
+const storeSessionData = (user: User | null, creator: Creator | null) => {
+  try {
+    if (user) {
+      localStorage.setItem('muse_user_session', JSON.stringify({
+        user, 
+        creator,
+        timestamp: Date.now()
+      }));
+    } else {
+      localStorage.removeItem('muse_user_session');
+    }
+  } catch (error) {
+    console.error('Error storing session data:', error);
+  }
+};
+
+const getStoredSessionData = () => {
+  try {
+    const data = localStorage.getItem('muse_user_session');
+    if (!data) return null;
+    
+    const parsedData = JSON.parse(data);
+    const timestamp = parsedData.timestamp || 0;
+    
+    // Only use stored session if it's less than 24 hours old
+    if (Date.now() - timestamp > 24 * 60 * 60 * 1000) {
+      localStorage.removeItem('muse_user_session');
+      return null;
+    }
+    
+    return parsedData;
+  } catch (error) {
+    console.error('Error retrieving stored session:', error);
+    return null;
+  }
+};
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [creator, setCreator] = useState<Creator | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
-
-  // Store the last check time to prevent too frequent refreshes
-  const [lastRefresh, setLastRefresh] = useState(0);
 
   const checkCreatorWithUser = useCallback(
     async (currentUser: User) => {
@@ -56,9 +90,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           return null;
         }
 
-        if (data) {
-          setCreator(data);
-        }
+        setCreator(data);
         return data;
       } catch (error) {
         console.error("Error checking creator:", error);
@@ -66,7 +98,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return null;
       }
     },
-    [] // Remove supabase from dependencies, it doesn't change
+    [supabase]
   );
 
   const checkCreator = useCallback(async () => {
@@ -74,23 +106,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return checkCreatorWithUser(user);
   }, [user, checkCreatorWithUser]);
 
-  const refreshSession = useCallback(async () => {
-    // Prevent excessive refreshes (don't refresh more than once every 3 seconds)
-    const now = Date.now();
-    if (now - lastRefresh < 3000) {
-      console.log("Skipping refresh: too soon since last refresh");
-      return;
-    }
-    
-    setLastRefresh(now);
-    
+  const refreshSession = async () => {
     try {
       setIsLoading(true);
       console.log("Refreshing session...");
 
       // Add a timeout to prevent getting stuck forever
       const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error("Session refresh timeout")), 10000)
+        setTimeout(() => reject(new Error("Session refresh timeout")), 20000)
       );
 
       // Race the session refresh with a timeout
@@ -101,6 +124,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (error) {
         console.error("Error refreshing session:", error);
+        
+        // Try to retrieve from storage as fallback
+        const storedSession = getStoredSessionData();
+        if (storedSession?.user) {
+          console.log("Using stored session as fallback");
+          setUser(storedSession.user);
+          setCreator(storedSession.creator);
+          setIsLoading(false);
+          return;
+        }
+        
         setUser(null);
         setCreator(null);
         return;
@@ -109,7 +143,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const currentUser = data.session?.user ?? null;
       if (currentUser) {
         console.log("Session refreshed successfully");
-        
+        setUser(currentUser);
+
         // Fetch profile role after refresh
         try {
           const { data: profile, error: profileError } = await supabase
@@ -119,18 +154,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             .single();
 
           if (!profileError && profile) {
-            setUser({
+            const userWithRole = {
               ...currentUser,
               role: profile.role,
-            });
-          } else {
-            // Just set the user without role if profile fetch fails
-            setUser(currentUser);
+            };
+            setUser(userWithRole);
+            // Store session data
+            storeSessionData(userWithRole, creator);
           }
         } catch (profileError) {
           console.error("Error fetching profile after refresh:", profileError);
-          // Still set the user even if profile fetch fails
-          setUser(currentUser);
         }
 
         await checkCreatorWithUser(currentUser);
@@ -138,18 +171,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.log("No user found after session refresh");
         setUser(null);
         setCreator(null);
+        storeSessionData(null, null);
       }
     } catch (error) {
       console.error("Unexpected error refreshing session:", error);
+      if (error instanceof Error) {
+        console.error(`Error name: ${error.name}, message: ${error.message}`);
+        // If it's a timeout error, log it specifically 
+        if (error.message === "Session refresh timeout") {
+          console.error("Session refresh timed out in production");
+        }
+      }
       setUser(null);
       setCreator(null);
     } finally {
       console.log("Session refresh complete, setting isLoading to false");
       setIsLoading(false);
     }
-  }, [checkCreatorWithUser, lastRefresh]);
+  };
 
-  const checkUser = useCallback(async () => {
+  const checkUser = async () => {
     try {
       const {
         data: { session },
@@ -158,13 +199,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (sessionError) {
         console.error("Error getting session:", sessionError);
+        
+        // Try to use stored session as fallback
+        const storedSession = getStoredSessionData();
+        if (storedSession?.user) {
+          console.log("Using stored session as fallback during checkUser");
+          setUser(storedSession.user);
+          setCreator(storedSession.creator);
+          setIsLoading(false);
+          return;
+        }
+        
         setUser(null);
         setIsLoading(false);
         return;
       }
 
       const currentUser = session?.user ?? null;
-      
+      setUser(currentUser);
+
       if (currentUser) {
         try {
           // Fetch profile role
@@ -176,34 +229,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
           if (error) {
             console.error("Error fetching profile role:", error);
-            setUser(currentUser); // Still set user even if profile fetch fails
           } else if (profile) {
             // Create a new user object with the role
-            setUser({
+            const userWithRole = {
               ...currentUser,
               role: profile.role,
-            });
-          } else {
-            setUser(currentUser);
+            };
+            setUser(userWithRole);
+            
+            // Store updated session data
+            const creatorData = await checkCreatorWithUser(currentUser);
+            storeSessionData(userWithRole, creatorData);
+            return;
           }
 
           // Check creator status
-          await checkCreatorWithUser(currentUser);
+          const creatorData = await checkCreatorWithUser(currentUser);
+          storeSessionData(currentUser, creatorData);
         } catch (error) {
           console.error("Error in user profile check:", error);
-          setUser(currentUser); // Still set user even if profile check fails
         }
       } else {
-        setUser(null);
-        setCreator(null);
+        // Clear stored session if no current user
+        storeSessionData(null, null);
       }
     } catch (error) {
       console.error("Error checking user:", error);
       setUser(null);
+      storeSessionData(null, null);
     } finally {
       setIsLoading(false);
     }
-  }, [checkCreatorWithUser]);
+  };
 
   useEffect(() => {
     // Check current session
@@ -216,7 +273,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const currentUser = session?.user ?? null;
 
       if (currentUser) {
-        setUser(currentUser); // Set user immediately first to prevent flickering
+        setUser(currentUser);
 
         try {
           // Fetch profile role on auth state change
@@ -252,7 +309,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => {
       subscription.unsubscribe();
     };
-  }, [router, checkCreatorWithUser, checkUser]);
+  }, [router]);
 
   const setupCreator = async (username: string) => {
     if (!user) throw new Error("No user found");
@@ -272,9 +329,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Refresh creator data
       await checkCreator();
     } catch (error: unknown) {
-      // Fix the any type
-      const err = error as Error;
-      if (err.message?.includes("creators_username_key")) {
+      if (error instanceof Error && error.message?.includes("creators_username_key")) {
         throw new Error("Username already taken");
       }
       throw error;
@@ -324,24 +379,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  // Memoize the context value to prevent unnecessary rerenders
-  const contextValue = useMemo(
-    () => ({
-      user,
-      creator,
-      isLoading,
-      login,
-      googleLogin,
-      logout,
-      checkCreator,
-      setupCreator,
-      refreshSession,
-    }),
-    [user, creator, isLoading, checkCreator, refreshSession]
-  );
-
   return (
-    <AuthContext.Provider value={contextValue}>
+    <AuthContext.Provider
+      value={{
+        user,
+        creator,
+        isLoading,
+        login,
+        googleLogin,
+        logout,
+        checkCreator,
+        setupCreator,
+        refreshSession,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
