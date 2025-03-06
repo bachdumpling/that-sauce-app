@@ -28,135 +28,62 @@ import {
 } from "@/components/ui/dialog";
 
 export default function ProfilePage() {
-  const {
-    state,
-    user,
-    creator,
-    isLoading,
-    isCreatorLoading,
-    logout,
-    refreshSession,
-  } = useAuth();
-  console.log(
-    "Auth state:",
-    state.status,
-    "isCreatorLoading",
-    isCreatorLoading
-  );
+  const { status, user, creator, isCreatorLoading, logout, refreshSession } =
+    useAuth();
   const [projects, setProjects] = useState<Project[]>([]);
   const [isProjectsLoading, setIsProjectsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
-  // Force render after a timeout even if isLoading is stuck
+  // Force render after a timeout if loading is stuck
   const [forceRender, setForceRender] = useState(false);
 
-  useEffect(() => {
-    // If isLoading is true for more than 8 seconds, force render the UI
-    const timeoutId = setTimeout(() => {
-      if (isLoading) {
-        console.warn("Profile page: Force rendering UI after timeout");
-        setForceRender(true);
-      }
-    }, 8000);
-
-    return () => clearTimeout(timeoutId);
-  }, [isLoading]);
-
-  // Edit project state
+  // Project state
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingProject, setEditingProject] = useState<Project | null>(null);
   const [editTitle, setEditTitle] = useState("");
   const [editDescription, setEditDescription] = useState("");
   const [isEditing, setIsEditing] = useState(false);
-
-  // Delete project state
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [deletingProject, setDeletingProject] = useState<Project | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
+  // Handle auth initialization
   useEffect(() => {
-    const initializeAuth = async () => {
-      try {
-        console.log("Profile page: initializeAuth called", {
-          authState: state.status,
-          userExists: !!user,
-          isLoading,
-          isCreatorLoading,
-          forceRender,
-        });
-
-        // If we're forcing render, don't try to refresh
-        if (forceRender) {
-          console.log(
-            "Profile page: Force render active, skipping auth refresh"
-          );
-          return;
-        }
-
-        // If unauthenticated and not loading, try to refresh session
-        if (state.status === "UNAUTHENTICATED" && !isLoading) {
-          console.log("Profile page: No user detected, refreshing session");
-          try {
-            await refreshSession();
-            console.log("Profile page: Session refresh completed");
-          } catch (refreshError) {
-            console.error(
-              "Profile page: Error during session refresh",
-              refreshError
-            );
-          }
-
-          // Wait a bit and check again before redirecting
-          setTimeout(() => {
-            if (state.status === "UNAUTHENTICATED" && !forceRender) {
-              console.log(
-                "Profile page: Still no user after refresh, redirecting to login"
-              );
-              router.push("/auth/login");
-            }
-          }, 2000);
-        } else {
-          console.log("Profile page: Auth state - ", {
-            status: state.status,
-            user: user ? "logged in" : "not logged in",
-            creator: creator ? "has creator profile" : "no creator profile",
-            isLoading,
-            isCreatorLoading,
-            forceRender,
-          });
-        }
-      } catch (error) {
-        console.error("Profile page: Error during auth initialization", error);
-
-        // Only redirect if we're sure there's no user and not forcing render
-        if (state.status === "UNAUTHENTICATED" && !isLoading && !forceRender) {
-          console.log("Profile page: Redirecting to login after auth error");
-          router.push("/auth/login");
-        }
+    // If loading for more than 8 seconds, force render the UI
+    const timeoutId = setTimeout(() => {
+      if (status === "loading") {
+        console.log("Profile page: Force rendering UI after timeout");
+        setForceRender(true);
       }
-    };
+    }, 8000);
 
-    initializeAuth();
-  }, [
-    refreshSession,
-    state.status,
-    user,
-    isLoading,
-    router,
-    creator,
-    isCreatorLoading,
-    forceRender,
-  ]);
+    return () => clearTimeout(timeoutId);
+  }, [status]);
+
+  // Handle session refresh if needed
+  useEffect(() => {
+    if (status === "unauthenticated" && !forceRender) {
+      console.log("Profile page: No user detected, refreshing session");
+      refreshSession().catch((error) => {
+        console.error("Error refreshing session:", error);
+      });
+    }
+  }, [status, refreshSession, forceRender]);
 
   // Redirect to login if not authenticated
   useEffect(() => {
-    if (!isLoading && state.status === "UNAUTHENTICATED" && !forceRender) {
-      console.log("Profile page: No user after loading, redirecting to login");
-      router.push("/auth/login");
-    }
-  }, [state.status, isLoading, router, forceRender]);
+    if (status === "unauthenticated" && !forceRender) {
+      const redirectTimeout = setTimeout(() => {
+        console.log("Profile page: Redirecting to login");
+        router.push("/auth/login");
+      }, 2000);
 
+      return () => clearTimeout(redirectTimeout);
+    }
+  }, [status, router, forceRender]);
+
+  // Fetch projects when creator is available
   const fetchProjects = useCallback(async () => {
     if (!user) return;
 
@@ -173,8 +100,7 @@ export default function ProfilePage() {
 
       // Fallback to direct Supabase query if API fails
       try {
-        const creatorId = creator?.id;
-        if (!creatorId) {
+        if (!creator?.id) {
           console.log("No creator ID available, cannot fetch projects");
           setIsProjectsLoading(false);
           return;
@@ -183,7 +109,7 @@ export default function ProfilePage() {
         const { data: projectsData, error: projectsError } = await supabase
           .from("projects")
           .select("*")
-          .eq("creator_id", creatorId)
+          .eq("creator_id", creator.id)
           .order("created_at", { ascending: false });
 
         if (projectsError) throw projectsError;
@@ -196,32 +122,32 @@ export default function ProfilePage() {
     }
   }, [user, creator]);
 
+  // Load projects when authenticated and creator is available
   useEffect(() => {
-    if (user) {
-      // If creator is available, fetch projects
+    if (status === "authenticated") {
       if (creator) {
         fetchProjects();
-      }
-      // If creator is still loading, wait for it
-      else if (isCreatorLoading) {
-        console.log(
-          "Waiting for creator profile to load before fetching projects"
-        );
-      }
-      // If creator is not loading and not available, show empty state
-      else {
+      } else if (!isCreatorLoading) {
         setIsProjectsLoading(false);
       }
     }
-  }, [user, creator, fetchProjects, isCreatorLoading]);
+  }, [status, creator, isCreatorLoading, fetchProjects]);
 
-  const createProject = async (title: string, description: string) => {
-    if (!user) {
-      throw new Error("You must be logged in to create a project");
+  // Set a timeout to stop showing loading state for projects
+  useEffect(() => {
+    if (isProjectsLoading) {
+      const timeoutId = setTimeout(() => {
+        setIsProjectsLoading(false);
+      }, 5000);
+
+      return () => clearTimeout(timeoutId);
     }
+  }, [isProjectsLoading]);
 
-    if (!creator) {
-      throw new Error("Creator profile not found");
+  // Project operations
+  const createProject = async (title: string, description: string) => {
+    if (!user || !creator) {
+      throw new Error("You must be logged in to create a project");
     }
 
     if (!title.trim()) {
@@ -229,42 +155,16 @@ export default function ProfilePage() {
     }
 
     try {
-      // Use the API to create a project
       const data = await apiCreateProject({
         title: title.trim(),
         description: description.trim() || undefined,
       });
 
-      // Refresh projects list
       fetchProjects();
-
       return data;
     } catch (err) {
       console.error("Error creating project:", err);
-
-      // Fallback to direct Supabase query if API fails
-      try {
-        const { data, error } = await supabase
-          .from("projects")
-          .insert([
-            {
-              title: title.trim(),
-              description: description.trim() || null,
-              creator_id: creator.id,
-            },
-          ])
-          .select();
-
-        if (error) throw error;
-        fetchProjects();
-        return data;
-      } catch (fallbackErr) {
-        const errorMessage =
-          fallbackErr instanceof Error
-            ? fallbackErr.message
-            : "Failed to create project";
-        throw new Error(errorMessage);
-      }
+      throw err;
     }
   };
 
@@ -296,32 +196,11 @@ export default function ProfilePage() {
         description: editDescription.trim() || undefined,
       });
 
-      // Refresh projects and close dialog
       fetchProjects();
       setIsEditDialogOpen(false);
     } catch (err) {
       console.error("Error updating project:", err);
-
-      // Fallback to direct Supabase query if API fails
-      try {
-        const { error } = await supabase
-          .from("projects")
-          .update({
-            title: editTitle.trim(),
-            description: editDescription.trim() || null,
-          })
-          .eq("id", editingProject.id);
-
-        if (error) throw error;
-        fetchProjects();
-        setIsEditDialogOpen(false);
-      } catch (fallbackErr) {
-        const errorMessage =
-          fallbackErr instanceof Error
-            ? fallbackErr.message
-            : "Failed to update project";
-        setError(errorMessage);
-      }
+      setError("Failed to update project. Please try again.");
     } finally {
       setIsEditing(false);
     }
@@ -340,54 +219,18 @@ export default function ProfilePage() {
 
     try {
       await apiDeleteProject(deletingProject.id);
-
-      // Refresh projects and close dialog
       fetchProjects();
       setIsDeleteDialogOpen(false);
     } catch (err) {
       console.error("Error deleting project:", err);
-
-      // Fallback to direct Supabase query if API fails
-      try {
-        const { error } = await supabase
-          .from("projects")
-          .delete()
-          .eq("id", deletingProject.id);
-
-        if (error) throw error;
-        fetchProjects();
-        setIsDeleteDialogOpen(false);
-      } catch (fallbackErr) {
-        const errorMessage =
-          fallbackErr instanceof Error
-            ? fallbackErr.message
-            : "Failed to delete project";
-        setError(errorMessage);
-      }
+      setError("Failed to delete project. Please try again.");
     } finally {
       setIsDeleting(false);
     }
   };
 
-  // Add a timeout for creator profile loading
-  useEffect(() => {
-    let timeoutId: NodeJS.Timeout;
-
-    if (isCreatorLoading) {
-      // If creator profile is still loading after 5 seconds, show the UI anyway
-      timeoutId = setTimeout(() => {
-        console.log("Creator profile loading timeout - showing UI anyway");
-        setIsProjectsLoading(false);
-      }, 5000);
-    }
-
-    return () => {
-      if (timeoutId) clearTimeout(timeoutId);
-    };
-  }, [isCreatorLoading]);
-
-  // Replace your existing loading state with this more detailed one
-  if (isLoading && !forceRender) {
+  // Loading state
+  if (status === "loading" && !forceRender) {
     return (
       <div className="container max-w-6xl py-8">
         <div className="flex justify-center items-center h-64">
@@ -411,7 +254,7 @@ export default function ProfilePage() {
     );
   }
 
-  // Enhance the no user state to allow time for session refresh
+  // Not authenticated state
   if (!user && !forceRender) {
     return (
       <div className="container max-w-6xl py-8">
@@ -470,9 +313,24 @@ export default function ProfilePage() {
                 </p>
               </div>
             ) : (
-              <p className="text-muted-foreground">
-                Creator profile not found. Please complete onboarding.
-              </p>
+              <div className="space-y-2">
+                <p className="text-muted-foreground">
+                  Creator profile not found. Please complete onboarding.
+                </p>
+                {user && (
+                  <p>
+                    <span className="text-muted-foreground">Email:</span>{" "}
+                    <span className="font-medium">{user.email}</span>
+                  </p>
+                )}
+                <Button
+                  size="sm"
+                  onClick={() => router.push("/onboarding")}
+                  className="mt-2"
+                >
+                  Complete Onboarding
+                </Button>
+              </div>
             )}
             <Button
               variant="outline"
@@ -578,8 +436,15 @@ export default function ProfilePage() {
             <div className="bg-muted/30 border rounded-lg p-8 text-center">
               <h3 className="font-medium mb-2">No Projects Yet</h3>
               <p className="text-muted-foreground mb-4">
-                Create your first project to get started
+                {creator
+                  ? "Create your first project to get started"
+                  : "Complete onboarding to create projects"}
               </p>
+              {!creator && !isCreatorLoading && (
+                <Button onClick={() => router.push("/onboarding")} size="sm">
+                  Complete Onboarding
+                </Button>
+              )}
             </div>
           )}
         </div>

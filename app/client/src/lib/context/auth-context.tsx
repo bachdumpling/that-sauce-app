@@ -5,7 +5,6 @@ import {
   useEffect,
   useState,
   useCallback,
-  useReducer,
 } from "react";
 import { useRouter } from "next/navigation";
 import { User } from "@supabase/supabase-js";
@@ -17,57 +16,13 @@ interface Creator {
   profile_id: string;
 }
 
-// Define clear auth states
-type AuthState =
-  | { status: "INITIAL" }
-  | { status: "LOADING" }
-  | { status: "AUTHENTICATED"; user: User; creator: Creator | null }
-  | { status: "UNAUTHENTICATED" }
-  | { status: "ERROR"; error: string };
-
-// Define auth actions
-type AuthAction =
-  | { type: "AUTH_LOADING" }
-  | { type: "AUTH_SUCCESS"; user: User; creator: Creator | null }
-  | { type: "AUTH_FAILURE"; error?: string }
-  | { type: "AUTH_LOGOUT" }
-  | { type: "SET_CREATOR"; creator: Creator | null };
-
-// Auth reducer for state management
-function authReducer(state: AuthState, action: AuthAction): AuthState {
-  switch (action.type) {
-    case "AUTH_LOADING":
-      return { status: "LOADING" };
-    case "AUTH_SUCCESS":
-      return {
-        status: "AUTHENTICATED",
-        user: action.user,
-        creator: action.creator,
-      };
-    case "AUTH_FAILURE":
-      return {
-        status: "UNAUTHENTICATED",
-      };
-    case "AUTH_LOGOUT":
-      return { status: "UNAUTHENTICATED" };
-    case "SET_CREATOR":
-      if (state.status !== "AUTHENTICATED") {
-        return state;
-      }
-      return {
-        ...state,
-        creator: action.creator,
-      };
-    default:
-      return state;
-  }
-}
+// Simplified auth status
+type AuthStatus = "loading" | "authenticated" | "unauthenticated";
 
 interface AuthContextType {
-  state: AuthState;
+  status: AuthStatus;
   user: User | null;
   creator: Creator | null;
-  isLoading: boolean;
   isCreatorLoading: boolean;
   login: (email: string) => Promise<void>;
   googleLogin: () => Promise<void>;
@@ -75,6 +30,7 @@ interface AuthContextType {
   checkCreator: () => Promise<Creator | null>;
   setupCreator: (username: string) => Promise<void>;
   refreshSession: () => Promise<void>;
+  isLoading: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -121,78 +77,74 @@ const getStoredSessionData = () => {
 };
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [state, dispatch] = useReducer(authReducer, { status: "INITIAL" });
+  // Core auth state
+  const [status, setStatus] = useState<AuthStatus>("loading");
+  const [user, setUser] = useState<User | null>(null);
+
+  // Profile state (separate from core auth)
+  const [creator, setCreator] = useState<Creator | null>(null);
   const [isCreatorLoading, setIsCreatorLoading] = useState(false);
+
   const router = useRouter();
 
-  // Derived state for backward compatibility
-  const user = state.status === "AUTHENTICATED" ? state.user : null;
-  const creator = state.status === "AUTHENTICATED" ? state.creator : null;
-  const isLoading = state.status === "LOADING" || state.status === "INITIAL";
-
-  // Safety timeout to ensure we're never stuck in loading
+  // Safety timeout to prevent getting stuck in loading
   useEffect(() => {
-    if (state.status === "LOADING") {
+    if (status === "loading") {
       const safetyTimeout = setTimeout(() => {
         console.warn(
           "Safety timeout triggered: forcing auth state to resolve after 10s"
         );
+
         // Try to recover from stored session
         const storedSession = getStoredSessionData();
         if (storedSession?.user) {
-          dispatch({
-            type: "AUTH_SUCCESS",
-            user: storedSession.user,
-            creator: storedSession.creator,
-          });
+          setUser(storedSession.user);
+          setCreator(storedSession.creator);
+          setStatus("authenticated");
         } else {
-          dispatch({ type: "AUTH_FAILURE" });
+          setStatus("unauthenticated");
         }
       }, 10000);
 
       return () => clearTimeout(safetyTimeout);
     }
-  }, [state.status]);
+  }, [status]);
 
-  const checkCreatorWithUser = useCallback(
-    async (currentUser: User) => {
-      if (!currentUser?.id) return null;
+  const checkCreatorWithUser = useCallback(async (currentUser: User) => {
+    if (!currentUser?.id) return null;
 
-      try {
-        setIsCreatorLoading(true);
-        const { data, error } = await supabase
-          .from("creators")
-          .select("id, username, profile_id")
-          .eq("profile_id", currentUser.id)
-          .single();
+    try {
+      setIsCreatorLoading(true);
+      const { data, error } = await supabase
+        .from("creators")
+        .select("id, username, profile_id")
+        .eq("profile_id", currentUser.id)
+        .single();
 
-        if (error) {
-          console.error("Error checking creator:", error);
-          return null;
-        }
-
-        // Update creator in state
-        dispatch({ type: "SET_CREATOR", creator: data });
-        return data;
-      } catch (error) {
+      if (error) {
         console.error("Error checking creator:", error);
         return null;
-      } finally {
-        setIsCreatorLoading(false);
       }
-    },
-    [dispatch]
-  );
+
+      setCreator(data);
+      return data;
+    } catch (error) {
+      console.error("Error checking creator:", error);
+      return null;
+    } finally {
+      setIsCreatorLoading(false);
+    }
+  }, []);
 
   const checkCreator = useCallback(async () => {
-    if (state.status !== "AUTHENTICATED") return null;
-    return checkCreatorWithUser(state.user);
-  }, [state, checkCreatorWithUser]);
+    if (!user) return null;
+    return checkCreatorWithUser(user);
+  }, [user, checkCreatorWithUser]);
 
   const refreshSession = async () => {
     try {
       // Set loading state
-      dispatch({ type: "AUTH_LOADING" });
+      setStatus("loading");
       console.log("Refreshing session...");
 
       // Add a timeout to prevent getting stuck forever
@@ -200,244 +152,147 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setTimeout(() => reject(new Error("Session refresh timeout")), 20000)
       );
 
-      let sessionData;
-      let sessionError;
-
       try {
         // Race the session refresh with a timeout
-        const result = await Promise.race([
+        const { data, error } = await Promise.race([
           supabase.auth.refreshSession(),
           timeoutPromise,
         ]);
-        sessionData = result.data;
-        sessionError = result.error;
-      } catch (error) {
-        console.error("Error in session refresh race:", error);
-        sessionError = error;
-      }
 
-      if (sessionError) {
-        console.error("Error refreshing session:", sessionError);
+        if (error) {
+          console.error("Error refreshing session:", error);
 
-        // Try to retrieve from storage as fallback
-        const storedSession = getStoredSessionData();
-        if (storedSession?.user) {
-          console.log("Using stored session as fallback");
-          dispatch({
-            type: "AUTH_SUCCESS",
-            user: storedSession.user,
-            creator: storedSession.creator,
-          });
+          // Try to retrieve from storage as fallback
+          const storedSession = getStoredSessionData();
+          if (storedSession?.user) {
+            console.log("Using stored session as fallback");
+            setUser(storedSession.user);
+            setCreator(storedSession.creator);
+            setStatus("authenticated");
+            return;
+          }
 
-          // Check creator profile asynchronously
-          setTimeout(() => checkCreatorWithUser(storedSession.user), 0);
+          setStatus("unauthenticated");
           return;
         }
 
-        dispatch({ type: "AUTH_FAILURE", error: "Session refresh failed" });
-        return;
-      }
+        const currentUser = data.session?.user ?? null;
 
-      const currentUser = sessionData?.session?.user ?? null;
-      console.log(
-        "Session refresh result:",
-        currentUser ? "User found" : "No user"
-      );
-
-      if (!currentUser) {
-        console.log("No user found after session refresh");
-        dispatch({ type: "AUTH_FAILURE" });
-        storeSessionData(null, null);
-        return;
-      }
-
-      // Set authenticated state immediately
-      dispatch({ type: "AUTH_SUCCESS", user: currentUser, creator: null });
-
-      // Fetch profile role after refresh
-      try {
-        const { data: profile, error: profileError } = await supabase
-          .from("profiles")
-          .select("role")
-          .eq("id", currentUser.id)
-          .single();
-
-        if (profileError) {
-          console.error("Error fetching profile after refresh:", profileError);
-        } else if (profile) {
-          console.log("Profile role fetched successfully");
-          const userWithRole = {
-            ...currentUser,
-            role: profile.role,
-          };
-
-          // Update user with role
-          dispatch({ type: "AUTH_SUCCESS", user: userWithRole, creator });
-          storeSessionData(userWithRole, creator);
+        if (!currentUser) {
+          console.log("No user found after session refresh");
+          setUser(null);
+          setCreator(null);
+          setStatus("unauthenticated");
+          storeSessionData(null, null);
+          return;
         }
 
-        // Check creator profile asynchronously
-        checkCreatorWithUser(currentUser)
-          .then((creatorData) => {
-            console.log(
-              "Creator profile check completed:",
-              creatorData ? "Found" : "Not found"
-            );
+        // Set authenticated state immediately
+        console.log("Session refreshed successfully");
+        setUser(currentUser);
+        setStatus("authenticated");
+
+        // Fetch profile data asynchronously
+        Promise.all([
+          // Fetch profile role
+          supabase
+            .from("profiles")
+            .select("role")
+            .eq("id", currentUser.id)
+            .single()
+            .then(({ data: profile, error: profileError }) => {
+              if (profileError) {
+                console.error("Error fetching profile:", profileError);
+                return;
+              }
+
+              if (profile) {
+                const userWithRole = {
+                  ...currentUser,
+                  role: profile.role,
+                };
+                setUser(userWithRole);
+                storeSessionData(userWithRole, creator);
+              }
+            }),
+
+          // Check creator profile
+          checkCreatorWithUser(currentUser).then((creatorData) => {
             if (creatorData) {
               storeSessionData(currentUser, creatorData);
             }
-          })
-          .catch((error) => {
-            console.error("Error checking creator profile:", error);
-          });
-      } catch (profileError) {
-        console.error("Error fetching profile after refresh:", profileError);
+          }),
+        ]).catch((error) => {
+          console.error("Error in profile data fetch:", error);
+        });
+      } catch (error) {
+        console.error("Error in session refresh:", error);
+        setStatus("unauthenticated");
       }
     } catch (error) {
       console.error("Unexpected error refreshing session:", error);
-      if (error instanceof Error) {
-        console.error(`Error name: ${error.name}, message: ${error.message}`);
-      }
-      dispatch({ type: "AUTH_FAILURE", error: "Unexpected error" });
+      setStatus("unauthenticated");
     }
   };
 
-  const checkUser = async () => {
-    try {
-      dispatch({ type: "AUTH_LOADING" });
-      console.log("Starting checkUser...");
+  // Initial session check
+  useEffect(() => {
+    const checkSession = async () => {
+      try {
+        console.log("Checking initial session...");
+        const { data, error } = await supabase.auth.getSession();
 
-      const {
-        data: { session },
-        error: sessionError,
-      } = await supabase.auth.getSession();
-
-      if (sessionError) {
-        console.error("Error getting session:", sessionError);
-
-        // Try to use stored session as fallback
-        const storedSession = getStoredSessionData();
-        if (storedSession?.user) {
-          console.log("Using stored session as fallback during checkUser");
-          dispatch({
-            type: "AUTH_SUCCESS",
-            user: storedSession.user,
-            creator: storedSession.creator,
-          });
-
-          // Check creator profile asynchronously
-          setTimeout(() => checkCreatorWithUser(storedSession.user), 0);
+        if (error) {
+          console.error("Error getting initial session:", error);
+          setStatus("unauthenticated");
           return;
         }
 
-        dispatch({ type: "AUTH_FAILURE" });
-        return;
-      }
+        const currentUser = data.session?.user ?? null;
 
-      const currentUser = session?.user ?? null;
-      console.log("checkUser result:", currentUser ? "User found" : "No user");
+        if (currentUser) {
+          console.log("User found in initial session");
+          setUser(currentUser);
+          setStatus("authenticated");
 
-      if (!currentUser) {
-        dispatch({ type: "AUTH_FAILURE" });
-        storeSessionData(null, null);
-        return;
-      }
-
-      // Set authenticated state immediately
-      dispatch({ type: "AUTH_SUCCESS", user: currentUser, creator: null });
-
-      try {
-        // Fetch profile role
-        const { data: profile, error } = await supabase
-          .from("profiles")
-          .select("role")
-          .eq("id", currentUser.id)
-          .single();
-
-        if (error) {
-          console.error("Error fetching profile role:", error);
-        } else if (profile) {
-          console.log("Profile role fetched successfully in checkUser");
-          // Create a new user object with the role
-          const userWithRole = {
-            ...currentUser,
-            role: profile.role,
-          };
-
-          // Update user with role
-          dispatch({ type: "AUTH_SUCCESS", user: userWithRole, creator });
+          // Fetch profile data asynchronously
+          checkCreatorWithUser(currentUser);
+        } else {
+          console.log("No user in initial session");
+          setStatus("unauthenticated");
         }
-
-        // Check creator profile asynchronously
-        checkCreatorWithUser(currentUser).catch((error) => {
-          console.error("Error checking creator profile in checkUser:", error);
-        });
       } catch (error) {
-        console.error("Error in user profile check:", error);
+        console.error("Error in initial session check:", error);
+        setStatus("unauthenticated");
       }
-    } catch (error) {
-      console.error("Error checking user:", error);
-      dispatch({ type: "AUTH_FAILURE" });
-      storeSessionData(null, null);
-    }
-  };
+    };
 
-  useEffect(() => {
-    // Check current session
-    checkUser();
+    checkSession();
 
     // Listen for auth changes
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log("Auth state changed:", event);
-      const currentUser = session?.user ?? null;
 
-      if (currentUser) {
-        // Set authenticated state immediately
-        dispatch({ type: "AUTH_SUCCESS", user: currentUser, creator: null });
-
-        try {
-          // Fetch profile role on auth state change
-          const { data: profile, error } = await supabase
-            .from("profiles")
-            .select("role")
-            .eq("id", currentUser.id)
-            .single();
-
-          if (!error && profile) {
-            // Update user with role
-            const userWithRole = {
-              ...currentUser,
-              role: profile.role,
-            };
-            dispatch({
-              type: "AUTH_SUCCESS",
-              user: userWithRole,
-              creator: null,
-            });
-          }
-
-          const creatorData = await checkCreatorWithUser(currentUser);
-          if (event === "SIGNED_IN" && !creatorData) {
-            router.push("/onboarding");
-          }
-        } catch (error) {
-          console.error("Error in auth state change:", error);
-        }
+      if (session?.user) {
+        setUser(session.user);
+        setStatus("authenticated");
+        checkCreatorWithUser(session.user);
       } else {
-        dispatch({ type: "AUTH_FAILURE" });
-        storeSessionData(null, null);
+        setUser(null);
+        setCreator(null);
+        setStatus("unauthenticated");
       }
     });
 
     return () => {
       subscription.unsubscribe();
     };
-  }, [router, checkCreatorWithUser]);
+  }, [checkCreatorWithUser]);
 
   const setupCreator = async (username: string) => {
-    if (state.status !== "AUTHENTICATED") throw new Error("No user found");
+    if (!user) throw new Error("No user found");
 
     if (!username.trim()) {
       throw new Error("Username cannot be empty");
@@ -445,7 +300,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     try {
       const { error } = await supabase.rpc("setup_creator_profile", {
-        p_profile_id: state.user.id,
+        p_profile_id: user.id,
         p_username: username,
       });
 
@@ -492,29 +347,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = async () => {
     try {
-      dispatch({ type: "AUTH_LOADING" });
+      setStatus("loading");
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
 
-      dispatch({ type: "AUTH_LOGOUT" });
+      setUser(null);
+      setCreator(null);
+      setStatus("unauthenticated");
       storeSessionData(null, null);
       router.push("/");
     } catch (error) {
       console.error("Error during logout:", error);
       // Force client-side cleanup even if API call fails
-      dispatch({ type: "AUTH_LOGOUT" });
+      setUser(null);
+      setCreator(null);
+      setStatus("unauthenticated");
       storeSessionData(null, null);
       router.push("/");
     }
   };
 
+  // Derived value for backward compatibility
+  const isLoading = status === "loading";
+
   return (
     <AuthContext.Provider
       value={{
-        state,
+        status,
         user,
         creator,
-        isLoading,
         isCreatorLoading,
         login,
         googleLogin,
@@ -522,6 +383,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         checkCreator,
         setupCreator,
         refreshSession,
+        isLoading,
       }}
     >
       {children}

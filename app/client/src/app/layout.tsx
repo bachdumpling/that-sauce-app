@@ -9,14 +9,14 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
-      <body suppressHydrationWarning={true}>
-        <AuthProvider>
+    <AuthProvider>
+      <html lang="en">
+        <body suppressHydrationWarning={true}>
           <Header />
           <main className="container mx-auto px-4 py-8">{children}</main>
-        </AuthProvider>
-        <Analytics />
-      </body>
-    </html>
+          <Analytics />
+        </body>
+      </html>
+    </AuthProvider>
   );
 }
