@@ -439,7 +439,7 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="container max-w-7xl py-8">
+    <div className="container max-w-7xl mx-auto py-8">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
         {/* Left Column - User Info & Create Project */}
         <div className="md:col-span-1 space-y-6">
