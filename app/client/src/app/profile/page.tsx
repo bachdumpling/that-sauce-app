@@ -28,12 +28,40 @@ import {
 } from "@/components/ui/dialog";
 
 export default function ProfilePage() {
-  const { user, creator, isLoading, isCreatorLoading, logout, refreshSession } = useAuth();
-  console.log("isLoading", isLoading, "isCreatorLoading", isCreatorLoading);
+  const {
+    state,
+    user,
+    creator,
+    isLoading,
+    isCreatorLoading,
+    logout,
+    refreshSession,
+  } = useAuth();
+  console.log(
+    "Auth state:",
+    state.status,
+    "isCreatorLoading",
+    isCreatorLoading
+  );
   const [projects, setProjects] = useState<Project[]>([]);
   const [isProjectsLoading, setIsProjectsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
+
+  // Force render after a timeout even if isLoading is stuck
+  const [forceRender, setForceRender] = useState(false);
+
+  useEffect(() => {
+    // If isLoading is true for more than 8 seconds, force render the UI
+    const timeoutId = setTimeout(() => {
+      if (isLoading) {
+        console.warn("Profile page: Force rendering UI after timeout");
+        setForceRender(true);
+      }
+    }, 8000);
+
+    return () => clearTimeout(timeoutId);
+  }, [isLoading]);
 
   // Edit project state
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -47,36 +75,62 @@ export default function ProfilePage() {
   const [deletingProject, setDeletingProject] = useState<Project | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // Add this at the beginning of your component
   useEffect(() => {
     const initializeAuth = async () => {
       try {
-        if (!user && !isLoading) {
+        console.log("Profile page: initializeAuth called", {
+          authState: state.status,
+          userExists: !!user,
+          isLoading,
+          isCreatorLoading,
+          forceRender,
+        });
+
+        // If we're forcing render, don't try to refresh
+        if (forceRender) {
+          console.log(
+            "Profile page: Force render active, skipping auth refresh"
+          );
+          return;
+        }
+
+        // If unauthenticated and not loading, try to refresh session
+        if (state.status === "UNAUTHENTICATED" && !isLoading) {
           console.log("Profile page: No user detected, refreshing session");
-          await refreshSession();
+          try {
+            await refreshSession();
+            console.log("Profile page: Session refresh completed");
+          } catch (refreshError) {
+            console.error(
+              "Profile page: Error during session refresh",
+              refreshError
+            );
+          }
 
           // Wait a bit and check again before redirecting
           setTimeout(() => {
-            if (!user) {
+            if (state.status === "UNAUTHENTICATED" && !forceRender) {
               console.log(
                 "Profile page: Still no user after refresh, redirecting to login"
               );
               router.push("/auth/login");
             }
-          }, 2000); // Increased from 1000ms to 2000ms to give more time
+          }, 2000);
         } else {
           console.log("Profile page: Auth state - ", {
+            status: state.status,
             user: user ? "logged in" : "not logged in",
             creator: creator ? "has creator profile" : "no creator profile",
             isLoading,
-            isCreatorLoading
+            isCreatorLoading,
+            forceRender,
           });
         }
       } catch (error) {
         console.error("Profile page: Error during auth initialization", error);
-        
-        // Only redirect if we're sure there's no user
-        if (!user && !isLoading) {
+
+        // Only redirect if we're sure there's no user and not forcing render
+        if (state.status === "UNAUTHENTICATED" && !isLoading && !forceRender) {
           console.log("Profile page: Redirecting to login after auth error");
           router.push("/auth/login");
         }
@@ -84,18 +138,28 @@ export default function ProfilePage() {
     };
 
     initializeAuth();
-  }, [refreshSession, user, isLoading, router, creator, isCreatorLoading]);
+  }, [
+    refreshSession,
+    state.status,
+    user,
+    isLoading,
+    router,
+    creator,
+    isCreatorLoading,
+    forceRender,
+  ]);
 
   // Redirect to login if not authenticated
   useEffect(() => {
-    if (!isLoading && !user) {
+    if (!isLoading && state.status === "UNAUTHENTICATED" && !forceRender) {
+      console.log("Profile page: No user after loading, redirecting to login");
       router.push("/auth/login");
     }
-  }, [user, isLoading, router]);
+  }, [state.status, isLoading, router, forceRender]);
 
   const fetchProjects = useCallback(async () => {
     if (!user) return;
-    
+
     setIsProjectsLoading(true);
     setError(null);
 
@@ -115,7 +179,7 @@ export default function ProfilePage() {
           setIsProjectsLoading(false);
           return;
         }
-        
+
         const { data: projectsData, error: projectsError } = await supabase
           .from("projects")
           .select("*")
@@ -137,11 +201,13 @@ export default function ProfilePage() {
       // If creator is available, fetch projects
       if (creator) {
         fetchProjects();
-      } 
+      }
       // If creator is still loading, wait for it
       else if (isCreatorLoading) {
-        console.log("Waiting for creator profile to load before fetching projects");
-      } 
+        console.log(
+          "Waiting for creator profile to load before fetching projects"
+        );
+      }
       // If creator is not loading and not available, show empty state
       else {
         setIsProjectsLoading(false);
@@ -306,7 +372,7 @@ export default function ProfilePage() {
   // Add a timeout for creator profile loading
   useEffect(() => {
     let timeoutId: NodeJS.Timeout;
-    
+
     if (isCreatorLoading) {
       // If creator profile is still loading after 5 seconds, show the UI anyway
       timeoutId = setTimeout(() => {
@@ -314,14 +380,14 @@ export default function ProfilePage() {
         setIsProjectsLoading(false);
       }, 5000);
     }
-    
+
     return () => {
       if (timeoutId) clearTimeout(timeoutId);
     };
   }, [isCreatorLoading]);
 
   // Replace your existing loading state with this more detailed one
-  if (isLoading) {
+  if (isLoading && !forceRender) {
     return (
       <div className="container max-w-6xl py-8">
         <div className="flex justify-center items-center h-64">
@@ -331,6 +397,14 @@ export default function ProfilePage() {
             <p className="text-xs text-muted-foreground">
               Please wait while we check your login status
             </p>
+            <Button
+              variant="link"
+              size="sm"
+              onClick={() => setForceRender(true)}
+              className="mt-2"
+            >
+              Continue anyway
+            </Button>
           </div>
         </div>
       </div>
@@ -338,7 +412,7 @@ export default function ProfilePage() {
   }
 
   // Enhance the no user state to allow time for session refresh
-  if (!user) {
+  if (!user && !forceRender) {
     return (
       <div className="container max-w-6xl py-8">
         <div className="flex justify-center items-center h-64">
@@ -350,6 +424,14 @@ export default function ProfilePage() {
             <div className="flex justify-center">
               <Loader2 className="h-6 w-6 animate-spin text-primary" />
             </div>
+            <Button
+              variant="link"
+              size="sm"
+              onClick={() => router.push("/auth/login")}
+              className="mt-4"
+            >
+              Go to login
+            </Button>
           </div>
         </div>
       </div>
@@ -357,7 +439,7 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="container max-w-6xl py-8">
+    <div className="container max-w-7xl py-8">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
         {/* Left Column - User Info & Create Project */}
         <div className="md:col-span-1 space-y-6">
@@ -408,17 +490,16 @@ export default function ProfilePage() {
             ) : isCreatorLoading ? (
               <div className="text-center py-4">
                 <Loader2 className="h-5 w-5 animate-spin mx-auto mb-2" />
-                <p className="text-sm text-muted-foreground">Loading creator profile...</p>
+                <p className="text-sm text-muted-foreground">
+                  Loading creator profile...
+                </p>
               </div>
             ) : (
               <div className="text-center py-4">
                 <p className="text-sm text-muted-foreground mb-2">
                   You need a creator profile to create projects
                 </p>
-                <Button 
-                  onClick={() => router.push('/onboarding')}
-                  size="sm"
-                >
+                <Button onClick={() => router.push("/onboarding")} size="sm">
                   Complete Onboarding
                 </Button>
               </div>
