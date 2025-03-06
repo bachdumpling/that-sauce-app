@@ -1,10 +1,8 @@
 import { signInWithGoogleAction, signInWithOTPAction } from "@/app/actions";
 import { FormMessage, Message } from "@/components/form-message";
-import { SubmitButton } from "@/components/submit-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import Link from "next/link";
-import { SmtpMessage } from "../smtp-message";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -30,13 +28,13 @@ export default async function Signup(props: {
             Sign in
           </Link>
         </p>
-        
+
         <Tabs defaultValue="google" className="mt-6">
           <TabsList className="grid grid-cols-2 w-full">
             <TabsTrigger value="google">Google</TabsTrigger>
             <TabsTrigger value="otp">Email OTP</TabsTrigger>
           </TabsList>
-          
+
           {/* Google sign up */}
           <TabsContent value="google">
             <div className="flex flex-col mt-4">
@@ -50,16 +48,20 @@ export default async function Signup(props: {
               </p>
             </div>
           </TabsContent>
-          
+
           {/* Email OTP sign up */}
           <TabsContent value="otp">
             <form className="flex flex-col mt-4">
               <div className="flex flex-col gap-2 [&>input]:mb-3">
                 <Label htmlFor="email">Email</Label>
                 <Input name="email" placeholder="you@example.com" required />
-                <SubmitButton pendingText="Sending link..." formAction={signInWithOTPAction}>
+                <Button
+                  type="submit"
+                  className="w-full"
+                  formAction={signInWithOTPAction}
+                >
                   Send Magic Link
-                </SubmitButton>
+                </Button>
                 <p className="text-xs text-muted-foreground text-center">
                   We'll send you a login link to your email
                 </p>
@@ -67,10 +69,9 @@ export default async function Signup(props: {
             </form>
           </TabsContent>
         </Tabs>
-        
+
         <FormMessage message={searchParams} className="mt-4" />
       </div>
-      <SmtpMessage />
     </>
   );
 }
