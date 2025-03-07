@@ -16,7 +16,7 @@ router.get(
   "/creators",
   cacheMiddleware(
     300,
-    (req) => `creators_list_${req.query.page || 1}_${req.query.limit || 10}`
+    (req) => `creators_list_${req.query.page || 1}_${req.query.limit || 10}_${req.query.search || ""}`
   ),
   adminController.listCreators
 );

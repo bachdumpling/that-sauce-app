@@ -48,6 +48,8 @@ export class AdminController {
       const offset = (page - 1) * limit;
       const searchQuery = req.query.search as string;
 
+      logger.info(`Listing creators - Page: ${page}, Limit: ${limit}, Search: "${searchQuery || ''}"`);
+
       // Build the query
       let query = supabase.from("creators").select(
         `
@@ -61,7 +63,11 @@ export class AdminController {
 
       // Apply search filter if provided
       if (searchQuery && searchQuery.trim() !== "") {
-        query = query.ilike("username", `%${searchQuery}%`);
+        const trimmedSearch = searchQuery.trim();
+        logger.info(`Applying search filter: "${trimmedSearch}"`);
+        
+        // Search in multiple columns with improved pattern
+        query = query.or(`username.ilike.%${trimmedSearch}%,location.ilike.%${trimmedSearch}%`);
       }
 
       // Apply pagination and ordering
@@ -73,7 +79,12 @@ export class AdminController {
         .range(offset, offset + limit - 1)
         .order("username", { ascending: true });
 
-      if (error) throw error;
+      if (error) {
+        logger.error(`Error fetching creators: ${error.message}`, { error });
+        throw error;
+      }
+
+      logger.info(`Found ${count || 0} creators matching criteria`);
 
       // Step 2: Fetch preview images for each creator
       if (creators && creators.length > 0) {
@@ -272,7 +283,7 @@ export class AdminController {
       // First check if the creator exists
       const { data: creator, error: fetchError } = await supabase
         .from("creators")
-        .select("id, username")
+        .select("*")
         .eq("id", id)
         .single();
 
@@ -283,23 +294,48 @@ export class AdminController {
         });
       }
 
-      // Update the creator status to rejected
-      const { error: updateError } = await supabase
-        .from("creators")
-        .update({
-          status: "rejected",
+      // Begin a transaction to move the creator to unqualified_creators table
+      const { error: insertError } = await supabase
+        .from("unqualified_creators")
+        .insert({
+          profile_id: creator.profile_id,
+          username: creator.username,
+          location: creator.location,
+          bio: creator.bio,
+          primary_role: creator.primary_role,
+          social_links: creator.social_links,
+          years_of_experience: creator.years_of_experience,
           rejection_reason: reason,
+          rejected_by: req?.user?.id,
           rejected_at: new Date().toISOString(),
-        })
-        .eq("id", id);
-
-      if (updateError) {
-        logger.error(`Error rejecting creator: ${updateError.message}`, {
-          updateError,
         });
+
+      if (insertError) {
+        logger.error(
+          `Error inserting into unqualified_creators: ${insertError.message}`,
+          {
+            insertError,
+          }
+        );
         return res.status(500).json({
           success: false,
           error: "Failed to reject creator",
+        });
+      }
+
+      // Delete the creator from the creators table
+      const { error: deleteError } = await supabase
+        .from("creators")
+        .delete()
+        .eq("id", id);
+
+      if (deleteError) {
+        logger.error(`Error deleting from creators: ${deleteError.message}`, {
+          deleteError,
+        });
+        return res.status(500).json({
+          success: false,
+          error: "Failed to remove creator after rejection",
         });
       }
 
@@ -781,7 +817,7 @@ export class AdminController {
       // Invalidate cache
       invalidateCache(`admin_project_details_${id}`);
       invalidateCache("admin_projects_list_");
-      
+
       // Also invalidate the creator details cache
       if (project && project.creator_id) {
         invalidateCache(`creator_details_${project.creator_id}`);
@@ -841,14 +877,14 @@ export class AdminController {
 
       // Invalidate cache
       invalidateCache(`admin_project_details_${projectId}`);
-      
+
       // Also invalidate the creator details cache since it contains project data
       const { data: project } = await supabase
         .from("projects")
         .select("creator_id")
         .eq("id", projectId)
         .single();
-        
+
       if (project && project.creator_id) {
         invalidateCache(`creator_details_${project.creator_id}`);
       }

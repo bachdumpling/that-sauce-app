@@ -12,6 +12,14 @@ const nextConfig: NextConfig = {
         protocol: "https",
         hostname: "tzkhvlquyavzxlrvujhy.supabase.co",
       },
+      {
+        protocol: "https",
+        hostname: "i.vimeocdn.com",
+      },
+      {
+        protocol: "https",
+        hostname: "muse-bucket.s3.us-east-2.amazonaws.com",
+      },
     ],
   },
   eslint: {

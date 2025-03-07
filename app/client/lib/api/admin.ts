@@ -31,26 +31,44 @@ export interface CreatorsResponse {
 export const fetchCreators = async (page = 1, limit = 10, search?: string) => {
   const params: Record<string, any> = { page, limit };
 
-  // Add search parameter if provided
-  if (search && search.trim() !== "") {
+  // Only add search parameter if it's defined and not empty
+  if (search !== undefined && search !== null && search.trim() !== "") {
     params.search = search.trim();
   }
 
-  const response = await apiRequest.get<CreatorsResponse>(
-    API_ENDPOINTS.admin.creators,
-    { params }
-  );
+  // Add a timestamp to prevent browser caching
+  params._t = Date.now();
+
+  console.log("API Request params:", JSON.stringify(params));
+
+  const response = await apiRequest.get<any>(API_ENDPOINTS.admin.creators, {
+    params,
+  });
+
+  if (response.data && response.data.success) {
+    console.log(
+      `API Response: Success, Creators: ${response.data.data.creators.length}`
+    );
+  } else {
+    console.log(
+      `API Response: Error - ${response.data?.error || "Unknown error"}`
+    );
+  }
+
   return response.data;
 };
 
 /**
  * Fetch a single creator's details
  */
-export const fetchCreatorDetails = async (creatorId: string, bustCache = false) => {
+export const fetchCreatorDetails = async (
+  creatorId: string,
+  bustCache = false
+) => {
   try {
     // Add a timestamp parameter to bust the cache if needed
     const params = bustCache ? { _t: Date.now() } : {};
-    
+
     const response = await apiRequest.get<{
       success: boolean;
       data: Creator;

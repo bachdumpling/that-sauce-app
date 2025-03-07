@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import React, { useState, useEffect, useRef, useCallback } from "react";
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -41,45 +41,97 @@ const CreatorManagementPage = () => {
   const [imageModalOpen, setImageModalOpen] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
+  const pathname = usePathname();
+  const previousSearchRef = useRef("");
+  const previousPageRef = useRef(1);
 
   // Fetch creators from the API
-  const loadCreators = async (page = 1, search = searchQuery) => {
-    setLoading(true);
-    setError(null);
+  const loadCreators = useCallback(
+    async (page = 1, search = searchQuery) => {
+      // Normalize the search parameter - explicitly set to undefined if empty
+      const normalizedSearch =
+        search === undefined ? undefined : (search || "").trim();
+      const searchParam =
+        normalizedSearch === "" ? undefined : normalizedSearch;
 
-    try {
-      const response = await fetchCreators(page, pagination.limit, search);
+      console.log(
+        `Loading creators - Page: ${page}, Search: "${normalizedSearch || "ALL"}", Timestamp: ${Date.now()}`
+      );
 
-      if (response.success) {
-        setCreators(response.data.creators);
-        setPagination({
-          page: response.data.pagination.page,
-          limit: response.data.pagination.limit,
-          total: response.data.pagination.total,
-          totalPages:
-            response.data.pagination.totalPages ||
-            response.data.pagination.pages ||
-            0,
-        });
-      } else {
-        throw new Error(response.error || "Failed to fetch creators");
+      setLoading(true);
+      setError(null);
+
+      try {
+        console.log("Before API call to fetchCreators");
+        const response = await fetchCreators(
+          page,
+          pagination.limit,
+          searchParam
+        );
+        console.log("API response received:", response);
+
+        if (response.success) {
+          console.log(`Loaded ${response.data.creators.length} creators`);
+          setCreators(response.data.creators);
+          setPagination({
+            page: response.data.pagination.page,
+            limit: response.data.pagination.limit,
+            total: response.data.pagination.total,
+            totalPages:
+              response.data.pagination.totalPages ||
+              response.data.pagination.pages ||
+              0,
+          });
+        } else {
+          throw new Error(response.error || "Failed to fetch creators");
+        }
+      } catch (err) {
+        console.error("Error fetching creators:", err);
+        setError(err.message || "An error occurred while fetching creators");
+        setCreators([]);
+      } finally {
+        setLoading(false);
       }
-    } catch (err) {
-      console.error("Error fetching creators:", err);
-      setError(err.message || "An error occurred while fetching creators");
-      setCreators([]);
-    } finally {
-      setLoading(false);
-    }
-  };
+    },
+    [searchQuery, pagination.limit]
+  );
 
-  // Initial data load
+  // Initial load when component mounts
+  useEffect(() => {
+    console.log("Component mounted - Initial load triggered");
+    loadCreators(1);
+
+    // Debug: Check if this effect is running
+    return () => {
+      console.log("Component unmounted - Initial load cleanup");
+    };
+  }, [loadCreators]);
+
+  // Initial data load and handle URL parameter changes
   useEffect(() => {
     const page = parseInt(searchParams.get("page") || "1");
     const urlSearchQuery = searchParams.get("search") || "";
 
+    // Only reload if the search parameters have actually changed
+    if (
+      previousSearchRef.current === urlSearchQuery &&
+      previousPageRef.current === page
+    ) {
+      return;
+    }
+
+    console.log(
+      `URL parameters changed - Page: ${page}, Search: "${urlSearchQuery || "ALL"}"`
+    );
+
+    // Update refs with current values
+    previousSearchRef.current = urlSearchQuery;
+    previousPageRef.current = page;
+
     if (urlSearchQuery) {
       setSearchQuery(urlSearchQuery);
+    } else if (searchQuery !== "") {
+      setSearchQuery("");
     }
 
     setPagination((prev) => ({
@@ -87,27 +139,37 @@ const CreatorManagementPage = () => {
       page,
     }));
 
-    loadCreators(page, urlSearchQuery);
-  }, []);
+    // Pass undefined for empty search to ensure we load all creators
+    const searchParam = urlSearchQuery === "" ? undefined : urlSearchQuery;
+    console.log(
+      `Loading creators with searchParam: ${searchParam === undefined ? "undefined (ALL)" : `"${searchParam}"`}`
+    );
+    loadCreators(page, searchParam);
+  }, [searchParams, searchQuery, loadCreators]);
 
   // Handle page change
   const handlePageChange = (newPage) => {
+    // Don't do anything if the page hasn't changed
+    if (previousPageRef.current === newPage) {
+      return;
+    }
+
     setPagination((prev) => ({
       ...prev,
       page: newPage,
     }));
-    loadCreators(newPage);
+
+    // Update ref with new page
+    previousPageRef.current = newPage;
 
     // Update URL with the new page parameter
-    const url = new URL(window.location.href);
-    url.searchParams.set("page", newPage.toString());
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("page", newPage.toString());
 
-    // Keep search parameter if it exists
-    if (searchQuery) {
-      url.searchParams.set("search", searchQuery);
-    }
+    // Use Next.js router to update URL without full page reload
+    router.push(`${pathname}?${params.toString()}`);
 
-    router.push(url.pathname + url.search);
+    loadCreators(newPage, previousSearchRef.current);
 
     // Scroll to top when changing pages
     window.scrollTo(0, 0);
@@ -117,33 +179,62 @@ const CreatorManagementPage = () => {
   const handleSearch = (e) => {
     e.preventDefault();
 
-    // Update URL with search parameter and reset to page 1
-    const url = new URL(window.location.href);
-    url.searchParams.set("page", "1");
+    const trimmedQuery = searchQuery.trim();
 
-    if (searchQuery.trim() !== "") {
-      url.searchParams.set("search", searchQuery);
-    } else {
-      url.searchParams.delete("search");
+    // Don't do anything if the search query hasn't changed
+    if (trimmedQuery === previousSearchRef.current) {
+      return;
     }
 
-    router.push(url.pathname + url.search);
+    console.log(`Searching for: "${trimmedQuery || "ALL"}"`);
 
-    // Load creators with search parameter
-    loadCreators(1, searchQuery);
+    // Update URL with search parameter and reset to page 1
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("page", "1");
+
+    if (trimmedQuery !== "") {
+      params.set("search", trimmedQuery);
+    } else {
+      params.delete("search");
+    }
+
+    // Update refs with new values
+    previousSearchRef.current = trimmedQuery;
+    previousPageRef.current = 1;
+
+    // Use Next.js router to update URL without full page reload
+    router.push(`${pathname}?${params.toString()}`);
+
+    // Pass undefined for empty search to ensure we load all creators
+    const searchParam = trimmedQuery === "" ? undefined : trimmedQuery;
+    console.log(
+      `Searching with searchParam: ${searchParam === undefined ? "undefined (ALL)" : `"${searchParam}"`}`
+    );
+    loadCreators(1, searchParam);
   };
 
   // Clear search
   const clearSearch = () => {
+    // Don't do anything if the search is already empty
+    if (previousSearchRef.current === "") {
+      return;
+    }
+
+    console.log("Clearing search - Loading ALL creators");
+
     setSearchQuery("");
+    previousSearchRef.current = "";
 
     // Update URL to remove search parameter and reset to page 1
-    const url = new URL(window.location.href);
-    url.searchParams.set("page", "1");
-    url.searchParams.delete("search");
-    router.push(url.pathname + url.search);
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("page", "1");
+    params.delete("search");
 
-    loadCreators(1, "");
+    // Use Next.js router to update URL without full page reload
+    router.push(`${pathname}?${params.toString()}`);
+
+    // Load all creators (with undefined search parameter)
+    loadCreators(1, undefined);
   };
 
   // Navigate to creator detail page

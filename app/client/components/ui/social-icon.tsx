@@ -6,8 +6,6 @@ import {
   Youtube,
   Globe,
   Dribbble,
-  Behance,
-  Vimeo,
   type LucideIcon,
 } from "lucide-react";
 
@@ -24,8 +22,8 @@ const PLATFORM_ICONS: Record<string, LucideIcon> = {
   youtube: Youtube,
   website: Globe,
   dribbble: Dribbble,
-  behance: Behance,
-  vimeo: Vimeo,
+  behance: Globe,
+  vimeo: Globe,
 };
 
 export const SocialIcon: React.FC<SocialIconProps> = ({
