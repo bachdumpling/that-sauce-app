@@ -27,6 +27,31 @@ router.get(
   adminController.getCreatorDetails
 );
 
+// New creator management endpoints
+router.put("/creators/:id", adminController.updateCreator);
+router.delete("/creators/:id", adminController.deleteCreator);
+
+// Project management routes
+router.get(
+  "/projects",
+  cacheMiddleware(
+    300,
+    (req) =>
+      `admin_projects_list_${req.query.page || 1}_${req.query.limit || 10}_${req.query.creator_id || "all"}`
+  ),
+  adminController.listProjects
+);
+
+router.get(
+  "/projects/:id",
+  cacheMiddleware(300, (req) => `admin_project_details_${req.params.id}`),
+  adminController.getProjectDetails
+);
+
+router.put("/projects/:id", adminController.updateProject);
+router.delete("/projects/:id", adminController.deleteProject);
+
+// Existing rejection routes
 router.post("/creators/:id/reject", adminController.rejectCreator);
 
 // Rejected creators routes

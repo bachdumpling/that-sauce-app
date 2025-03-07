@@ -39,9 +39,12 @@ export function ProfileClientWrapper({
   creatorError,
   projectsError,
 }: ProfileClientWrapperProps) {
+  const [profile, setProfile] = useState<any>(creator);
   const [projects, setProjects] = useState<Project[]>(initialProjects);
   const [isProjectsLoading, setIsProjectsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(creatorError || projectsError || null);
+  const [error, setError] = useState<string | null>(
+    creatorError || projectsError || null
+  );
   const router = useRouter();
 
   // Project state
@@ -54,6 +57,8 @@ export function ProfileClientWrapper({
   const [deletingProject, setDeletingProject] = useState<Project | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
+  // TODO: Fetch profile
+
   // Fetch projects
   const fetchProjects = useCallback(async () => {
     if (!user) return;
@@ -63,9 +68,9 @@ export function ProfileClientWrapper({
 
     try {
       // Use direct Supabase query through the API
-      const response = await fetch('/api/projects');
+      const response = await fetch("/api/projects");
       if (!response.ok) {
-        throw new Error('Failed to fetch projects');
+        throw new Error("Failed to fetch projects");
       }
       const data = await response.json();
       setProjects(data.projects || []);
@@ -164,13 +169,13 @@ export function ProfileClientWrapper({
 
   const handleLogout = async () => {
     try {
-      const response = await fetch('/api/auth/logout', { method: 'POST' });
+      const response = await fetch("/api/auth/logout", { method: "POST" });
       if (response.ok) {
-        router.push('/sign-in');
+        router.push("/sign-in");
         router.refresh();
       }
     } catch (error) {
-      console.error('Logout error:', error);
+      console.error("Logout error:", error);
     }
   };
 
@@ -225,19 +230,22 @@ export function ProfileClientWrapper({
           {creator ? (
             <div>
               <h3 className="text-lg font-semibold mb-4">Create New Project</h3>
-              <form onSubmit={(e) => {
-                e.preventDefault();
-                const formData = new FormData(e.currentTarget);
-                const title = formData.get('title') as string;
-                const description = formData.get('description') as string;
-                createProject(title, description)
-                  .then(() => {
-                    e.currentTarget.reset();
-                  })
-                  .catch((err) => {
-                    setError(err.message);
-                  });
-              }} className="space-y-4">
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  const formData = new FormData(e.currentTarget);
+                  const title = formData.get("title") as string;
+                  const description = formData.get("description") as string;
+                  createProject(title, description)
+                    .then(() => {
+                      e.currentTarget.reset();
+                    })
+                    .catch((err) => {
+                      setError(err.message);
+                    });
+                }}
+                className="space-y-4"
+              >
                 <div className="space-y-2">
                   <label htmlFor="title" className="text-sm font-medium">
                     Title
@@ -309,10 +317,7 @@ export function ProfileClientWrapper({
         {isProjectsLoading ? (
           <div className="space-y-4">
             {[1, 2, 3].map((n) => (
-              <div
-                key={n}
-                className="bg-muted animate-pulse h-32 rounded-lg"
-              />
+              <div key={n} className="bg-muted animate-pulse h-32 rounded-lg" />
             ))}
           </div>
         ) : projects.length > 0 ? (
@@ -460,4 +465,4 @@ export function ProfileClientWrapper({
       </Dialog>
     </div>
   );
-} 
+}

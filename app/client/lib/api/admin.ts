@@ -1,5 +1,5 @@
 import { apiRequest } from "./client";
-import { API_ENDPOINTS } from "./api"; 
+import { API_ENDPOINTS } from "./api";
 
 export interface Creator {
   id: string;
@@ -11,6 +11,11 @@ export interface Creator {
   status: "pending" | "approved" | "rejected";
   created_at: string;
   updated_at: string;
+  username?: string;
+  location?: string;
+  primary_role?: string[];
+  social_links?: Record<string, string>;
+  years_of_experience?: number;
 }
 
 export interface CreatorsResponse {
@@ -42,10 +47,69 @@ export const fetchCreators = async (page = 1, limit = 10, search?: string) => {
  * Fetch a single creator's details
  */
 export const fetchCreatorDetails = async (creatorId: string) => {
-  const response = await apiRequest.get<Creator>(
-    API_ENDPOINTS.admin.creatorDetails(creatorId)
-  );
-  return response.data;
+  try {
+    const response = await apiRequest.get<{
+      success: boolean;
+      data: Creator;
+      error?: string;
+    }>(API_ENDPOINTS.admin.creatorDetails(creatorId));
+
+    if (response.data.success) {
+      return {
+        success: true,
+        data: response.data.data,
+      };
+    } else {
+      return {
+        success: false,
+        error: response.data.error || "Failed to fetch creator details",
+      };
+    }
+  } catch (error: any) {
+    console.error("Error in fetchCreatorDetails:", error);
+    return {
+      success: false,
+      error: error.message || "Failed to fetch creator details",
+    };
+  }
+};
+
+/**
+ * Update a creator's profile
+ */
+export const updateCreator = async (
+  creatorId: string,
+  data: Partial<Creator>
+) => {
+  try {
+    const response = await apiRequest.put<{
+      success: boolean;
+      message?: string;
+      creator?: Creator;
+      error?: string;
+    }>(API_ENDPOINTS.admin.creatorDetails(creatorId), data);
+
+    console.log("API response:", response);
+
+    if (response.data.success) {
+      return {
+        success: true,
+        message: response.data.message || "Creator updated successfully",
+        creator: response.data.creator,
+      };
+    } else {
+      return {
+        success: false,
+        error: response.data.error || "Failed to update creator",
+      };
+    }
+  } catch (error: any) {
+    console.error("Error in updateCreator:", error);
+    return {
+      success: false,
+      error: error.message || "Failed to update creator",
+    };
+  }
 };
 
 /**
@@ -70,14 +134,33 @@ export const approveCreator = async (creatorId: string) => {
 };
 
 /**
- * Fetch rejected creators with pagination
+ * Fetch rejected creators from the unqualified_creators table
  */
 export const fetchRejectedCreators = async (page = 1, limit = 10) => {
-  const response = await apiRequest.get<CreatorsResponse>(
-    API_ENDPOINTS.admin.rejectedCreators,
-    { params: { page, limit } }
-  );
-  return response.data;
+  try {
+    const response = await apiRequest.get(
+      API_ENDPOINTS.admin.rejectedCreators,
+      { params: { page, limit } }
+    );
+    
+    if (response.data.success) {
+      return {
+        success: true,
+        data: response.data.data,
+      };
+    } else {
+      return {
+        success: false,
+        error: response.data.error || "Failed to fetch unqualified creators",
+      };
+    }
+  } catch (error) {
+    console.error("Error in fetchRejectedCreators:", error);
+    return {
+      success: false,
+      error: error.message || "Failed to fetch unqualified creators",
+    };
+  }
 };
 
 /**

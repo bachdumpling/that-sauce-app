@@ -5,10 +5,10 @@ import { AdminProtection } from "@/components/admin/AdminProtection";
 export default function AdminLayout({ children }: { children: ReactNode }) {
   return (
     <AdminProtection>
-      <div className="min-h-screen max-w-7xl mx-auto bg-background">
+      <div className="container px-4 py-8 mx-auto md:max-w-6xl w-full">
         {children}
-        <Toaster />
       </div>
+      <Toaster />
     </AdminProtection>
   );
 }

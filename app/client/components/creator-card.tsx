@@ -1,8 +1,9 @@
-// src/components/CreatorCard.tsx
+"use client";
+
 import { Globe } from "lucide-react";
 import Link from "next/link";
-import { SocialIcon } from "@/components/ui/SocialIcon";
-import { SearchProjectCard } from "@/components/ProjectCard";
+import { SocialIcon } from "@/components/ui/social-icon";
+import { SearchProjectCard } from "@/components/project-card";
 
 interface CreatorCardProps {
   result: {

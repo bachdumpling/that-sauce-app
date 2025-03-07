@@ -24,8 +24,44 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { fetchRejectedCreators } from "@/lib/api/admin";
 
+// Define the UnqualifiedCreator interface to match the database schema
+interface UnqualifiedCreator {
+  id: string;
+  profile_id?: string;
+  username: string;
+  location?: string;
+  bio?: string;
+  primary_role?: string[];
+  social_links?: Record<string, string>;
+  years_of_experience?: number;
+  created_at?: string;
+  updated_at?: string;
+  rejected_at: string;
+  rejection_reason: string;
+  rejected_by: string;
+  profiles?: {
+    first_name?: string;
+    last_name?: string;
+    email?: string;
+  };
+}
+
+interface RejectedCreatorsResponse {
+  success: boolean;
+  data: {
+    creators: UnqualifiedCreator[];
+    pagination: {
+      page: number;
+      limit: number;
+      total: number;
+      totalPages: number;
+    };
+  };
+  error?: string;
+}
+
 const RejectedCreatorsPage = () => {
-  const [creators, setCreators] = useState([]);
+  const [creators, setCreators] = useState<UnqualifiedCreator[]>([]);
   const [pagination, setPagination] = useState({
     page: 1,
     limit: 10,
@@ -33,7 +69,7 @@ const RejectedCreatorsPage = () => {
     totalPages: 0,
   });
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState("rejected");
   const router = useRouter();
@@ -52,7 +88,7 @@ const RejectedCreatorsPage = () => {
       } else {
         throw new Error(response.error || "Failed to fetch rejected creators");
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error fetching rejected creators:", err);
       setError(
         err.message || "An error occurred while fetching rejected creators"
@@ -69,7 +105,7 @@ const RejectedCreatorsPage = () => {
   }, []);
 
   // Handle page change
-  const handlePageChange = (newPage) => {
+  const handlePageChange = (newPage: number) => {
     setPagination((prev) => ({
       ...prev,
       page: newPage,
@@ -80,7 +116,7 @@ const RejectedCreatorsPage = () => {
   };
 
   // Handle search
-  const handleSearch = (e) => {
+  const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     // Implement search with backend (this would require a new API endpoint)
     console.log("Searching for:", searchQuery);
@@ -94,7 +130,7 @@ const RejectedCreatorsPage = () => {
   };
 
   // Switch between active and rejected creators
-  const handleTabChange = (value) => {
+  const handleTabChange = (value: string) => {
     setActiveTab(value);
     if (value === "active") {
       router.push("/admin/creators");
@@ -106,7 +142,9 @@ const RejectedCreatorsPage = () => {
   };
 
   // Format date for display
-  const formatDate = (dateString) => {
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return "Unknown date";
+    
     try {
       const date = new Date(dateString);
       return date.toLocaleDateString("en-US", {
@@ -122,7 +160,7 @@ const RejectedCreatorsPage = () => {
   };
 
   return (
-    <div className="container mx-auto py-8 px-4">
+    <>
       <div className="mb-6">
         <div className="flex items-center mb-4">
           <Button
@@ -176,13 +214,22 @@ const RejectedCreatorsPage = () => {
       )}
 
       {loading ? (
-        <div className="space-y-4">
-          {[1, 2, 3].map((i) => (
-            <Card key={i} className="animate-pulse">
-              <CardContent className="p-6">
-                <div className="h-6 bg-muted rounded w-1/4 mb-4"></div>
-                <div className="h-4 bg-muted rounded w-1/2 mb-2"></div>
-                <div className="h-4 bg-muted rounded w-3/4"></div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 w-full">
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <Card key={i} className="animate-pulse overflow-hidden w-full">
+              <CardHeader className="space-y-3">
+                <div className="h-6 bg-muted rounded w-2/3"></div>
+                <div className="h-4 bg-muted rounded w-1/2"></div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <div className="h-4 bg-muted rounded w-1/3 mb-1"></div>
+                  <div className="h-16 bg-muted rounded w-full"></div>
+                </div>
+                <div>
+                  <div className="h-4 bg-muted rounded w-1/3 mb-1"></div>
+                  <div className="h-4 bg-muted rounded w-1/2"></div>
+                </div>
               </CardContent>
             </Card>
           ))}
@@ -219,71 +266,98 @@ const RejectedCreatorsPage = () => {
                           : "Unknown Admin"}
                       </p>
                     </div>
+
+                    {creator.location && (
+                      <div>
+                        <h3 className="text-sm font-medium text-muted-foreground mb-1">
+                          Location:
+                        </h3>
+                        <p className="text-foreground">{creator.location}</p>
+                      </div>
+                    )}
+
+                    {creator.primary_role && creator.primary_role.length > 0 && (
+                      <div>
+                        <h3 className="text-sm font-medium text-muted-foreground mb-1">
+                          Primary Role:
+                        </h3>
+                        <div className="flex flex-wrap gap-2">
+                          {creator.primary_role.map((role) => (
+                            <span
+                              key={role}
+                              className="bg-secondary/50 rounded-md px-2 py-1 text-xs text-muted-foreground"
+                            >
+                              {role}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>
             ))
           ) : (
-            <div className="text-center py-12 text-muted-foreground">
+            <div className="col-span-full text-center py-12 text-muted-foreground">
               No rejected creators found
             </div>
           )}
-
-          {pagination.totalPages > 1 && (
-            <Pagination>
-              <PaginationContent>
-                <PaginationItem>
-                  <PaginationPrevious
-                    onClick={() =>
-                      handlePageChange(Math.max(1, pagination.page - 1))
-                    }
-                    className={
-                      pagination.page === 1
-                        ? "pointer-events-none opacity-50"
-                        : ""
-                    }
-                  />
-                </PaginationItem>
-
-                {Array.from({ length: pagination.totalPages }, (_, i) => i + 1)
-                  .filter(
-                    (page) =>
-                      page === 1 ||
-                      page === pagination.totalPages ||
-                      (page >= pagination.page - 1 &&
-                        page <= pagination.page + 1)
-                  )
-                  .map((page) => (
-                    <PaginationItem key={page}>
-                      <PaginationLink
-                        isActive={page === pagination.page}
-                        onClick={() => handlePageChange(page)}
-                      >
-                        {page}
-                      </PaginationLink>
-                    </PaginationItem>
-                  ))}
-
-                <PaginationItem>
-                  <PaginationNext
-                    onClick={() =>
-                      handlePageChange(
-                        Math.min(pagination.totalPages, pagination.page + 1)
-                      )
-                    }
-                    className={
-                      pagination.page === pagination.totalPages
-                        ? "pointer-events-none opacity-50"
-                        : ""
-                    }
-                  />
-                </PaginationItem>
-              </PaginationContent>
-            </Pagination>
-          )}
         </div>
       )}
-    </div>
+
+      {pagination.totalPages > 1 && (
+        <Pagination className="mt-8">
+          <PaginationContent>
+            <PaginationItem>
+              <PaginationPrevious
+                onClick={() =>
+                  handlePageChange(Math.max(1, pagination.page - 1))
+                }
+                className={
+                  pagination.page === 1
+                    ? "pointer-events-none opacity-50"
+                    : ""
+                }
+              />
+            </PaginationItem>
+
+            {Array.from({ length: pagination.totalPages }, (_, i) => i + 1)
+              .filter(
+                (page) =>
+                  page === 1 ||
+                  page === pagination.totalPages ||
+                  (page >= pagination.page - 1 &&
+                    page <= pagination.page + 1)
+              )
+              .map((page) => (
+                <PaginationItem key={page}>
+                  <PaginationLink
+                    isActive={page === pagination.page}
+                    onClick={() => handlePageChange(page)}
+                  >
+                    {page}
+                  </PaginationLink>
+                </PaginationItem>
+              ))}
+
+            <PaginationItem>
+              <PaginationNext
+                onClick={() =>
+                  handlePageChange(
+                    Math.min(pagination.totalPages, pagination.page + 1)
+                  )
+                }
+                className={
+                  pagination.page === pagination.totalPages
+                    ? "pointer-events-none opacity-50"
+                    : ""
+                }
+              />
+            </PaginationItem>
+          </PaginationContent>
+        </Pagination>
+      )}
+    </>
   );
 };
 

@@ -10,10 +10,16 @@ interface Project {
   id: string;
   title: string;
   creator_id: string;
+  description?: string;
   images?: Array<{
     id: string;
     url: string;
     resolutions: any;
+  }>;
+  videos?: Array<{
+    id: string;
+    url: string;
+    thumbnail_url?: string;
   }>;
 }
 
@@ -21,9 +27,13 @@ interface Creator {
   id: string;
   username: string;
   location?: string;
-  primary_role?: string;
-  creative_fields?: string[];
+  primary_role?: string[];
   projects?: Project[];
+  bio?: string;
+  profile_id?: string;
+  email?: string;
+  social_links?: Record<string, string>;
+  years_of_experience?: number;
 }
 
 export class AdminController {
@@ -44,8 +54,7 @@ export class AdminController {
           id,
           username,
           location,
-          primary_role,
-          creative_fields
+          primary_role
         `,
         { count: "exact" }
       );
@@ -68,7 +77,7 @@ export class AdminController {
 
       // Step 2: Fetch preview images for each creator
       if (creators && creators.length > 0) {
-        const creatorIds = creators.map((creator: Creator) => creator.id);
+        const creatorIds = creators.map((creator: any) => creator.id);
 
         // Get up to 4 projects per creator
         const { data: projectsWithImages, error: projectError } = await supabase
@@ -149,7 +158,7 @@ export class AdminController {
         }
 
         // Assign projects to creators
-        creators.forEach((creator: Creator) => {
+        creators.forEach((creator: any) => {
           const projects = creatorToProjects[creator.id] || [];
           creator.projects = projects;
         });
@@ -161,34 +170,31 @@ export class AdminController {
           page,
           limit,
           total: count || 0,
-          totalPages: Math.ceil((count || 0) / limit),
+          totalPages: count ? Math.ceil(count / limit) : 0,
         },
       };
 
-      res.json({
+      return res.status(200).json({
         success: true,
         data: result,
       });
     } catch (error: any) {
-      logger.error("Error fetching creators:", error);
-      res.status(500).json({
+      logger.error(`Error in listCreators: ${error.message}`, { error });
+      return res.status(500).json({
         success: false,
         error: "Failed to fetch creators",
-        details:
-          process.env.NODE_ENV === "development" ? error.message : undefined,
       });
     }
   }
 
   /**
-   * Get detailed information about a creator
+   * Get details of a specific creator
    * GET /api/admin/creators/:id
    */
   async getCreatorDetails(req: AuthenticatedRequest, res: Response) {
     try {
       const { id } = req.params;
 
-      // Query creator with all projects and media
       const { data: creator, error } = await supabase
         .from("creators")
         .select(
@@ -198,7 +204,6 @@ export class AdminController {
           location,
           bio,
           primary_role,
-          creative_fields,
           social_links,
           years_of_experience,
           projects (
@@ -230,77 +235,87 @@ export class AdminController {
       if (error) {
         if (error.code === "PGRST116") {
           // Record not found
-          return res.status(404).json({
-            success: false,
-            error: "Creator not found",
-          });
+          return res.status(404).json({ error: "Creator not found" });
         }
         throw error;
       }
 
-      res.json({
+      return res.status(200).json({
         success: true,
         data: creator,
       });
     } catch (error: any) {
-      logger.error("Error fetching creator details:", error);
-      res.status(500).json({
+      logger.error(`Error in getCreatorDetails: ${error.message}`, { error });
+      return res.status(500).json({
         success: false,
-        error: "Failed to fetch creator details",
-        details:
-          process.env.NODE_ENV === "development" ? error.message : undefined,
+        error: "Internal server error",
       });
     }
   }
 
   /**
-   * Reject a creator (move to unqualified tables)
+   * Reject a creator
    * POST /api/admin/creators/:id/reject
    */
   async rejectCreator(req: AuthenticatedRequest, res: Response) {
     try {
       const { id } = req.params;
       const { reason } = req.body;
-      const { user } = req;
 
-      if (!user) {
-        return res.status(401).json({
-          success: false,
-          error: "Authentication required",
-        });
-      }
-
-      if (!reason) {
+      if (!reason || reason.trim() === "") {
         return res.status(400).json({
           success: false,
           error: "Rejection reason is required",
         });
       }
 
-      // Call the stored procedure to move the creator to unqualified tables
-      const { data, error } = await supabase.rpc("reject_creator", {
-        p_creator_id: id,
-        p_reason: reason,
-        p_rejected_by: user.id,
-      });
+      // First check if the creator exists
+      const { data: creator, error: fetchError } = await supabase
+        .from("creators")
+        .select("id, username")
+        .eq("id", id)
+        .single();
 
-      if (error) throw error;
+      if (fetchError) {
+        return res.status(404).json({
+          success: false,
+          error: "Creator not found",
+        });
+      }
+
+      // Update the creator status to rejected
+      const { error: updateError } = await supabase
+        .from("creators")
+        .update({
+          status: "rejected",
+          rejection_reason: reason,
+          rejected_at: new Date().toISOString(),
+        })
+        .eq("id", id);
+
+      if (updateError) {
+        logger.error(`Error rejecting creator: ${updateError.message}`, {
+          updateError,
+        });
+        return res.status(500).json({
+          success: false,
+          error: "Failed to reject creator",
+        });
+      }
 
       // Invalidate relevant caches
-      invalidateCache(`creator_${id}`);
-      invalidateCache("creators_list");
+      invalidateCache(`creator_details_${id}`);
+      invalidateCache("creators_list_");
 
-      res.json({
+      return res.status(200).json({
         success: true,
         message: "Creator rejected successfully",
       });
     } catch (error: any) {
-      logger.error("Error rejecting creator:", error);
-      res.status(500).json({
+      logger.error(`Error in rejectCreator: ${error.message}`, { error });
+      return res.status(500).json({
         success: false,
-        error: "Failed to reject creator",
-        details:
-          process.env.NODE_ENV === "development" ? error.message : undefined,
+        error: "Internal server error",
       });
     }
   }
@@ -315,7 +330,7 @@ export class AdminController {
       const limit = parseInt(req.query.limit as string) || 10;
       const offset = (page - 1) * limit;
 
-      // Query rejected creators with count
+      // Query unqualified creators
       const {
         data: creators,
         error,
@@ -326,11 +341,15 @@ export class AdminController {
           `
           id,
           username,
+          location,
+          primary_role,
+          bio,
+          social_links,
+          years_of_experience,
           rejection_reason,
           rejected_at,
           rejected_by,
           profiles:rejected_by (
-            id,
             first_name,
             last_name
           )
@@ -348,21 +367,430 @@ export class AdminController {
           page,
           limit,
           total: count || 0,
-          totalPages: Math.ceil((count || 0) / limit),
+          totalPages: count ? Math.ceil(count / limit) : 0,
         },
       };
 
-      res.json({
+      return res.status(200).json({
         success: true,
         data: result,
       });
     } catch (error: any) {
-      logger.error("Error fetching rejected creators:", error);
-      res.status(500).json({
+      logger.error(`Error in listRejectedCreators: ${error.message}`, {
+        error,
+      });
+      return res.status(500).json({
         success: false,
-        error: "Failed to fetch rejected creators",
-        details:
-          process.env.NODE_ENV === "development" ? error.message : undefined,
+        error: "Failed to fetch unqualified creators",
+      });
+    }
+  }
+
+  /**
+   * Update a creator's profile
+   * PUT /api/admin/creators/:id
+   */
+  async updateCreator(req: AuthenticatedRequest, res: Response) {
+    try {
+      const { id } = req.params;
+      const {
+        username,
+        location,
+        primary_role,
+        bio,
+        social_links,
+        years_of_experience,
+      } = req.body;
+
+      // Validate required fields
+      if (username && username.trim() === "") {
+        return res.status(400).json({
+          success: false,
+          error: "Username cannot be empty",
+        });
+      }
+
+      // Prepare update data
+      const updateData: Partial<Creator> = {};
+
+      if (username !== undefined) updateData.username = username;
+      if (location !== undefined) updateData.location = location;
+      if (primary_role !== undefined) updateData.primary_role = primary_role;
+      if (bio !== undefined) updateData.bio = bio;
+      if (social_links !== undefined) updateData.social_links = social_links;
+      if (years_of_experience !== undefined)
+        updateData.years_of_experience = years_of_experience;
+
+      // Update the creator profile
+      const { data, error } = await supabase
+        .from("creators")
+        .update(updateData)
+        .eq("id", id)
+        .select()
+        .single();
+
+      if (error) {
+        logger.error(`Error updating creator: ${error.message}`, { error });
+        return res.status(500).json({
+          success: false,
+          error: "Failed to update creator profile",
+        });
+      }
+
+      // Invalidate cache for this creator
+      invalidateCache(`creator_details_${id}`);
+      invalidateCache("creators_list_");
+
+      return res.status(200).json({
+        success: true,
+        message: "Creator profile updated successfully",
+        creator: data,
+      });
+    } catch (error: any) {
+      logger.error(`Error in updateCreator: ${error.message}`, { error });
+      return res.status(500).json({
+        success: false,
+        error: "Internal server error",
+      });
+    }
+  }
+
+  /**
+   * Delete a creator
+   * DELETE /api/admin/creators/:id
+   */
+  async deleteCreator(req: AuthenticatedRequest, res: Response) {
+    try {
+      const { id } = req.params;
+
+      // First check if the creator exists
+      const { data: creator, error: fetchError } = await supabase
+        .from("creators")
+        .select("id")
+        .eq("id", id)
+        .single();
+
+      if (fetchError) {
+        return res.status(404).json({
+          success: false,
+          error: "Creator not found",
+        });
+      }
+
+      // Delete the creator
+      const { error } = await supabase.from("creators").delete().eq("id", id);
+
+      if (error) {
+        logger.error(`Error deleting creator: ${error.message}`, { error });
+        return res.status(500).json({
+          success: false,
+          error: "Failed to delete creator",
+        });
+      }
+
+      // Invalidate cache
+      invalidateCache(`creator_details_${id}`);
+      invalidateCache("creators_list_");
+
+      return res.status(200).json({
+        success: true,
+        message: "Creator deleted successfully",
+      });
+    } catch (error: any) {
+      logger.error(`Error in deleteCreator: ${error.message}`, { error });
+      return res.status(500).json({
+        success: false,
+        error: "Internal server error",
+      });
+    }
+  }
+
+  /**
+   * List all projects with pagination and filtering
+   * GET /api/admin/projects
+   */
+  async listProjects(req: AuthenticatedRequest, res: Response) {
+    try {
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 10;
+      const offset = (page - 1) * limit;
+      const creatorId = req.query.creator_id as string;
+      const searchQuery = req.query.search as string;
+
+      // Build the query
+      let query = supabase.from("projects").select(
+        `
+          id,
+          title,
+          description,
+          created_at,
+          updated_at,
+          creator_id,
+          creators (
+            id,
+            username
+          )
+        `,
+        { count: "exact" }
+      );
+
+      // Apply filters
+      if (creatorId && creatorId !== "all") {
+        query = query.eq("creator_id", creatorId);
+      }
+
+      if (searchQuery && searchQuery.trim() !== "") {
+        query = query.ilike("title", `%${searchQuery}%`);
+      }
+
+      // Apply pagination and ordering
+      const {
+        data: projects,
+        error,
+        count,
+      } = await query
+        .range(offset, offset + limit - 1)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+
+      // Fetch preview images for each project
+      if (projects && projects.length > 0) {
+        const projectIds = projects.map((project: any) => project.id);
+
+        // Get one image for each project
+        const { data: images, error: imagesError } = await supabase
+          .from("images")
+          .select(
+            `
+            id,
+            url,
+            resolutions,
+            project_id
+          `
+          )
+          .in("project_id", projectIds)
+          .order("order", { ascending: true });
+
+        if (imagesError) throw imagesError;
+
+        // Create a map of project_id to its first image
+        const projectToImage: Record<string, any> = {};
+        if (images && images.length > 0) {
+          images.forEach((image: any) => {
+            if (!projectToImage[image.project_id]) {
+              projectToImage[image.project_id] = image;
+            }
+          });
+        }
+
+        // Assign images to projects
+        projects.forEach((project: any) => {
+          const image = projectToImage[project.id];
+          if (image) {
+            project.preview_image = image;
+          }
+        });
+      }
+
+      const result = {
+        projects,
+        pagination: {
+          total: count || 0,
+          page,
+          limit,
+          pages: count ? Math.ceil(count / limit) : 0,
+        },
+      };
+
+      return res.status(200).json({
+        success: true,
+        data: result,
+      });
+    } catch (error: any) {
+      logger.error(`Error in listProjects: ${error.message}`, { error });
+      return res.status(500).json({
+        success: false,
+        error: "Failed to fetch projects",
+      });
+    }
+  }
+
+  /**
+   * Get details of a specific project
+   * GET /api/admin/projects/:id
+   */
+  async getProjectDetails(req: AuthenticatedRequest, res: Response) {
+    try {
+      const { id } = req.params;
+
+      // Get the project with creator info
+      const { data: project, error: projectError } = await supabase
+        .from("projects")
+        .select(
+          `
+          *,
+          creators (
+            id,
+            username,
+            location,
+            primary_role,
+            bio,
+            social_links
+          )
+        `
+        )
+        .eq("id", id)
+        .single();
+
+      if (projectError) {
+        return res.status(404).json({
+          success: false,
+          error: "Project not found",
+        });
+      }
+
+      // Get project images
+      const { data: images, error: imagesError } = await supabase
+        .from("images")
+        .select("*")
+        .eq("project_id", id)
+        .order("order", { ascending: true });
+
+      if (imagesError) throw imagesError;
+
+      // Get project videos
+      const { data: videos, error: videosError } = await supabase
+        .from("videos")
+        .select("*")
+        .eq("project_id", id)
+        .order("created_at", { ascending: false });
+
+      if (videosError) throw videosError;
+
+      // Combine all data
+      const projectWithMedia = {
+        ...project,
+        images: images || [],
+        videos: videos || [],
+      };
+
+      return res.status(200).json({
+        success: true,
+        project: projectWithMedia,
+      });
+    } catch (error: any) {
+      logger.error(`Error in getProjectDetails: ${error.message}`, { error });
+      return res.status(500).json({
+        success: false,
+        error: "Internal server error",
+      });
+    }
+  }
+
+  /**
+   * Update a project
+   * PUT /api/admin/projects/:id
+   */
+  async updateProject(req: AuthenticatedRequest, res: Response) {
+    try {
+      const { id } = req.params;
+      const { title, description } = req.body;
+
+      // Validate required fields
+      if (title !== undefined && title.trim() === "") {
+        return res.status(400).json({
+          success: false,
+          error: "Title cannot be empty",
+        });
+      }
+
+      // Prepare update data
+      const updateData: Partial<Project> = {};
+
+      if (title !== undefined) updateData.title = title;
+      if (description !== undefined) updateData.description = description;
+
+      // Update the project
+      const { data, error } = await supabase
+        .from("projects")
+        .update(updateData)
+        .eq("id", id)
+        .select()
+        .single();
+
+      if (error) {
+        logger.error(`Error updating project: ${error.message}`, { error });
+        return res.status(500).json({
+          success: false,
+          error: "Failed to update project",
+        });
+      }
+
+      // Invalidate cache
+      invalidateCache(`admin_project_details_${id}`);
+      invalidateCache("admin_projects_list_");
+
+      return res.status(200).json({
+        success: true,
+        message: "Project updated successfully",
+        project: data,
+      });
+    } catch (error: any) {
+      logger.error(`Error in updateProject: ${error.message}`, { error });
+      return res.status(500).json({
+        success: false,
+        error: "Internal server error",
+      });
+    }
+  }
+
+  /**
+   * Delete a project
+   * DELETE /api/admin/projects/:id
+   */
+  async deleteProject(req: AuthenticatedRequest, res: Response) {
+    try {
+      const { id } = req.params;
+
+      // First check if the project exists
+      const { data: project, error: fetchError } = await supabase
+        .from("projects")
+        .select("id")
+        .eq("id", id)
+        .single();
+
+      if (fetchError) {
+        return res.status(404).json({
+          success: false,
+          error: "Project not found",
+        });
+      }
+
+      // Delete the project
+      const { error } = await supabase.from("projects").delete().eq("id", id);
+
+      if (error) {
+        logger.error(`Error deleting project: ${error.message}`, { error });
+        return res.status(500).json({
+          success: false,
+          error: "Failed to delete project",
+        });
+      }
+
+      // Invalidate cache
+      invalidateCache(`admin_project_details_${id}`);
+      invalidateCache("admin_projects_list_");
+
+      return res.status(200).json({
+        success: true,
+        message: "Project deleted successfully",
+      });
+    } catch (error: any) {
+      logger.error(`Error in deleteProject: ${error.message}`, { error });
+      return res.status(500).json({
+        success: false,
+        error: "Internal server error",
       });
     }
   }

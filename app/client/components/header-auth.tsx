@@ -24,6 +24,7 @@ export default async function AuthButton() {
               Please update .env.local file with anon key and url
             </Badge>
           </div>
+
           <div className="flex gap-2">
             <Button
               asChild

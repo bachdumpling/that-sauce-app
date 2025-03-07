@@ -18,7 +18,6 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
-import { createClient } from "@/utils/supabase/client";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { VimeoEmbed } from "@/components/ui/vimeo-embed";
