@@ -51,6 +51,12 @@ router.get(
 router.put("/projects/:id", adminController.updateProject);
 router.delete("/projects/:id", adminController.deleteProject);
 
+// Project image management routes
+router.delete(
+  "/projects/:projectId/images/:imageId",
+  adminController.deleteProjectImage
+);
+
 // Existing rejection routes
 router.post("/creators/:id/reject", adminController.rejectCreator);
 

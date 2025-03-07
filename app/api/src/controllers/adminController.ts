@@ -756,7 +756,7 @@ export class AdminController {
       // First check if the project exists
       const { data: project, error: fetchError } = await supabase
         .from("projects")
-        .select("id")
+        .select("id, creator_id")
         .eq("id", id)
         .single();
 
@@ -781,6 +781,11 @@ export class AdminController {
       // Invalidate cache
       invalidateCache(`admin_project_details_${id}`);
       invalidateCache("admin_projects_list_");
+      
+      // Also invalidate the creator details cache
+      if (project && project.creator_id) {
+        invalidateCache(`creator_details_${project.creator_id}`);
+      }
 
       return res.status(200).json({
         success: true,
@@ -788,6 +793,72 @@ export class AdminController {
       });
     } catch (error: any) {
       logger.error(`Error in deleteProject: ${error.message}`, { error });
+      return res.status(500).json({
+        success: false,
+        error: "Internal server error",
+      });
+    }
+  }
+
+  /**
+   * Delete a project image
+   * DELETE /api/admin/projects/:projectId/images/:imageId
+   */
+  async deleteProjectImage(req: AuthenticatedRequest, res: Response) {
+    try {
+      const { projectId, imageId } = req.params;
+
+      // First check if the image exists and belongs to the project
+      const { data: image, error: fetchError } = await supabase
+        .from("images")
+        .select("id, project_id")
+        .eq("id", imageId)
+        .eq("project_id", projectId)
+        .single();
+
+      if (fetchError) {
+        return res.status(404).json({
+          success: false,
+          error: "Image not found or does not belong to the specified project",
+        });
+      }
+
+      // Delete the image
+      const { error } = await supabase
+        .from("images")
+        .delete()
+        .eq("id", imageId);
+
+      if (error) {
+        logger.error(`Error deleting project image: ${error.message}`, {
+          error,
+        });
+        return res.status(500).json({
+          success: false,
+          error: "Failed to delete project image",
+        });
+      }
+
+      // Invalidate cache
+      invalidateCache(`admin_project_details_${projectId}`);
+      
+      // Also invalidate the creator details cache since it contains project data
+      const { data: project } = await supabase
+        .from("projects")
+        .select("creator_id")
+        .eq("id", projectId)
+        .single();
+        
+      if (project && project.creator_id) {
+        invalidateCache(`creator_details_${project.creator_id}`);
+      }
+
+      return res.status(200).json({
+        success: true,
+        message: "Project image deleted successfully",
+      });
+    } catch (error: any) {
+      logger.error(`Error in deleteProjectImage: ${error.message}`, { error });
       return res.status(500).json({
         success: false,
         error: "Internal server error",

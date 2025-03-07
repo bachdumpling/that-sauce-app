@@ -46,13 +46,16 @@ export const fetchCreators = async (page = 1, limit = 10, search?: string) => {
 /**
  * Fetch a single creator's details
  */
-export const fetchCreatorDetails = async (creatorId: string) => {
+export const fetchCreatorDetails = async (creatorId: string, bustCache = false) => {
   try {
+    // Add a timestamp parameter to bust the cache if needed
+    const params = bustCache ? { _t: Date.now() } : {};
+    
     const response = await apiRequest.get<{
       success: boolean;
       data: Creator;
       error?: string;
-    }>(API_ENDPOINTS.admin.creatorDetails(creatorId));
+    }>(API_ENDPOINTS.admin.creatorDetails(creatorId), { params });
 
     if (response.data.success) {
       return {
@@ -142,7 +145,7 @@ export const fetchRejectedCreators = async (page = 1, limit = 10) => {
       API_ENDPOINTS.admin.rejectedCreators,
       { params: { page, limit } }
     );
-    
+
     if (response.data.success) {
       return {
         success: true,
@@ -175,4 +178,69 @@ export const getAdminStats = async () => {
     totalProjects: number;
   }>("/admin/stats");
   return response.data;
+};
+
+/**
+ * Delete a project
+ */
+export const deleteProject = async (projectId: string) => {
+  try {
+    const response = await apiRequest.delete<{
+      success: boolean;
+      message?: string;
+      error?: string;
+    }>(API_ENDPOINTS.admin.projectDetails(projectId));
+
+    if (response.data.success) {
+      return {
+        success: true,
+        message: response.data.message || "Project deleted successfully",
+      };
+    } else {
+      return {
+        success: false,
+        error: response.data.error || "Failed to delete project",
+      };
+    }
+  } catch (error: any) {
+    console.error("Error in deleteProject:", error);
+    return {
+      success: false,
+      error: error.message || "Failed to delete project",
+    };
+  }
+};
+
+/**
+ * Delete a project image
+ */
+export const deleteProjectImage = async (
+  projectId: string,
+  imageId: string
+) => {
+  try {
+    const response = await apiRequest.delete<{
+      success: boolean;
+      message?: string;
+      error?: string;
+    }>(API_ENDPOINTS.admin.deleteProjectImage(projectId, imageId));
+
+    if (response.data.success) {
+      return {
+        success: true,
+        message: response.data.message || "Image deleted successfully",
+      };
+    } else {
+      return {
+        success: false,
+        error: response.data.error || "Failed to delete image",
+      };
+    }
+  } catch (error: any) {
+    console.error("Error in deleteProjectImage:", error);
+    return {
+      success: false,
+      error: error.message || "Failed to delete image",
+    };
+  }
 };

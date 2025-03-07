@@ -16,6 +16,10 @@ export const API_ENDPOINTS = {
     creatorDetails: (creatorId: string) => `/admin/creators/${creatorId}`,
     rejectCreator: (creatorId: string) => `/admin/creators/${creatorId}/reject`,
     rejectedCreators: "/admin/unqualified/creators",
+    projects: "/admin/projects",
+    projectDetails: (projectId: string) => `/admin/projects/${projectId}`,
+    deleteProjectImage: (projectId: string, imageId: string) =>
+      `/admin/projects/${projectId}/images/${imageId}`,
   },
 } as const;
 

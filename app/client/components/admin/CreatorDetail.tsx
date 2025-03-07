@@ -20,17 +20,20 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogClose,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import Image from "next/image";
-import { X, ArrowLeft, ExternalLink, Edit, Save } from "lucide-react";
+import { X, ArrowLeft, ExternalLink, Edit, Save, Trash2 } from "lucide-react";
 import { SocialIcon } from "@/components/ui/social-icon";
 import {
   fetchCreatorDetails,
   rejectCreator,
   updateCreator,
+  deleteProject,
+  deleteProjectImage,
 } from "@/lib/api/admin";
 import { VimeoEmbed } from "@/components/ui/vimeo-embed";
 import { toast } from "sonner";
@@ -64,6 +67,12 @@ const CreatorDetailPage = ({ params }) => {
     years_of_experience: "",
   });
   const router = useRouter();
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [projectToDelete, setProjectToDelete] = useState(null);
+  const [isDeletingImage, setIsDeletingImage] = useState(false);
+  const [selectedImage, setSelectedImage] = useState(null);
+  const [imageModalOpen, setImageModalOpen] = useState(false);
 
   // Convert arrays to options for MultiSelect
   const roleOptions = CREATOR_ROLES.map((role) => ({
@@ -78,42 +87,40 @@ const CreatorDetailPage = ({ params }) => {
   };
 
   // Fetch creator details from API
-  useEffect(() => {
-    const loadCreatorDetails = async () => {
-      if (!creatorId) return;
+  const loadCreatorDetails = async (bustCache = false) => {
+    if (!creatorId) return;
 
-      setLoading(true);
-      setError(null);
+    setLoading(true);
+    setError(null);
 
-      try {
-        const response = await fetchCreatorDetails(creatorId);
+    try {
+      const response = await fetchCreatorDetails(creatorId, bustCache);
 
-        if (response.success) {
-          setCreator(response.data);
-          // Initialize edit form with creator data
-          setEditForm({
-            username: response.data.username || "",
-            location: response.data.location || "",
-            bio: response.data.bio || "",
-            primary_role: ensureArray(response.data.primary_role),
-            social_links: response.data.social_links || {},
-            years_of_experience: response.data.years_of_experience
-              ? String(response.data.years_of_experience)
-              : "",
-          });
-        } else {
-          throw new Error(response.error || "Failed to fetch creator details");
-        }
-      } catch (err) {
-        console.error("Error fetching creator details:", err);
-        setError(
-          err.message || "An error occurred while loading creator details"
-        );
-      } finally {
-        setLoading(false);
+      if (response.success) {
+        setCreator(response.data);
+        // Initialize edit form with creator data
+        setEditForm({
+          username: response.data.username || "",
+          location: response.data.location || "",
+          bio: response.data.bio || "",
+          primary_role: ensureArray(response.data.primary_role),
+          social_links: response.data.social_links || {},
+          years_of_experience: response.data.years_of_experience
+            ? response.data.years_of_experience.toString()
+            : "",
+        });
+      } else {
+        setError(response.error);
       }
-    };
+    } catch (err) {
+      console.error("Error fetching creator details:", err);
+      setError("Failed to load creator details");
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     loadCreatorDetails();
   }, [creatorId]);
 
@@ -234,6 +241,84 @@ const CreatorDetailPage = ({ params }) => {
     }
   };
 
+  // Handle project deletion
+  const handleDeleteProject = async () => {
+    if (!projectToDelete) return;
+
+    setIsDeleting(true);
+
+    try {
+      const response = await deleteProject(projectToDelete.id);
+
+      if (response.success) {
+        toast.success("Project deleted successfully");
+
+        // Update the UI immediately
+        setCreator((prevCreator) => ({
+          ...prevCreator,
+          projects: prevCreator.projects.filter(
+            (project) => project.id !== projectToDelete.id
+          ),
+        }));
+
+        // Reload data with cache busting to ensure we have the latest data
+        await loadCreatorDetails(true);
+      } else {
+        toast.error(response.error || "Failed to delete project");
+      }
+    } catch (error) {
+      console.error("Error deleting project:", error);
+      toast.error("An unexpected error occurred");
+    } finally {
+      setIsDeleting(false);
+      setDeleteDialogOpen(false);
+      setProjectToDelete(null);
+    }
+  };
+
+  // Handle image deletion
+  const handleDeleteImage = async (projectId, imageId) => {
+    setIsDeletingImage(true);
+
+    try {
+      const response = await deleteProjectImage(projectId, imageId);
+
+      if (response.success) {
+        toast.success("Image deleted successfully");
+
+        // Update the UI immediately
+        setCreator((prevCreator) => ({
+          ...prevCreator,
+          projects: prevCreator.projects.map((project) => {
+            if (project.id === projectId) {
+              return {
+                ...project,
+                images: project.images.filter((image) => image.id !== imageId),
+              };
+            }
+            return project;
+          }),
+        }));
+
+        // Reload data with cache busting to ensure we have the latest data
+        await loadCreatorDetails(true);
+      } else {
+        toast.error(response.error || "Failed to delete image");
+      }
+    } catch (error) {
+      console.error("Error deleting image:", error);
+      toast.error("An unexpected error occurred");
+    } finally {
+      setIsDeletingImage(false);
+    }
+  };
+
+  // Function to open the image modal
+  const openImageModal = (image) => {
+    setSelectedImage(image);
+    setImageModalOpen(true);
+  };
+
   if (loading) {
     return (
       <>
@@ -322,6 +407,8 @@ const CreatorDetailPage = ({ params }) => {
       </>
     );
   }
+
+  console.log(creator);
 
   return (
     <>
@@ -596,18 +683,34 @@ const CreatorDetailPage = ({ params }) => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {creator.projects.map((project) => (
             <Card key={project.id} className="overflow-hidden">
-              <CardHeader>
-                <CardTitle>{project.title}</CardTitle>
-                {project.description && (
-                  <CardDescription>{project.description}</CardDescription>
-                )}
+              <CardHeader className="flex flex-row items-start justify-between">
+                <div>
+                  <CardTitle>{project.title}</CardTitle>
+                  {/* {project.description && (
+                    <CardDescription>{project.description}</CardDescription>
+                  )} */}
+                </div>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => {
+                    setProjectToDelete(project);
+                    setDeleteDialogOpen(true);
+                  }}
+                >
+                  <X className="h-4 w-4 mr-1" />
+                  Delete
+                </Button>
               </CardHeader>
               <CardContent>
                 {project.videos && project.videos.length > 0 && (
                   <div className="space-y-4 mb-4">
                     {project.videos.map((video) => (
                       <div key={video.id} className="space-y-2">
-                        <VimeoEmbed videoId={video.vimeo_id} />
+                        <VimeoEmbed
+                          vimeoId={video.vimeo_id}
+                          title={video.title}
+                        />
                         {video.title && (
                           <p className="font-medium">{video.title}</p>
                         )}
@@ -625,22 +728,44 @@ const CreatorDetailPage = ({ params }) => {
                   <div className="space-y-4">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       {project.images.map((image) => (
-                        <div key={image.id} className="space-y-2">
-                          <div className="aspect-square rounded-md overflow-hidden bg-muted">
+                        <div
+                          key={image.id}
+                          className="space-y-2 relative group"
+                        >
+                          <div
+                            className="aspect-square rounded-md overflow-hidden bg-muted cursor-pointer relative"
+                            onClick={() => openImageModal(image)}
+                          >
                             <Image
                               src={image.resolutions?.high_res || image.url}
-                              alt={image.alt_text || project.title}
+                              alt={project.title}
                               width={500}
                               height={500}
                               className="object-cover w-full h-full"
                             />
+                            <div
+                              className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                              onClick={(e) => {
+                                e.stopPropagation(); // Prevent opening the modal when delete button is clicked
+                                handleDeleteImage(project.id, image.id);
+                              }}
+                            >
+                              <Button
+                                variant="destructive"
+                                size="icon"
+                                className="h-8 w-8 rounded-full"
+                                disabled={isDeletingImage}
+                              >
+                                <Trash2 className="h-4 w-4 text-red-500" />
+                              </Button>
+                            </div>
                           </div>
 
-                          {image.alt_text && (
+                          {/* {image.alt_text && (
                             <p className="text-sm text-muted-foreground">
                               {image.alt_text}
                             </p>
-                          )}
+                          )} */}
                         </div>
                       ))}
                     </div>
@@ -662,6 +787,69 @@ const CreatorDetailPage = ({ params }) => {
           No projects available for this creator
         </div>
       )}
+
+      {/* Delete Project Dialog */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Project</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this project? This action cannot
+              be undone.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="project-title">Project</Label>
+              <Input
+                id="project-title"
+                value={projectToDelete?.title || ""}
+                disabled
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setDeleteDialogOpen(false);
+                setProjectToDelete(null);
+              }}
+              disabled={isDeleting}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDeleteProject}
+              disabled={isDeleting}
+            >
+              {isDeleting ? "Deleting..." : "Delete Project"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Image Modal */}
+      <Dialog open={imageModalOpen} onOpenChange={setImageModalOpen}>
+        <DialogContent className="w-full p-0 overflow-hidden bg-black/80 border-none">
+          <DialogTitle className="sr-only">Image Preview</DialogTitle>
+
+          <div className="w-full h-[600px] overflow-auto">
+            {selectedImage && (
+              <Image
+                src={selectedImage.resolutions?.high_res || selectedImage.url}
+                alt="Project image"
+                fill
+                className="object-contain p-10"
+                priority
+              />
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   );
 };

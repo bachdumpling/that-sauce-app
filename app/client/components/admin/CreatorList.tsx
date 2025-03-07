@@ -18,6 +18,12 @@ import { Input } from "@/components/ui/input";
 import Image from "next/image";
 import { fetchCreators } from "@/lib/api/admin";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Dialog,
+  DialogContent,
+  DialogClose,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 const CreatorManagementPage = () => {
   const [creators, setCreators] = useState([]);
@@ -31,6 +37,8 @@ const CreatorManagementPage = () => {
   const [error, setError] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState("active");
+  const [selectedImage, setSelectedImage] = useState(null);
+  const [imageModalOpen, setImageModalOpen] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -48,7 +56,10 @@ const CreatorManagementPage = () => {
           page: response.data.pagination.page,
           limit: response.data.pagination.limit,
           total: response.data.pagination.total,
-          totalPages: response.data.pagination.totalPages || response.data.pagination.pages || 0,
+          totalPages:
+            response.data.pagination.totalPages ||
+            response.data.pagination.pages ||
+            0,
         });
       } else {
         throw new Error(response.error || "Failed to fetch creators");
@@ -149,6 +160,13 @@ const CreatorManagementPage = () => {
     }
   };
 
+  // Function to open the image modal
+  const openImageModal = (image, e) => {
+    e.stopPropagation(); // Prevent navigating to creator detail
+    setSelectedImage(image);
+    setImageModalOpen(true);
+  };
+
   return (
     <>
       <div className="mb-6">
@@ -205,7 +223,10 @@ const CreatorManagementPage = () => {
                     <div className="h-4 bg-muted rounded w-1/2"></div>
                     <div className="flex flex-wrap gap-2 mt-2">
                       {[1, 2, 3].map((j) => (
-                        <div key={j} className="h-6 bg-muted rounded-md w-20"></div>
+                        <div
+                          key={j}
+                          className="h-6 bg-muted rounded-md w-20"
+                        ></div>
                       ))}
                     </div>
                   </div>
@@ -271,7 +292,12 @@ const CreatorManagementPage = () => {
                     {creator.projects?.map((project) => (
                       <div key={project.id} className="space-y-2">
                         {project.images && project.images[0] ? (
-                          <div className="aspect-square rounded-md overflow-hidden bg-muted">
+                          <div
+                            className="aspect-square rounded-md overflow-hidden bg-muted cursor-pointer"
+                            onClick={(e) =>
+                              openImageModal(project.images[0], e)
+                            }
+                          >
                             <Image
                               src={
                                 project.images[0].resolutions?.high_res ||
@@ -282,6 +308,12 @@ const CreatorManagementPage = () => {
                               height={300}
                               className="object-cover w-full h-full"
                             />
+                          </div>
+                        ) : project.videos && project.videos.length > 0 ? (
+                          <div className="aspect-square rounded-md bg-muted flex items-center justify-center">
+                            <span className="text-muted-foreground text-sm">
+                              Video
+                            </span>
                           </div>
                         ) : (
                           <div className="aspect-square rounded-md bg-muted flex items-center justify-center">
@@ -310,7 +342,7 @@ const CreatorManagementPage = () => {
               No creators found
             </div>
           )}
-    
+
           {pagination.totalPages > 1 && (
             <Pagination>
               <PaginationContent>
@@ -365,6 +397,25 @@ const CreatorManagementPage = () => {
           )}
         </div>
       )}
+
+      {/* Image Modal */}
+      <Dialog open={imageModalOpen} onOpenChange={setImageModalOpen}>
+        <DialogContent className="w-full p-0 overflow-hidden bg-black/80 border-none">
+          <DialogTitle className="sr-only">Image Preview</DialogTitle>
+
+          <div className="w-full h-[600px] overflow-auto">
+            {selectedImage && (
+              <Image
+                src={selectedImage.resolutions?.high_res || selectedImage.url}
+                alt="Project image"
+                fill
+                className="object-contain p-10"
+                priority
+              />
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   );
 };

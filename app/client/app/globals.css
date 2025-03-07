@@ -59,6 +59,33 @@
   }
 }
 
+@layer components {
+  /* Custom styles for the Dialog close button in image modals */
+  .bg-black\/90 [data-state="open"].bg-accent {
+    background-color: transparent !important;
+  }
+
+  .bg-black\/90 .absolute.right-4.top-4 {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    background-color: rgba(0, 0, 0, 0.5);
+    
+    border-radius: 9999px;
+    z-index: 50;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.2s ease;
+    opacity: 1;
+  }
+
+  .bg-black\/90 .absolute.right-4.top-4:hover {
+    background-color: rgba(0, 0, 0, 0.7);
+  }
+
+}
+
 @layer base {
   * {
     @apply border-border;
