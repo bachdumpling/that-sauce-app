@@ -1,7 +1,9 @@
 import { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { Suspense } from "react";
 import { getProjectByTitleServer } from "@/lib/api/creators";
 import { ProjectDisplay } from "./components/project-display";
+import { Skeleton } from "@/components/ui/skeleton";
 import { createClient } from "@/utils/supabase/server";
 
 interface ProjectPageProps {
@@ -66,12 +68,16 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
     const { creator, project: projectData } = response.data;
 
     return (
-      <ProjectDisplay
-        initialData={{ creator, project: projectData }}
-        username={username}
-        projectSlug={project}
-        currentUserId={currentUserId}
-      />
+      <div className="container max-w-6xl mx-auto py-8 px-4">
+        <Suspense fallback={<Skeleton variant="project" />}>
+          <ProjectDisplay
+            initialData={{ creator, project: projectData }}
+            username={username}
+            projectSlug={project}
+            currentUserId={currentUserId}
+          />
+        </Suspense>
+      </div>
     );
   } catch (error) {
     console.error("Error fetching project:", error);

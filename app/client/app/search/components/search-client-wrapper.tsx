@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Toggle } from "@/components/ui/toggle";
 import { useRouter, useSearchParams } from "next/navigation";
-import { searchCreators } from "@/lib/api/search"; 
+import { searchCreators } from "@/lib/api/search";
 import { CreatorCard } from "@/components/shared/creator-card";
 import { SearchResult } from "@/components/shared/types";
 
@@ -171,11 +171,7 @@ export function SearchClientWrapper({
       {/* Results */}
       <div className="space-y-6">
         {isLoading ? (
-          <div className="space-y-4 w-full">
-            {[1, 2, 3].map((n) => (
-              <Skeleton key={n} className="h-32 w-full" />
-            ))}
-          </div>
+          <Skeleton variant="creator" />
         ) : results?.data.results.length ? (
           results.data.results.map((result) => (
             <CreatorCard

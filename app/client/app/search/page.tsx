@@ -32,7 +32,13 @@ export default async function SearchPage({
           </p>
         </div>
 
-        <Suspense fallback={<div className="h-[500px] w-full"><Skeleton className="h-full w-full" /></div>}>
+        <Suspense
+          fallback={
+            <div className="h-[500px] w-full">
+              <Skeleton variant="creator" className="h-full w-full" />
+            </div>
+          }
+        >
           <SearchClientWrapper
             initialQuery={initialQuery}
             initialContentType={initialContentType as "all" | "videos"}

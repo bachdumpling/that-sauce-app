@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/dialog";
 import { CreatorCard } from "@/components/shared/creator-card";
 import { Creator } from "@/components/shared/types";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const CreatorManagementPage = () => {
   const [creators, setCreators] = useState([]);
@@ -306,37 +307,7 @@ const CreatorManagementPage = () => {
       )}
 
       {loading ? (
-        <div className="space-y-4 w-full">
-          {[1, 2, 3].map((i) => (
-            <Card key={i} className="animate-pulse overflow-hidden w-full">
-              <CardContent className="p-6">
-                <div className="flex flex-col md:flex-row justify-between items-start mb-4">
-                  <div className="space-y-3 w-full md:w-2/3">
-                    <div className="h-6 bg-muted rounded w-1/3"></div>
-                    <div className="h-4 bg-muted rounded w-1/2"></div>
-                    <div className="flex flex-wrap gap-2 mt-2">
-                      {[1, 2, 3].map((j) => (
-                        <div
-                          key={j}
-                          className="h-6 bg-muted rounded-md w-20"
-                        ></div>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="h-10 bg-muted rounded w-32 mt-2 md:mt-0"></div>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mt-4">
-                  {[1, 2, 3, 4].map((j) => (
-                    <div key={j} className="space-y-2">
-                      <div className="aspect-square bg-muted rounded-md"></div>
-                      <div className="h-4 bg-muted rounded w-3/4"></div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+        <Skeleton variant="creator" />
       ) : (
         <div className="space-y-6">
           {creators.length > 0 ? (

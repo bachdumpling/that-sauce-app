@@ -1,7 +1,9 @@
 import { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { Suspense } from "react";
 import { getCreatorByUsername } from "@/lib/api/creators";
 import { CreatorProfile } from "@/components/shared/creator-profile";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface CreatorPageProps {
   params: {
@@ -51,7 +53,9 @@ export default async function CreatorPage({ params }: CreatorPageProps) {
 
     return (
       <div className="container max-w-6xl py-8">
-        <CreatorProfile creator={response.data} viewMode="public" />
+        <Suspense fallback={<Skeleton variant="creator" />}>
+          <CreatorProfile creator={response.data} viewMode="public" />
+        </Suspense>
       </div>
     );
   } catch (error) {
