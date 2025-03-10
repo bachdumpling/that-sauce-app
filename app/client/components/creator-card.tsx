@@ -11,7 +11,7 @@ interface CreatorCardProps {
       id: string;
       username: string;
       location?: string;
-      creative_fields?: string[];
+      primary_role?: string[];
       website?: string;
       social_links?: Record<string, string>;
     };
@@ -66,14 +66,14 @@ export const CreatorCard: React.FC<CreatorCardProps> = ({ result, showScores }) 
                 <Globe className="h-4 w-4" /> {profile.location}
               </p>
             )}
-            {profile.creative_fields && profile.creative_fields.length > 0 && (
+            {profile.primary_role && profile.primary_role.length > 0 && (
               <div className="flex flex-wrap gap-2">
-                {profile.creative_fields.map((field) => (
+                {profile.primary_role.map((role) => (
                   <div
-                    key={field}
+                    key={role}
                     className="bg-secondary/50 rounded-md px-2 py-1 text-sm text-muted-foreground"
                   >
-                    {field.replace(/-/g, " ")}
+                    {role.replace(/-/g, " ")}
                   </div>
                 ))}
               </div>

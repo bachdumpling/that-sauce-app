@@ -18,7 +18,7 @@ interface SearchResults {
         id: string;
         username: string;
         location: string;
-        creative_fields: string[];
+        primary_role: string[];
         website?: string;
         social_links: Record<string, string>;
       };

@@ -34,8 +34,7 @@ Retrieves a paginated list of creators.
       "id": "string",
       "username": "string",
       "location": "string",
-      "primary_role": "string",
-      "creative_fields": ["string"],
+      "primary_role": ["string"],
       "projects": [
         {
           "id": "string",
@@ -77,8 +76,7 @@ Retrieves detailed information about a specific creator.
     "id": "string",
     "username": "string",
     "location": "string",
-    "primary_role": "string",
-    "creative_fields": ["string"],
+    "primary_role": ["string"],
     "bio": "string",
     "website": "string",
     "social_links": {},
@@ -114,8 +112,7 @@ Updates a creator's profile information.
 {
   "username": "string",
   "location": "string",
-  "primary_role": "string",
-  "creative_fields": ["string"],
+  "primary_role": ["string"],
   "bio": "string",
   "website": "string",
   "social_links": {}
@@ -131,8 +128,7 @@ Updates a creator's profile information.
     "id": "string",
     "username": "string",
     "location": "string",
-    "primary_role": "string",
-    "creative_fields": ["string"],
+    "primary_role": ["string"],
     "bio": "string",
     "website": "string",
     "social_links": {}
@@ -193,8 +189,7 @@ Retrieves a paginated list of rejected creators.
       "id": "string",
       "username": "string",
       "location": "string",
-      "primary_role": "string",
-      "creative_fields": ["string"]
+      "primary_role": ["string"]
     }
   ],
   "pagination": {
@@ -276,8 +271,7 @@ Retrieves detailed information about a specific project.
       "id": "string",
       "username": "string",
       "location": "string",
-      "primary_role": "string",
-      "creative_fields": ["string"],
+      "primary_role": ["string"],
       "bio": "string",
       "website": "string",
       "social_links": {}

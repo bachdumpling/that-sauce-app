@@ -348,26 +348,19 @@ const CreatorManagementPage = () => {
                       </h2>
                       <div className="flex flex-col md:flex-row gap-2 text-sm text-muted-foreground mt-1">
                         {creator.location && <span>{creator.location}</span>}
-                        {creator.primary_role && (
-                          <span className="md:before:content-['•'] md:before:mx-2 md:before:text-muted-foreground">
-                            {creator.primary_role}
-                          </span>
-                        )}
-                      </div>
-
-                      {creator.creative_fields &&
-                        creator.creative_fields.length > 0 && (
+                        {creator.primary_role && creator.primary_role.length > 0 && (
                           <div className="flex flex-wrap gap-2 mt-2">
-                            {creator.creative_fields.map((field) => (
+                            {creator.primary_role.map((role) => (
                               <span
-                                key={field}
+                                key={role}
                                 className="bg-secondary/50 rounded-md px-2 py-1 text-xs text-muted-foreground"
                               >
-                                {field.replace(/-/g, " ")}
+                                {role.replace(/-/g, " ")}
                               </span>
                             ))}
                           </div>
                         )}
+                      </div>
                     </div>
 
                     <Button

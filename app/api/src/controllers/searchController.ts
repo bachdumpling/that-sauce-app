@@ -74,7 +74,6 @@ export class SearchController {
               location,
               bio,
               primary_role,
-              creative_fields,
               social_links
             `
             )

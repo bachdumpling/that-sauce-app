@@ -1,12 +1,12 @@
-import { EnvVarWarning } from "@/components/env-var-warning";
 import HeaderAuth from "@/components/header-auth";
 import { ThemeSwitcher } from "@/components/theme-switcher";
-import { hasEnvVars } from "@/utils/supabase/check-env-vars";
-import { Geist } from "next/font/google";
 import { ThemeProvider } from "next-themes";
 import Link from "next/link";
+import Image from "next/image";
 import "./globals.css";
 import { Analytics } from "@vercel/analytics/react";
+import localFont from "next/font/local";
+
 const defaultUrl = process.env.NEXT_PUBLIC_CLIENT_URL
   ? `https://${process.env.NEXT_PUBLIC_CLIENT_URL}`
   : "https://localhost:3000";
@@ -17,9 +17,52 @@ export const metadata = {
   description: "creative talent search engine",
 };
 
-const geistSans = Geist({
+// Define Helvetica Neue as a local font
+const helveticaNeue = localFont({
+  src: [
+    {
+      path: "./fonts/HelveticaNeueLight.otf",
+      weight: "300",
+      style: "normal",
+    },
+    {
+      path: "./fonts/HelveticaNeueLightItalic.otf",
+      weight: "300",
+      style: "italic",
+    },
+    {
+      path: "./fonts/HelveticaNeueRoman.otf",
+      weight: "400",
+      style: "normal",
+    },
+    {
+      path: "./fonts/HelveticaNeueItalic.ttf",
+      weight: "400",
+      style: "italic",
+    },
+    {
+      path: "./fonts/HelveticaNeueMedium.otf",
+      weight: "500",
+      style: "normal",
+    },
+    {
+      path: "./fonts/HelveticaNeueMediumItalic.otf",
+      weight: "500",
+      style: "italic",
+    },
+    {
+      path: "./fonts/HelveticaNeueBold.otf",
+      weight: "700",
+      style: "normal",
+    },
+    {
+      path: "./fonts/HelveticaNeueBoldItalic.otf",
+      weight: "700",
+      style: "italic",
+    },
+  ],
+  variable: "--font-helvetica-neue",
   display: "swap",
-  subsets: ["latin"],
 });
 
 export default function RootLayout({
@@ -28,8 +71,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={geistSans.className} suppressHydrationWarning>
-      <body className="bg-background text-foreground">
+    <html
+      lang="en"
+      className={`${helveticaNeue.variable}`}
+      suppressHydrationWarning
+    >
+      <body className="bg-background text-foreground font-sans">
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
@@ -40,19 +87,35 @@ export default function RootLayout({
             <div className="flex-1 w-full flex flex-col gap-20 items-center">
               <nav className="w-full flex justify-center border-b border-b-foreground/10 h-16">
                 <div className="w-full max-w-6xl flex justify-between items-center p-2 px-4 text-sm">
-                  <div className="flex gap-5 items-center font-semibold">
-                    <Link href={"/"}>that sauce</Link>
+                  <div className="flex gap-4 items-center font-semibold">
+                    <Link href={"/"}>
+                      <Image
+                        src="/logo.png"
+                        alt="that sauce"
+                        width={50}
+                        height={50}
+                        priority
+                      />
+                    </Link>
                   </div>
-                  {!hasEnvVars ? <EnvVarWarning /> : <HeaderAuth />}
+                  <div className="flex gap-4 items-center">
+                    <HeaderAuth />
+                    <ThemeSwitcher />
+                  </div>
                 </div>
               </nav>
-              <div className="flex flex-col gap-20 mx-auto w-full md:max-w-6xl">
+              <div className="flex flex-col gap-20 mx-auto max-w-6xl">
                 {children}
               </div>
 
-              <footer className="w-full flex items-center justify-center border-t mx-auto text-center text-xs gap-8 py-16">
+              <footer className="w-full flex flex-col items-center justify-center border-t mx-auto text-center text-xs py-16">
+                <Image
+                  src="/logo.png"
+                  alt="that sauce"
+                  width={100}
+                  height={100}
+                />
                 <p>that sauce 2025</p>
-                <ThemeSwitcher />
               </footer>
             </div>
           </main>
