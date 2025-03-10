@@ -43,6 +43,8 @@ import {
   SOCIAL_PLATFORMS,
 } from "@/lib/constants/creator-options";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { CreatorProfile } from "@/components/shared/creator-profile";
+import { Creator, Project } from "@/components/shared/types";
 
 const CreatorDetailPage = ({ params }) => {
   const unwrappedParams = use(params);
@@ -412,380 +414,271 @@ const CreatorDetailPage = ({ params }) => {
 
   return (
     <>
-      <div className="flex justify-between items-center mb-6">
-        <div className="flex items-center">
-          <Button variant="ghost" onClick={handleGoBack} className="mr-2">
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back
-          </Button>
-          <h1 className="text-2xl font-bold">Creator Profile Review</h1>
+      {!isEditing && creator && (
+        <div className="space-y-8">
+          <div className="flex justify-between items-center">
+            <Button
+              variant="outline"
+              onClick={() => router.push(`/admin/creators?page=${currentPage}`)}
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Creators
+            </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => setIsEditing(true)}>
+                <Edit className="h-4 w-4 mr-2" />
+                Edit Profile
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={() => setRejectDialogOpen(true)}
+              >
+                Reject Creator
+              </Button>
+            </div>
+          </div>
+
+          <CreatorProfile
+            creator={creator}
+            viewMode="admin"
+            onEditProject={(project) => handleEditProject(project)}
+            onDeleteProject={(project) => handleDeleteProject(project)}
+          />
         </div>
-        <div className="flex gap-2">
-          {isEditing ? (
-            <>
+      )}
+
+      {isEditing && (
+        <>
+          <div className="flex justify-between items-center mb-6">
+            <div className="flex items-center">
+              <Button
+                variant="ghost"
+                onClick={handleEditToggle}
+                className="mr-2"
+              >
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Back
+              </Button>
+              <h1 className="text-2xl font-bold">Creator Profile Review</h1>
+            </div>
+            <div className="flex gap-2">
               <Button
                 variant="outline"
-                onClick={handleEditToggle}
+                onClick={handleSaveChanges}
                 disabled={isSaving}
               >
-                Cancel
-              </Button>
-              <Button onClick={handleSaveChanges} disabled={isSaving}>
                 {isSaving ? "Saving..." : "Save Changes"}
                 <Save className="ml-2 h-4 w-4" />
               </Button>
-            </>
-          ) : (
-            <>
-              <Button variant="outline" onClick={handleEditToggle}>
-                Edit Profile
-                <Edit className="ml-2 h-4 w-4" />
-              </Button>
-              <Dialog
-                open={rejectDialogOpen}
-                onOpenChange={setRejectDialogOpen}
-              >
-                <DialogTrigger asChild>
-                  <Button variant="destructive">
-                    <X className="mr-2 h-4 w-4" />
-                    Reject Creator
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Reject Creator</DialogTitle>
-                    <DialogDescription>
-                      This action will remove the creator and all their content
-                      from the platform. Please provide a reason for the
-                      rejection.
-                    </DialogDescription>
-                  </DialogHeader>
-
-                  <div className="space-y-4 py-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="username">Creator</Label>
-                      <Input id="username" value={creator.username} disabled />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="reason">Rejection Reason</Label>
-                      <Textarea
-                        id="reason"
-                        placeholder="Provide a detailed reason for rejecting this creator"
-                        value={rejectReason}
-                        onChange={(e) => setRejectReason(e.target.value)}
-                        rows={4}
-                        className="resize-none"
-                      />
-                      {rejectError && (
-                        <p className="text-sm text-destructive">
-                          {rejectError}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-
-                  <DialogFooter>
-                    <Button
-                      variant="outline"
-                      onClick={() => setRejectDialogOpen(false)}
-                    >
-                      Cancel
-                    </Button>
-                    <Button
-                      variant="destructive"
-                      onClick={handleReject}
-                      disabled={isRejecting}
-                    >
-                      {isRejecting ? "Rejecting..." : "Reject Creator"}
-                    </Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
-            </>
-          )}
-        </div>
-      </div>
-
-      <Card className="mb-8">
-        <CardHeader>
-          <div className="flex flex-col md:flex-row justify-between items-start">
-            <div>
-              {isEditing ? (
-                <div className="space-y-4 w-full max-w-md">
-                  <div>
-                    <Label htmlFor="username">Username</Label>
-                    <Input
-                      id="username"
-                      name="username"
-                      value={editForm.username}
-                      onChange={handleInputChange}
-                      placeholder="Username"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="location">Location</Label>
-                    <Input
-                      id="location"
-                      name="location"
-                      value={editForm.location}
-                      onChange={handleInputChange}
-                      placeholder="Location"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="years_of_experience">
-                      Years of Experience
-                    </Label>
-                    <Input
-                      id="years_of_experience"
-                      name="years_of_experience"
-                      type="number"
-                      value={editForm.years_of_experience}
-                      onChange={handleInputChange}
-                      placeholder="Years of Experience"
-                    />
-                  </div>
-                </div>
-              ) : (
-                <>
-                  <h2 className="text-2xl font-bold">{creator.username}</h2>
-                  <div className="flex flex-col md:flex-row gap-2 text-muted-foreground mt-1">
-                    {creator.location && <span>{creator.location}</span>}
-                    {creator.years_of_experience && (
-                      <span className="md:before:content-['•'] md:before:mx-2 md:before:text-muted-foreground">
-                        {creator.years_of_experience} years of experience
-                      </span>
-                    )}
-                  </div>
-                </>
-              )}
-            </div>
-            <div className="mt-4 md:mt-0">
-              {creator.status && (
-                <div
-                  className={`px-3 py-1 rounded-full text-xs font-medium ${
-                    creator.status === "active"
-                      ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
-                      : "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400"
-                  }`}
-                >
-                  {creator.status.charAt(0).toUpperCase() +
-                    creator.status.slice(1)}
-                </div>
-              )}
             </div>
           </div>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div>
-            <h3 className="text-lg font-medium mb-2">Bio</h3>
-            {isEditing ? (
-              <Textarea
-                name="bio"
-                value={editForm.bio}
-                onChange={handleInputChange}
-                placeholder="Creator bio"
-                rows={5}
-              />
-            ) : (
-              <p className="text-muted-foreground whitespace-pre-line">
-                {creator.bio || "No bio provided"}
-              </p>
-            )}
-          </div>
 
-          <div>
-            <h3 className="text-lg font-medium mb-2">Primary Role</h3>
-            {isEditing ? (
-              <MultiSelect
-                options={roleOptions}
-                selected={editForm.primary_role}
-                onChange={(selected) =>
-                  setEditForm((prev) => ({
-                    ...prev,
-                    primary_role: selected,
-                  }))
-                }
-                placeholder="Select roles"
-              />
-            ) : (
-              <div className="flex flex-wrap gap-2">
-                {creator.primary_role && creator.primary_role.length > 0 ? (
-                  creator.primary_role.map((role) => (
-                    <span
-                      key={role}
-                      className="bg-secondary rounded-md px-2 py-1 text-sm text-muted-foreground"
-                    >
-                      {role}
-                    </span>
-                  ))
-                ) : (
-                  <span className="text-muted-foreground">
-                    No roles specified
-                  </span>
-                )}
-              </div>
-            )}
-          </div>
-
-          <div>
-            <h3 className="text-lg font-medium mb-2">Social Links</h3>
-            {isEditing ? (
-              <div className="space-y-3">
-                {SOCIAL_PLATFORMS.map((platform) => (
-                  <div key={platform.id} className="flex items-center gap-2">
-                    <SocialIcon platform={platform} className="h-5 w-5" />
-                    <Input
-                      placeholder={
-                        platform.placeholder || `${platform.name} URL`
-                      }
-                      value={editForm.social_links?.[platform.id] || ""}
-                      onChange={(e) =>
-                        handleSocialLinkChange(platform.id, e.target.value)
-                      }
-                    />
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="flex flex-wrap gap-3">
-                {creator.social_links &&
-                Object.keys(creator.social_links).length > 0 ? (
-                  Object.entries(creator.social_links).map(
-                    ([platform, url]) =>
-                      url && (
-                        <a
-                          key={platform}
-                          href={url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors"
-                        >
-                          <SocialIcon platform={platform} className="h-5 w-5" />
-                          <span className="sr-only">{platform}</span>
-                        </a>
-                      )
-                  )
-                ) : (
-                  <span className="text-muted-foreground">
-                    No social links provided
-                  </span>
-                )}
-              </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-
-      <h2 className="text-xl font-bold mb-4">Projects</h2>
-      {creator.projects && creator.projects.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {creator.projects.map((project) => (
-            <Card key={project.id} className="overflow-hidden">
-              <CardHeader className="flex flex-row items-start justify-between">
+          <Card className="mb-8">
+            <CardHeader>
+              <div className="flex flex-col md:flex-row justify-between items-start">
                 <div>
-                  <CardTitle>{project.title}</CardTitle>
-                  {/* {project.description && (
-                    <CardDescription>{project.description}</CardDescription>
-                  )} */}
-                </div>
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  onClick={() => {
-                    setProjectToDelete(project);
-                    setDeleteDialogOpen(true);
-                  }}
-                >
-                  <X className="h-4 w-4 mr-1" />
-                  Delete
-                </Button>
-              </CardHeader>
-              <CardContent>
-                {project.videos && project.videos.length > 0 && (
-                  <div className="space-y-4 mb-4">
-                    {project.videos.map((video) => (
-                      <div key={video.id} className="space-y-2">
-                        <VimeoEmbed
-                          vimeoId={video.vimeo_id}
-                          title={video.title}
-                        />
-                        {video.title && (
-                          <p className="font-medium">{video.title}</p>
-                        )}
-                        {video.description && (
-                          <p className="text-sm text-muted-foreground">
-                            {video.description}
-                          </p>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {project.images && project.images.length > 0 && (
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      {project.images.map((image) => (
-                        <div
-                          key={image.id}
-                          className="space-y-2 relative group"
-                        >
-                          <div
-                            className="aspect-square rounded-md overflow-hidden bg-muted cursor-pointer relative"
-                            onClick={() => openImageModal(image)}
-                          >
-                            <Image
-                              src={image.resolutions?.high_res || image.url}
-                              alt={project.title}
-                              width={500}
-                              height={500}
-                              className="object-cover w-full h-full"
-                            />
-                            <div
-                              className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10"
-                              onClick={(e) => {
-                                e.stopPropagation(); // Prevent opening the modal when delete button is clicked
-                                handleDeleteImage(project.id, image.id);
-                              }}
-                            >
-                              <Button
-                                variant="destructive"
-                                size="icon"
-                                className="h-8 w-8 rounded-full"
-                                disabled={isDeletingImage}
-                              >
-                                <Trash2 className="h-4 w-4 text-red-500" />
-                              </Button>
-                            </div>
-                          </div>
-
-                          {/* {image.alt_text && (
-                            <p className="text-sm text-muted-foreground">
-                              {image.alt_text}
-                            </p>
-                          )} */}
-                        </div>
-                      ))}
+                  <div className="space-y-4 w-full max-w-md">
+                    <div>
+                      <Label htmlFor="username">Username</Label>
+                      <Input
+                        id="username"
+                        name="username"
+                        value={editForm.username}
+                        onChange={handleInputChange}
+                        placeholder="Username"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="location">Location</Label>
+                      <Input
+                        id="location"
+                        name="location"
+                        value={editForm.location}
+                        onChange={handleInputChange}
+                        placeholder="Location"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="years_of_experience">
+                        Years of Experience
+                      </Label>
+                      <Input
+                        id="years_of_experience"
+                        name="years_of_experience"
+                        type="number"
+                        value={editForm.years_of_experience}
+                        onChange={handleInputChange}
+                        placeholder="Years of Experience"
+                      />
                     </div>
                   </div>
-                )}
-
-                {(!project.images || project.images.length === 0) &&
-                  (!project.videos || project.videos.length === 0) && (
-                    <div className="py-8 text-center text-muted-foreground">
-                      No media available for this project
+                </div>
+                <div className="mt-4 md:mt-0">
+                  {creator.status && (
+                    <div
+                      className={`px-3 py-1 rounded-full text-xs font-medium ${
+                        creator.status === "active"
+                          ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
+                          : "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400"
+                      }`}
+                    >
+                      {creator.status.charAt(0).toUpperCase() +
+                        creator.status.slice(1)}
                     </div>
                   )}
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      ) : (
-        <div className="py-12 text-center text-muted-foreground">
-          No projects available for this creator
-        </div>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div>
+                <h3 className="text-lg font-medium mb-2">Bio</h3>
+                <Textarea
+                  name="bio"
+                  value={editForm.bio}
+                  onChange={handleInputChange}
+                  placeholder="Creator bio"
+                  rows={5}
+                />
+              </div>
+
+              <div>
+                <h3 className="text-lg font-medium mb-2">Primary Role</h3>
+                <MultiSelect
+                  options={roleOptions}
+                  selected={editForm.primary_role}
+                  onChange={(selected) =>
+                    setEditForm((prev) => ({
+                      ...prev,
+                      primary_role: selected,
+                    }))
+                  }
+                  placeholder="Select roles"
+                />
+              </div>
+
+              <div>
+                <h3 className="text-lg font-medium mb-2">Social Links</h3>
+                <div className="space-y-3">
+                  {SOCIAL_PLATFORMS.map((platform) => (
+                    <div key={platform.id} className="flex items-center gap-2">
+                      <SocialIcon platform={platform} className="h-5 w-5" />
+                      <Input
+                        placeholder={
+                          platform.placeholder || `${platform.name} URL`
+                        }
+                        value={editForm.social_links?.[platform.id] || ""}
+                        onChange={(e) =>
+                          handleSocialLinkChange(platform.id, e.target.value)
+                        }
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <h2 className="text-xl font-bold mb-4">Projects</h2>
+          {creator.projects && creator.projects.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {creator.projects.map((project) => (
+                <Card key={project.id} className="overflow-hidden">
+                  <CardHeader className="flex flex-row items-start justify-between">
+                    <div>
+                      <CardTitle>{project.title}</CardTitle>
+                    </div>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => {
+                        setProjectToDelete(project);
+                        setDeleteDialogOpen(true);
+                      }}
+                    >
+                      <X className="h-4 w-4 mr-1" />
+                      Delete
+                    </Button>
+                  </CardHeader>
+                  <CardContent>
+                    {project.videos && project.videos.length > 0 && (
+                      <div className="space-y-4 mb-4">
+                        {project.videos.map((video) => (
+                          <div key={video.id} className="space-y-2">
+                            <VimeoEmbed
+                              vimeoId={video.vimeo_id}
+                              title={video.title}
+                            />
+                            {video.title && (
+                              <p className="font-medium">{video.title}</p>
+                            )}
+                            {video.description && (
+                              <p className="text-sm text-muted-foreground">
+                                {video.description}
+                              </p>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {project.images && project.images.length > 0 && (
+                      <div className="space-y-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          {project.images.map((image) => (
+                            <div
+                              key={image.id}
+                              className="space-y-2 relative group"
+                            >
+                              <div
+                                className="aspect-square rounded-md overflow-hidden bg-muted cursor-pointer relative"
+                                onClick={() => openImageModal(image)}
+                              >
+                                <Image
+                                  src={image.resolutions?.high_res || image.url}
+                                  alt={project.title}
+                                  width={500}
+                                  height={500}
+                                  className="object-cover w-full h-full"
+                                />
+                                <div
+                                  className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                                  onClick={(e) => {
+                                    e.stopPropagation(); // Prevent opening the modal when delete button is clicked
+                                    handleDeleteImage(project.id, image.id);
+                                  }}
+                                >
+                                  <Button
+                                    variant="destructive"
+                                    size="icon"
+                                    className="h-8 w-8 rounded-full"
+                                    disabled={isDeletingImage}
+                                  >
+                                    <Trash2 className="h-4 w-4 text-red-500" />
+                                  </Button>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {(!project.images || project.images.length === 0) &&
+                      (!project.videos || project.videos.length === 0) && (
+                        <div className="py-8 text-center text-muted-foreground">
+                          No media available for this project
+                        </div>
+                      )}
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <div className="py-12 text-center text-muted-foreground">
+              No projects available for this creator
+            </div>
+          )}
+        </>
       )}
 
       {/* Delete Project Dialog */}
@@ -848,6 +741,63 @@ const CreatorDetailPage = ({ params }) => {
               />
             )}
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Reject Dialog */}
+      <Dialog
+        open={rejectDialogOpen}
+        onOpenChange={setRejectDialogOpen}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Reject Creator</DialogTitle>
+            <DialogDescription>
+              This action will remove the creator and all their content
+              from the platform. Please provide a reason for the
+              rejection.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="username">Creator</Label>
+              <Input id="username" value={creator.username} disabled />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="reason">Rejection Reason</Label>
+              <Textarea
+                id="reason"
+                placeholder="Provide a detailed reason for rejecting this creator"
+                value={rejectReason}
+                onChange={(e) => setRejectReason(e.target.value)}
+                rows={4}
+                className="resize-none"
+              />
+              {rejectError && (
+                <p className="text-sm text-destructive">
+                  {rejectError}
+                </p>
+              )}
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setRejectDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleReject}
+              disabled={isRejecting}
+            >
+              {isRejecting ? "Rejecting..." : "Reject Creator"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </>

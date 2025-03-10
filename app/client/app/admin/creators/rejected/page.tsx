@@ -1,6 +1,6 @@
 "use client";
 
-import RejectedCreatorsPage from "@/components/admin/RejectedCreators";
+import RejectedCreatorsPage from "@/app/admin/components/rejected-creators";
 
 export default function RejectedCreatorsPageWrapper() {
   return <RejectedCreatorsPage />;

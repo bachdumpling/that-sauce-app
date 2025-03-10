@@ -5,45 +5,16 @@ import { Search, X, Video } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { CreatorCard } from "@/components/creator-card";
 import { Toggle } from "@/components/ui/toggle";
 import { useRouter, useSearchParams } from "next/navigation";
 import { searchCreators } from "@/lib/api/search"; 
+import { CreatorCard } from "@/components/shared/creator-card";
+import { SearchResult } from "@/components/shared/types";
 
 interface SearchResults {
   success: boolean;
   data: {
-    results: Array<{
-      profile: {
-        id: string;
-        username: string;
-        location: string;
-        primary_role: string[];
-        website?: string;
-        social_links: Record<string, string>;
-      };
-      score: number;
-      projects: Array<{
-        id: string;
-        title: string;
-        behance_url?: string;
-        images?: Array<{
-          id: string;
-          url: string;
-          alt_text: string;
-          resolutions: {
-            high_res?: string;
-            low_res?: string;
-          };
-        }>;
-        videos?: Array<{
-          id: string;
-          title: string;
-          vimeo_id: string;
-          similarity_score: number;
-        }>;
-      }>;
-    }>;
+    results: SearchResult[];
     page: number;
     limit: number;
     total: number;
@@ -136,6 +107,8 @@ export function SearchClientWrapper({
     }
   };
 
+  console.log(results);
+
   return (
     <>
       {/* Search Form */}
@@ -198,19 +171,20 @@ export function SearchClientWrapper({
       {/* Results */}
       <div className="space-y-6">
         {isLoading ? (
-          <div className="space-y-4">
+          <div className="space-y-4 w-full">
             {[1, 2, 3].map((n) => (
               <Skeleton key={n} className="h-32 w-full" />
             ))}
           </div>
         ) : results?.data.results.length ? (
           results.data.results.map((result) => (
-            <div key={result.profile.id}>
-              <CreatorCard
-                result={result}
-                showScores={results.data.content_type === "videos"}
-              />
-            </div>
+            <CreatorCard
+              key={result.profile.id}
+              creator={result}
+              viewMode="public"
+              showScores={results.data.content_type === "videos"}
+              maxProjects={3}
+            />
           ))
         ) : searchQuery ? (
           <div className="text-center py-8 text-muted-foreground">

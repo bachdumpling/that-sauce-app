@@ -1,11 +1,11 @@
 import React from "react";
 import { createClient } from "@/utils/supabase/server";
 import { redirect } from "next/navigation";
-import { ProfileClientWrapper } from "@/components/profile/profile-client-wrapper";
+import { ProfileClientWrapper } from "./components/profile-client-wrapper";
 
 async function ProfilePage() {
   const supabase = await createClient();
-  
+
   // Get the current user
   const {
     data: { user },
@@ -31,15 +31,13 @@ async function ProfilePage() {
     .order("created_at", { ascending: false });
 
   return (
-    <div className="container max-w-7xl mx-auto py-8">
-      <ProfileClientWrapper 
+      <ProfileClientWrapper
         user={user}
         creator={creator || null}
         initialProjects={projects || []}
         creatorError={creatorError?.message}
         projectsError={projectsError?.message}
       />
-    </div>
   );
 }
 

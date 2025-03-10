@@ -6,6 +6,13 @@ export const API_ENDPOINTS = {
   search: "/search",
   searchCreators: "/search/creators",
 
+  // Creator endpoints
+  getCreatorByUsername: (username: string) => `/creators/${username}`,
+  getProjectByTitle: (username: string, projectTitle: string) =>
+    `/creators/${username}/projects/${projectTitle}`,
+  deleteProjectImage: (projectId: string, imageId: string) =>
+    `/creators/projects/${projectId}/images/${imageId}`,
+
   // Project endpoints
   projects: "/projects",
   projectMedia: (projectId: string) => `/projects/${projectId}/media`,

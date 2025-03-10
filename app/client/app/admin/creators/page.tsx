@@ -1,6 +1,6 @@
 "use client";
 
-import CreatorManagementPage from "@/components/admin/CreatorList";
+import CreatorManagementPage from "@/app/admin/components/creator-list";
 
 export default function CreatorsPage() {
   return <CreatorManagementPage />;

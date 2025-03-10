@@ -24,6 +24,8 @@ import {
   DialogClose,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { CreatorCard } from "@/components/shared/creator-card";
+import { Creator } from "@/components/shared/types";
 
 const CreatorManagementPage = () => {
   const [creators, setCreators] = useState([]);
@@ -339,91 +341,16 @@ const CreatorManagementPage = () => {
         <div className="space-y-6">
           {creators.length > 0 ? (
             creators.map((creator) => (
-              <Card key={creator.id} className="overflow-hidden">
-                <CardContent className="p-6">
-                  <div className="flex flex-col md:flex-row justify-between items-start mb-4">
-                    <div>
-                      <h2 className="text-xl font-semibold">
-                        {creator.username}
-                      </h2>
-                      <div className="flex flex-col md:flex-row gap-2 text-sm text-muted-foreground mt-1">
-                        {creator.location && <span>{creator.location}</span>}
-                        {creator.primary_role && creator.primary_role.length > 0 && (
-                          <div className="flex flex-wrap gap-2 mt-2">
-                            {creator.primary_role.map((role) => (
-                              <span
-                                key={role}
-                                className="bg-secondary/50 rounded-md px-2 py-1 text-xs text-muted-foreground"
-                              >
-                                {role.replace(/-/g, " ")}
-                              </span>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    <Button
-                      onClick={() => viewCreator(creator.id)}
-                      variant="outline"
-                      className="mt-2 md:mt-0"
-                    >
-                      Review Creator
-                    </Button>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mt-4">
-                    {creator.projects?.map((project) => (
-                      <div key={project.id} className="space-y-2">
-                        {project.images && project.images[0] ? (
-                          <div
-                            className="aspect-square rounded-md overflow-hidden bg-muted cursor-pointer"
-                            onClick={(e) =>
-                              openImageModal(project.images[0], e)
-                            }
-                          >
-                            <Image
-                              src={
-                                project.images[0].resolutions?.high_res ||
-                                project.images[0].url
-                              }
-                              alt={project.title}
-                              width={300}
-                              height={300}
-                              className="object-cover w-full h-full"
-                            />
-                          </div>
-                        ) : project.videos && project.videos.length > 0 ? (
-                          <div className="aspect-square rounded-md bg-muted flex items-center justify-center">
-                            <span className="text-muted-foreground text-sm">
-                              Video
-                            </span>
-                          </div>
-                        ) : (
-                          <div className="aspect-square rounded-md bg-muted flex items-center justify-center">
-                            <span className="text-muted-foreground text-sm">
-                              No image
-                            </span>
-                          </div>
-                        )}
-                        <p className="text-sm font-medium truncate">
-                          {project.title}
-                        </p>
-                      </div>
-                    ))}
-
-                    {!creator.projects || creator.projects.length === 0 ? (
-                      <div className="col-span-full text-center p-4 text-muted-foreground">
-                        No projects available
-                      </div>
-                    ) : null}
-                  </div>
-                </CardContent>
-              </Card>
+              <CreatorCard
+                key={creator.id}
+                creator={creator}
+                viewMode="admin"
+                onReview={() => viewCreator(creator.id)}
+              />
             ))
           ) : (
-            <div className="text-center py-12 text-muted-foreground">
-              No creators found
+            <div className="text-center py-8 text-muted-foreground">
+              No creators found.
             </div>
           )}
 

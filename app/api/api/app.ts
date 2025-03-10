@@ -12,6 +12,7 @@ import searchRouter from "../src/routes/search";
 import mediaAnalysisRouter from "../src/routes/mediaAnalysis";
 import adminRouter from "../src/routes/admin";
 import projectRoutes from "../src/routes/projectRoutes";
+import creatorsRouter from "../src/routes/creators";
 
 // Middleware
 import { errorHandler } from "../src/middleware/errorHandler";
@@ -86,6 +87,7 @@ app.use("/api/search", searchRouter);
 app.use("/api/media", mediaAnalysisRouter);
 app.use("/api/admin", adminRouter);
 app.use("/api/projects", projectRoutes);
+app.use("/api/creators", creatorsRouter);
 
 // Error handling middleware
 app.use(errorHandler);

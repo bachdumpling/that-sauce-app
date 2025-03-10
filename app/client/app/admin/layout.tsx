@@ -1,11 +1,11 @@
 import { ReactNode } from "react";
 import { Toaster } from "@/components/ui/sonner";
-import { AdminProtection } from "@/components/admin/AdminProtection";
+import { AdminProtection } from "@/app/admin/components/admin-protection";
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
   return (
     <AdminProtection>
-      <div className="container px-4 py-8 mx-auto md:max-w-6xl w-full">
+      <div className="container max-w-6xl mx-auto px-4 py-8">
         {children}
       </div>
       <Toaster />

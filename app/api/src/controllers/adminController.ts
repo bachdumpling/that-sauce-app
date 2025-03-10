@@ -21,6 +21,7 @@ interface Project {
     url: string;
     thumbnail_url?: string;
   }>;
+  creator_username?: string;
 }
 
 interface Creator {
@@ -48,7 +49,9 @@ export class AdminController {
       const offset = (page - 1) * limit;
       const searchQuery = req.query.search as string;
 
-      logger.info(`Listing creators - Page: ${page}, Limit: ${limit}, Search: "${searchQuery || ''}"`);
+      logger.info(
+        `Listing creators - Page: ${page}, Limit: ${limit}, Search: "${searchQuery || ""}"`
+      );
 
       // Build the query
       let query = supabase.from("creators").select(
@@ -65,9 +68,11 @@ export class AdminController {
       if (searchQuery && searchQuery.trim() !== "") {
         const trimmedSearch = searchQuery.trim();
         logger.info(`Applying search filter: "${trimmedSearch}"`);
-        
+
         // Search in multiple columns with improved pattern
-        query = query.or(`username.ilike.%${trimmedSearch}%,location.ilike.%${trimmedSearch}%`);
+        query = query.or(
+          `username.ilike.%${trimmedSearch}%,location.ilike.%${trimmedSearch}%`
+        );
       }
 
       // Apply pagination and ordering
@@ -171,6 +176,12 @@ export class AdminController {
         // Assign projects to creators
         creators.forEach((creator: any) => {
           const projects = creatorToProjects[creator.id] || [];
+
+          // Add creator_username to each project
+          projects.forEach((project: Project) => {
+            project.creator_username = creator.username;
+          });
+
           creator.projects = projects;
         });
       }
@@ -249,6 +260,14 @@ export class AdminController {
           return res.status(404).json({ error: "Creator not found" });
         }
         throw error;
+      }
+
+      // Add creator_username to each project
+      if (creator.projects) {
+        creator.projects = creator.projects.map((project: any) => ({
+          ...project,
+          creator_username: creator.username,
+        }));
       }
 
       return res.status(200).json({
