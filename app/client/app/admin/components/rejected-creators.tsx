@@ -23,6 +23,8 @@ import { Search, X, ArrowLeft } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { fetchRejectedCreators } from "@/lib/api/admin";
+import { Creator, ViewMode } from "@/components/shared/types";
+import { CreatorCard } from "@/components/shared/creator-card";
 
 // Define the UnqualifiedCreator interface to match the database schema
 interface UnqualifiedCreator {
@@ -160,150 +162,120 @@ const RejectedCreatorsPage = () => {
   };
 
   return (
-    <>
-      <div className="mb-6">
-        <div className="flex items-center mb-4">
-          <Button
-            variant="ghost"
-            onClick={handleGoBack}
-            className="mr-2 md:hidden"
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <h1 className="text-2xl font-bold">Creator Management</h1>
-        </div>
-
-        <Tabs
-          value={activeTab}
-          onValueChange={handleTabChange}
-          className="mb-6"
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+        <h1 className="text-2xl font-bold">Rejected Creators</h1>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleGoBack}
+          className="flex items-center gap-1"
         >
-          <TabsList>
-            <TabsTrigger value="active">Active Creators</TabsTrigger>
-            <TabsTrigger value="rejected">Unqualified Creators</TabsTrigger>
-          </TabsList>
-        </Tabs>
-
-        <form onSubmit={handleSearch} className="flex gap-2">
-          <div className="relative flex-grow">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
-            <Input
-              className="pl-10 pr-10"
-              placeholder="Search rejected creators..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-            {searchQuery && (
-              <button
-                type="button"
-                onClick={clearSearch}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            )}
-          </div>
-          <Button type="submit">Search</Button>
-        </form>
+          <ArrowLeft className="h-4 w-4" />
+          Back to Creator Management
+        </Button>
       </div>
 
-      {error && (
-        <Alert variant="destructive" className="mb-4">
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
+      <Tabs
+        value={activeTab}
+        onValueChange={handleTabChange}
+        className="mb-6"
+      >
+        <TabsList>
+          <TabsTrigger value="active">Active Creators</TabsTrigger>
+          <TabsTrigger value="rejected">Unqualified Creators</TabsTrigger>
+        </TabsList>
+      </Tabs>
 
-      {loading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 w-full">
-          {[1, 2, 3, 4, 5, 6].map((i) => (
-            <Card key={i} className="animate-pulse overflow-hidden w-full">
-              <CardHeader className="space-y-3">
-                <div className="h-6 bg-muted rounded w-2/3"></div>
-                <div className="h-4 bg-muted rounded w-1/2"></div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <div className="h-4 bg-muted rounded w-1/3 mb-1"></div>
-                  <div className="h-16 bg-muted rounded w-full"></div>
-                </div>
-                <div>
-                  <div className="h-4 bg-muted rounded w-1/3 mb-1"></div>
-                  <div className="h-4 bg-muted rounded w-1/2"></div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+      <form onSubmit={handleSearch} className="flex gap-2">
+        <div className="relative flex-grow">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
+          <Input
+            className="pl-10 pr-10"
+            placeholder="Search rejected creators..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={clearSearch}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
         </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {creators.length > 0 ? (
-            creators.map((creator) => (
-              <Card key={creator.id} className="overflow-hidden">
-                <CardHeader>
-                  <CardTitle>{creator.username}</CardTitle>
-                  <CardDescription>
-                    Rejected on {formatDate(creator.rejected_at)}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div>
-                      <h3 className="text-sm font-medium text-muted-foreground mb-1">
-                        Rejection Reason:
-                      </h3>
-                      <p className="text-foreground">
-                        {creator.rejection_reason}
-                      </p>
-                    </div>
+        <Button type="submit">Search</Button>
+      </form>
 
-                    <div>
-                      <h3 className="text-sm font-medium text-muted-foreground mb-1">
-                        Rejected By:
-                      </h3>
-                      <p className="text-foreground">
-                        {creator.profiles?.first_name
-                          ? `${creator.profiles.first_name} ${creator.profiles.last_name || ""}`
-                          : "Unknown Admin"}
-                      </p>
-                    </div>
-
-                    {creator.location && (
-                      <div>
-                        <h3 className="text-sm font-medium text-muted-foreground mb-1">
-                          Location:
-                        </h3>
-                        <p className="text-foreground">{creator.location}</p>
-                      </div>
-                    )}
-
-                    {creator.primary_role && creator.primary_role.length > 0 && (
-                      <div>
-                        <h3 className="text-sm font-medium text-muted-foreground mb-1">
-                          Primary Role:
-                        </h3>
-                        <div className="flex flex-wrap gap-2">
-                          {creator.primary_role.map((role) => (
-                            <span
-                              key={role}
-                              className="bg-secondary/50 rounded-md px-2 py-1 text-xs text-muted-foreground"
-                            >
-                              {role}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
+      {/* Creator list */}
+      <div className="space-y-6">
+        {loading ? (
+          // Loading skeletons
+          Array(3)
+            .fill(0)
+            .map((_, i) => (
+              <Card key={i} className="overflow-hidden">
+                <CardContent className="p-6">
+                  <div className="h-24 w-full mb-4 bg-gray-200 animate-pulse rounded-md"></div>
+                  <div className="h-4 w-3/4 mb-2 bg-gray-200 animate-pulse rounded-md"></div>
+                  <div className="h-4 w-1/2 bg-gray-200 animate-pulse rounded-md"></div>
                 </CardContent>
               </Card>
             ))
-          ) : (
-            <div className="col-span-full text-center py-12 text-muted-foreground">
-              No rejected creators found
-            </div>
-          )}
-        </div>
-      )}
+        ) : error ? (
+          <Alert variant="destructive">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        ) : creators.length === 0 ? (
+          <Alert>
+            <AlertDescription>
+              {searchQuery
+                ? "No rejected creators found matching your search."
+                : "No rejected creators found."}
+            </AlertDescription>
+          </Alert>
+        ) : (
+          creators.map((creator) => {
+            // Convert UnqualifiedCreator to Creator format for CreatorCard
+            const formattedCreator: Creator = {
+              id: creator.id,
+              username: creator.username,
+              location: creator.location,
+              bio: creator.bio,
+              primary_role: creator.primary_role,
+              social_links: creator.social_links,
+              years_of_experience: creator.years_of_experience,
+              status: 'rejected',
+              email: creator.profiles?.email,
+              created_at: creator.created_at,
+              updated_at: creator.updated_at
+            };
+            
+            return (
+              <Card key={creator.id} className="overflow-hidden">
+                <CardContent className="p-6">
+                  <CreatorCard 
+                    creator={formattedCreator} 
+                    viewMode="admin"
+                  />
+                  
+                  <div className="mt-4 p-4 bg-red-50 rounded-md border border-red-200">
+                    <h3 className="font-medium text-red-800 mb-1">Rejection Details</h3>
+                    <p className="text-sm text-red-700 mb-2">
+                      <strong>Reason:</strong> {creator.rejection_reason}
+                    </p>
+                    <p className="text-sm text-red-700">
+                      <strong>Rejected on:</strong> {formatDate(creator.rejected_at)}
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })
+        )}
+      </div>
 
       {pagination.totalPages > 1 && (
         <Pagination className="mt-8">
@@ -357,7 +329,7 @@ const RejectedCreatorsPage = () => {
           </PaginationContent>
         </Pagination>
       )}
-    </>
+    </div>
   );
 };
 

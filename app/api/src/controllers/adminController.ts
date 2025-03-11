@@ -215,7 +215,7 @@ export class AdminController {
    */
   async getCreatorDetails(req: AuthenticatedRequest, res: Response) {
     try {
-      const { id } = req.params;
+      const { username } = req.params;
 
       const { data: creator, error } = await supabase
         .from("creators")
@@ -251,7 +251,7 @@ export class AdminController {
           )
         `
         )
-        .eq("id", id)
+        .eq("username", username)
         .single();
 
       if (error) {
@@ -289,7 +289,7 @@ export class AdminController {
    */
   async rejectCreator(req: AuthenticatedRequest, res: Response) {
     try {
-      const { id } = req.params;
+      const { username } = req.params;
       const { reason } = req.body;
 
       if (!reason || reason.trim() === "") {
@@ -303,7 +303,7 @@ export class AdminController {
       const { data: creator, error: fetchError } = await supabase
         .from("creators")
         .select("*")
-        .eq("id", id)
+        .eq("username", username)
         .single();
 
       if (fetchError) {
@@ -346,7 +346,7 @@ export class AdminController {
       const { error: deleteError } = await supabase
         .from("creators")
         .delete()
-        .eq("id", id);
+        .eq("id", creator.id);
 
       if (deleteError) {
         logger.error(`Error deleting from creators: ${deleteError.message}`, {
@@ -359,7 +359,7 @@ export class AdminController {
       }
 
       // Invalidate relevant caches
-      invalidateCache(`creator_details_${id}`);
+      invalidateCache(`creator_details_${username}`);
       invalidateCache("creators_list_");
 
       return res.status(200).json({
@@ -447,7 +447,7 @@ export class AdminController {
    */
   async updateCreator(req: AuthenticatedRequest, res: Response) {
     try {
-      const { id } = req.params;
+      const { username: usernameParam } = req.params;
       const {
         username,
         location,
@@ -480,7 +480,7 @@ export class AdminController {
       const { data, error } = await supabase
         .from("creators")
         .update(updateData)
-        .eq("id", id)
+        .eq("username", usernameParam)
         .select()
         .single();
 
@@ -493,7 +493,7 @@ export class AdminController {
       }
 
       // Invalidate cache for this creator
-      invalidateCache(`creator_details_${id}`);
+      invalidateCache(`creator_details_${usernameParam}`);
       invalidateCache("creators_list_");
 
       return res.status(200).json({
@@ -516,13 +516,13 @@ export class AdminController {
    */
   async deleteCreator(req: AuthenticatedRequest, res: Response) {
     try {
-      const { id } = req.params;
+      const { username } = req.params;
 
       // First check if the creator exists
       const { data: creator, error: fetchError } = await supabase
         .from("creators")
         .select("id")
-        .eq("id", id)
+        .eq("username", username)
         .single();
 
       if (fetchError) {
@@ -533,7 +533,10 @@ export class AdminController {
       }
 
       // Delete the creator
-      const { error } = await supabase.from("creators").delete().eq("id", id);
+      const { error } = await supabase
+        .from("creators")
+        .delete()
+        .eq("id", creator.id);
 
       if (error) {
         logger.error(`Error deleting creator: ${error.message}`, { error });
@@ -544,7 +547,7 @@ export class AdminController {
       }
 
       // Invalidate cache
-      invalidateCache(`creator_details_${id}`);
+      invalidateCache(`creator_details_${username}`);
       invalidateCache("creators_list_");
 
       return res.status(200).json({

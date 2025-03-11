@@ -17,6 +17,10 @@ import {
 } from "lucide-react";
 import { Project, ViewMode } from "@/components/shared/types";
 import { deleteProjectImage } from "@/lib/api/creators";
+import {
+  deleteProjectImage as adminDeleteProjectImage,
+  deleteProject as adminDeleteProject,
+} from "@/lib/api/admin";
 import { toast } from "sonner";
 
 interface ProjectCardProps {
@@ -27,6 +31,7 @@ interface ProjectCardProps {
   onDelete?: (project: Project) => void;
   onImageClick?: (imageIndex: number) => void;
   onAddMedia?: (project: Project) => void;
+  onDeleteImage?: (projectId: string, imageId: string) => void;
   className?: string;
 }
 
@@ -38,6 +43,7 @@ export function ProjectCard({
   onDelete,
   onImageClick,
   onAddMedia,
+  onDeleteImage,
   className = "",
 }: ProjectCardProps) {
   const [isMediaLoading, setIsMediaLoading] = useState(true);
@@ -60,6 +66,12 @@ export function ProjectCard({
 
     if (!project.id || !imageId || isDeletingImage) return;
 
+    // If onDeleteImage prop is provided, use it instead of the default behavior
+    if (onDeleteImage) {
+      onDeleteImage(project.id, imageId);
+      return;
+    }
+
     if (
       confirm(
         "Are you sure you want to delete this image? This action cannot be undone."
@@ -68,7 +80,14 @@ export function ProjectCard({
       setIsDeletingImage(true);
 
       try {
-        const response = await deleteProjectImage(project.id, imageId);
+        let response;
+
+        // Use the appropriate API function based on viewMode
+        if (viewMode === "admin") {
+          response = await adminDeleteProjectImage(project.id, imageId);
+        } else {
+          response = await deleteProjectImage(project.id, imageId);
+        }
 
         if (response.success) {
           toast.success("Image deleted successfully");
@@ -119,13 +138,18 @@ export function ProjectCard({
                 >
                   <h3 className="text-md font-semibold">{project.title}</h3>
                 </Link>
+              ) : viewMode === "admin" ? (
+                <Link
+                  href={`/creator/${project.creator_username || "unknown"}/${getProjectSlug(project.title)}`}
+                  className="hover:text-primary transition-colors"
+                >
+                  <h3 className="text-md font-semibold">{project.title}</h3>
+                </Link>
               ) : (
                 <h3 className="text-md font-semibold">{project.title}</h3>
               )}
               {project.year && (
-                <p className="text-sm text-muted-foreground mt-1">
-                  {project.year}
-                </p>
+                <p className="text-sm text-muted-foreground">{project.year}</p>
               )}
 
               {shouldShowScores && (
@@ -144,36 +168,50 @@ export function ProjectCard({
               )}
             </div>
 
-            <div className="flex items-center gap-2">
-              {project.behance_url && (
-                <a
-                  href={project.behance_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  <ExternalLink className="h-5 w-5" />
-                </a>
-              )}
-
-              {/* Action buttons based on view mode */}
-              {viewMode === "owner" && onEdit && (
+            {/* Action buttons */}
+            <div className="flex gap-2">
+              {/* Edit button */}
+              {/* {onEdit && (
                 <Button
                   variant="ghost"
                   size="icon"
-                  onClick={() => onEdit(project)}
+                  className="h-8 w-8"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onEdit(project);
+                  }}
                 >
                   <Edit className="h-4 w-4" />
                 </Button>
-              )}
+              )} */}
 
-              {viewMode === "admin" && onDelete && (
+              {/* Delete button */}
+              {onDelete && viewMode === "admin" && (
                 <Button
                   variant="ghost"
                   size="icon"
-                  onClick={() => onDelete(project)}
+                  className="h-8 w-8 text-destructive hover:text-destructive"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onDelete(project);
+                  }}
                 >
                   <Trash2 className="h-4 w-4" />
+                </Button>
+              )}
+
+              {/* External link button */}
+              {project.behance_url && (
+                <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
+                  <a
+                    href={project.behance_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <ExternalLink className="h-4 w-4" />
+                  </a>
                 </Button>
               )}
             </div>
@@ -188,58 +226,56 @@ export function ProjectCard({
         <div className="mt-auto">
           {project.images && project.images.length > 0 && (
             <div className="p-4">
-              {/* Masonry grid for the first 3 images */}
-              {project.images.length > 1 && (
-                <div className="columns-2 sm:columns-3 gap-2 space-y-2 mt-2">
-                  {project.images.slice(0, 3).map((image, index) => (
-                    <div
-                      key={image.id}
-                      className="relative break-inside-avoid overflow-hidden rounded-md cursor-pointer group mb-2"
-                      onClick={() => {
-                        if (onImageClick) {
-                          onImageClick(index + 1);
-                        } else if (viewMode === "public") {
-                          // If no click handler is provided and in public view, use the link
-                          window.location.href = `/creator/${project.creator_username || "unknown"}/${getProjectSlug(project.title)}`;
-                        }
-                      }}
-                    >
-                      <div className="w-full relative">
-                        <Image
-                          src={image.resolutions.low_res || image.url}
-                          alt={image.alt_text || project.title}
-                          width={300}
-                          height={300}
-                          className="w-full h-auto transition-transform group-hover:scale-105"
-                          style={{ display: "block" }}
-                        />
-                        <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-2">
-                          <p className="text-white text-xs font-medium truncate w-full">
-                            {image.alt_text || `Image ${index + 2}`}
-                          </p>
-                        </div>
-
-                        {/* Delete button for admin/owner */}
-                        {canDeleteImages && (
-                          <div
-                            className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10"
-                            onClick={(e) => handleDeleteImage(e, image.id)}
-                          >
-                            <Button
-                              variant="destructive"
-                              size="icon"
-                              className="h-8 w-8 rounded-full"
-                              disabled={isDeletingImage}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        )}
+              {/* Display images (single or multiple) */}
+              <div className="columns-2 sm:columns-3 gap-2 space-y-2 mt-2">
+                {project.images.slice(0, 3).map((image, index) => (
+                  <div
+                    key={image.id}
+                    className="relative break-inside-avoid overflow-hidden rounded-md cursor-pointer group mb-2"
+                    onClick={() => {
+                      if (onImageClick) {
+                        onImageClick(index);
+                      } else if (viewMode === "public") {
+                        // If no click handler is provided and in public view, use the link
+                        window.location.href = `/creator/${project.creator_username || "unknown"}/${getProjectSlug(project.title)}`;
+                      }
+                    }}
+                  >
+                    <div className="w-full relative">
+                      <Image
+                        src={image.resolutions?.low_res || image.url}
+                        alt={image.alt_text || project.title}
+                        width={300}
+                        height={300}
+                        className="w-full h-auto transition-transform group-hover:scale-105"
+                        style={{ display: "block" }}
+                      />
+                      <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-2">
+                        <p className="text-white text-xs font-medium truncate w-full">
+                          {image.alt_text || `Image ${index + 1}`}
+                        </p>
                       </div>
+
+                      {/* Delete button for admin/owner */}
+                      {canDeleteImages && (
+                        <div
+                          className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                          onClick={(e) => handleDeleteImage(e, image.id)}
+                        >
+                          <Button
+                            variant="destructive"
+                            size="icon"
+                            className="h-8 w-8 rounded-full"
+                            disabled={isDeletingImage}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      )}
                     </div>
-                  ))}
-                </div>
-              )}
+                  </div>
+                ))}
+              </div>
             </div>
           )}
         </div>

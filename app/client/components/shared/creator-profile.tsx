@@ -37,6 +37,7 @@ interface CreatorProfileProps {
   onDeleteProject?: (project: Project) => void;
   onAddProject?: () => void;
   onAddMedia?: (project: Project) => void;
+  onDeleteImage?: (projectId: string, imageId: string) => void;
 }
 
 export function CreatorProfile({
@@ -48,6 +49,7 @@ export function CreatorProfile({
   onDeleteProject,
   onAddProject,
   onAddMedia,
+  onDeleteImage,
 }: CreatorProfileProps) {
   const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(
     null
@@ -230,6 +232,7 @@ export function CreatorProfile({
                   onDelete={onDeleteProject}
                   onImageClick={(index) => openImageModal(project, index)}
                   onAddMedia={onAddMedia}
+                  onDeleteImage={onDeleteImage}
                 />
               ))}
             </div>
@@ -250,6 +253,7 @@ export function CreatorProfile({
                   onDelete={onDeleteProject}
                   onImageClick={(index) => openImageModal(project, index)}
                   onAddMedia={onAddMedia}
+                  onDeleteImage={onDeleteImage}
                 />
               ))}
             </div>

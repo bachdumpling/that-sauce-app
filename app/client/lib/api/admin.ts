@@ -62,7 +62,7 @@ export const fetchCreators = async (page = 1, limit = 10, search?: string) => {
  * Fetch a single creator's details
  */
 export const fetchCreatorDetails = async (
-  creatorId: string,
+  username: string,
   bustCache = false
 ) => {
   try {
@@ -73,7 +73,7 @@ export const fetchCreatorDetails = async (
       success: boolean;
       data: Creator;
       error?: string;
-    }>(API_ENDPOINTS.admin.creatorDetails(creatorId), { params });
+    }>(API_ENDPOINTS.admin.creatorDetails(username), { params });
 
     if (response.data.success) {
       return {
@@ -99,7 +99,7 @@ export const fetchCreatorDetails = async (
  * Update a creator's profile
  */
 export const updateCreator = async (
-  creatorId: string,
+  username: string,
   data: Partial<Creator>
 ) => {
   try {
@@ -108,7 +108,7 @@ export const updateCreator = async (
       message?: string;
       creator?: Creator;
       error?: string;
-    }>(API_ENDPOINTS.admin.creatorDetails(creatorId), data);
+    }>(API_ENDPOINTS.admin.creatorDetails(username), data);
 
     console.log("API response:", response);
 
@@ -136,9 +136,9 @@ export const updateCreator = async (
 /**
  * Reject a creator
  */
-export const rejectCreator = async (creatorId: string, reason: string) => {
+export const rejectCreator = async (username: string, reason: string) => {
   const response = await apiRequest.post<{ success: boolean }>(
-    API_ENDPOINTS.admin.rejectCreator(creatorId),
+    API_ENDPOINTS.admin.rejectCreator(username),
     { reason }
   );
   return response.data;
@@ -147,9 +147,9 @@ export const rejectCreator = async (creatorId: string, reason: string) => {
 /**
  * Approve a creator
  */
-export const approveCreator = async (creatorId: string) => {
+export const approveCreator = async (username: string) => {
   const response = await apiRequest.post<{ success: boolean }>(
-    `${API_ENDPOINTS.admin.creators}/${creatorId}/approve`
+    `${API_ENDPOINTS.admin.creators}/${username}/approve`
   );
   return response.data;
 };

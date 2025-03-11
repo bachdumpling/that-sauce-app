@@ -22,14 +22,14 @@ router.get(
 );
 
 router.get(
-  "/creators/:id",
-  cacheMiddleware(300, (req) => `creator_details_${req.params.id}`),
+  "/creators/:username",
+  cacheMiddleware(300, (req) => `creator_details_${req.params.username}`),
   adminController.getCreatorDetails
 );
 
 // New creator management endpoints
-router.put("/creators/:id", adminController.updateCreator);
-router.delete("/creators/:id", adminController.deleteCreator);
+router.put("/creators/:username", adminController.updateCreator);
+router.delete("/creators/:username", adminController.deleteCreator);
 
 // Project management routes
 router.get(
@@ -58,7 +58,7 @@ router.delete(
 );
 
 // Existing rejection routes
-router.post("/creators/:id/reject", adminController.rejectCreator);
+router.post("/creators/:username/reject", adminController.rejectCreator);
 
 // Rejected creators routes
 router.get(

@@ -45,10 +45,11 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CreatorProfile } from "@/components/shared/creator-profile";
 import { Creator, Project } from "@/components/shared/types";
-
+import { ProjectCard } from "@/components/shared/project-card";
+import { Skeleton } from "@/components/ui/skeleton";
 const CreatorDetailPage = ({ params }) => {
   const unwrappedParams = use(params);
-  const creatorId = unwrappedParams?.id;
+  const creatorUsername = unwrappedParams?.username;
   const searchParams = useSearchParams();
   const currentPage = searchParams.get("page") || "1";
   const [creator, setCreator] = useState(null);
@@ -75,6 +76,11 @@ const CreatorDetailPage = ({ params }) => {
   const [isDeletingImage, setIsDeletingImage] = useState(false);
   const [selectedImage, setSelectedImage] = useState(null);
   const [imageModalOpen, setImageModalOpen] = useState(false);
+  const [deleteImageDialogOpen, setDeleteImageDialogOpen] = useState(false);
+  const [imageToDelete, setImageToDelete] = useState({
+    projectId: null,
+    imageId: null,
+  });
 
   // Convert arrays to options for MultiSelect
   const roleOptions = CREATOR_ROLES.map((role) => ({
@@ -90,13 +96,13 @@ const CreatorDetailPage = ({ params }) => {
 
   // Fetch creator details from API
   const loadCreatorDetails = async (bustCache = false) => {
-    if (!creatorId) return;
+    if (!creatorUsername) return;
 
     setLoading(true);
     setError(null);
 
     try {
-      const response = await fetchCreatorDetails(creatorId, bustCache);
+      const response = await fetchCreatorDetails(creatorUsername, bustCache);
 
       if (response.success) {
         setCreator(response.data);
@@ -124,7 +130,7 @@ const CreatorDetailPage = ({ params }) => {
 
   useEffect(() => {
     loadCreatorDetails();
-  }, [creatorId]);
+  }, [creatorUsername]);
 
   const handleReject = async () => {
     if (!rejectReason.trim()) {
@@ -136,7 +142,7 @@ const CreatorDetailPage = ({ params }) => {
     setIsRejecting(true);
 
     try {
-      const response = await rejectCreator(creatorId, rejectReason);
+      const response = await rejectCreator(creatorUsername, rejectReason);
 
       if (response.success) {
         toast("Creator Rejected", {
@@ -209,7 +215,7 @@ const CreatorDetailPage = ({ params }) => {
           : null,
       };
 
-      const response = await updateCreator(creatorId, updateData);
+      const response = await updateCreator(creatorUsername, updateData);
 
       if (response.success) {
         // Update local state with the updated creator data
@@ -243,73 +249,70 @@ const CreatorDetailPage = ({ params }) => {
     }
   };
 
-  // Handle project deletion
   const handleDeleteProject = async () => {
     if (!projectToDelete) return;
 
     setIsDeleting(true);
-
     try {
       const response = await deleteProject(projectToDelete.id);
-
       if (response.success) {
         toast.success("Project deleted successfully");
-
-        // Update the UI immediately
+        // Update the creator object by removing the deleted project
         setCreator((prevCreator) => ({
           ...prevCreator,
           projects: prevCreator.projects.filter(
-            (project) => project.id !== projectToDelete.id
+            (p) => p.id !== projectToDelete.id
           ),
         }));
-
-        // Reload data with cache busting to ensure we have the latest data
-        await loadCreatorDetails(true);
+        setDeleteDialogOpen(false);
+        setProjectToDelete(null);
       } else {
-        toast.error(response.error || "Failed to delete project");
+        throw new Error(response.error || "Failed to delete project");
       }
-    } catch (error) {
-      console.error("Error deleting project:", error);
-      toast.error("An unexpected error occurred");
+    } catch (err) {
+      console.error("Error deleting project:", err);
+      toast.error(
+        err.message || "An error occurred while deleting the project"
+      );
     } finally {
       setIsDeleting(false);
-      setDeleteDialogOpen(false);
-      setProjectToDelete(null);
     }
   };
 
-  // Handle image deletion
-  const handleDeleteImage = async (projectId, imageId) => {
+  const handleDeleteImage = async () => {
+    if (!imageToDelete.projectId || !imageToDelete.imageId) return;
+
     setIsDeletingImage(true);
-
     try {
-      const response = await deleteProjectImage(projectId, imageId);
-
+      const response = await deleteProjectImage(
+        imageToDelete.projectId,
+        imageToDelete.imageId
+      );
       if (response.success) {
         toast.success("Image deleted successfully");
-
-        // Update the UI immediately
+        // Update the creator object by removing the deleted image
         setCreator((prevCreator) => ({
           ...prevCreator,
           projects: prevCreator.projects.map((project) => {
-            if (project.id === projectId) {
+            if (project.id === imageToDelete.projectId) {
               return {
                 ...project,
-                images: project.images.filter((image) => image.id !== imageId),
+                images: project.images.filter(
+                  (img) => img.id !== imageToDelete.imageId
+                ),
               };
             }
             return project;
           }),
         }));
-
-        // Reload data with cache busting to ensure we have the latest data
-        await loadCreatorDetails(true);
+        setDeleteImageDialogOpen(false);
+        setImageToDelete({ projectId: null, imageId: null });
       } else {
-        toast.error(response.error || "Failed to delete image");
+        throw new Error(response.error || "Failed to delete image");
       }
-    } catch (error) {
-      console.error("Error deleting image:", error);
-      toast.error("An unexpected error occurred");
+    } catch (err) {
+      console.error("Error deleting image:", err);
+      toast.error(err.message || "An error occurred while deleting the image");
     } finally {
       setIsDeletingImage(false);
     }
@@ -321,82 +324,44 @@ const CreatorDetailPage = ({ params }) => {
     setImageModalOpen(true);
   };
 
-  if (loading) {
+  // Function to handle opening the delete image dialog
+  const openDeleteImageDialog = (projectId, imageId) => {
+    setImageToDelete({ projectId, imageId });
+    setDeleteImageDialogOpen(true);
+  };
+
+  // Render projects section
+  const renderProjects = () => {
+    if (!creator || !creator.projects || creator.projects.length === 0) {
+      return (
+        <Card className="mb-6">
+          <CardContent className="p-6">
+            <p className="text-muted-foreground">No projects found.</p>
+          </CardContent>
+        </Card>
+      );
+    }
+
     return (
-      <>
-        <div className="flex items-center mb-6">
-          <Button variant="ghost" disabled className="mr-2">
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back
-          </Button>
-          <h1 className="text-2xl font-bold">Creator Profile Review</h1>
-        </div>
-
-        <div className="space-y-6 animate-pulse w-full">
-          <Card className="w-full">
-            <CardHeader className="space-y-3">
-              <div className="h-8 bg-muted rounded w-1/3"></div>
-              <div className="h-4 bg-muted rounded w-1/2"></div>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="flex flex-col md:flex-row gap-6 w-full">
-                <div className="w-full md:w-1/3 space-y-4">
-                  <div className="aspect-square bg-muted rounded-md"></div>
-                  <div className="space-y-2">
-                    <div className="h-4 bg-muted rounded w-1/2"></div>
-                    <div className="h-4 bg-muted rounded w-3/4"></div>
-                    <div className="h-4 bg-muted rounded w-2/3"></div>
-                  </div>
-                </div>
-                <div className="w-full md:w-2/3 space-y-6">
-                  <div className="space-y-2">
-                    <div className="h-5 bg-muted rounded w-1/4"></div>
-                    <div className="h-20 bg-muted rounded w-full"></div>
-                  </div>
-                  <div className="space-y-2">
-                    <div className="h-5 bg-muted rounded w-1/4"></div>
-                    <div className="flex flex-wrap gap-2">
-                      {[1, 2, 3, 4].map((i) => (
-                        <div
-                          key={i}
-                          className="h-8 bg-muted rounded-md w-24"
-                        ></div>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <div className="h-5 bg-muted rounded w-1/4"></div>
-                    <div className="flex gap-3">
-                      {[1, 2, 3].map((i) => (
-                        <div
-                          key={i}
-                          className="h-10 w-10 bg-muted rounded-full"
-                        ></div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
-            {[1, 2, 3, 4].map((i) => (
-              <Card key={i} className="w-full">
-                <CardHeader className="space-y-3">
-                  <div className="h-6 bg-muted rounded w-1/3"></div>
-                </CardHeader>
-                <CardContent>
-                  <div className="aspect-video bg-muted rounded-md"></div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-      </>
+      <div className="space-y-6">
+        {creator.projects.map((project) => (
+          <ProjectCard
+            key={project.id}
+            project={project}
+            viewMode="admin"
+            onDelete={(project) => {
+              setProjectToDelete(project);
+              setDeleteDialogOpen(true);
+            }}
+          />
+        ))}
+      </div>
     );
-  }
+  };
 
+  if (loading) {
+    return <Skeleton variant="creator" />;
+  }
   if (error || !creator) {
     return (
       <>
@@ -410,22 +375,17 @@ const CreatorDetailPage = ({ params }) => {
     );
   }
 
-  console.log(creator);
-
   return (
     <>
       {!isEditing && creator && (
         <div className="space-y-8">
           <div className="flex justify-between items-center">
-            <Button
-              variant="outline"
-              onClick={() => router.push(`/admin/creators?page=${currentPage}`)}
-            >
+            <Button variant="outline" onClick={handleGoBack}>
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back to Creators
             </Button>
             <div className="flex gap-2">
-              <Button variant="outline" onClick={() => setIsEditing(true)}>
+              <Button variant="outline" onClick={handleEditToggle}>
                 <Edit className="h-4 w-4 mr-2" />
                 Edit Profile
               </Button>
@@ -442,7 +402,11 @@ const CreatorDetailPage = ({ params }) => {
             creator={creator}
             viewMode="admin"
             onEditProject={(project) => handleEditProject(project)}
-            onDeleteProject={(project) => handleDeleteProject(project)}
+            onDeleteProject={(project) => {
+              setProjectToDelete(project);
+              setDeleteDialogOpen(true);
+            }}
+            onDeleteImage={openDeleteImageDialog}
           />
         </div>
       )}
@@ -578,106 +542,10 @@ const CreatorDetailPage = ({ params }) => {
             </CardContent>
           </Card>
 
-          <h2 className="text-xl font-bold mb-4">Projects</h2>
-          {creator.projects && creator.projects.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {creator.projects.map((project) => (
-                <Card key={project.id} className="overflow-hidden">
-                  <CardHeader className="flex flex-row items-start justify-between">
-                    <div>
-                      <CardTitle>{project.title}</CardTitle>
-                    </div>
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => {
-                        setProjectToDelete(project);
-                        setDeleteDialogOpen(true);
-                      }}
-                    >
-                      <X className="h-4 w-4 mr-1" />
-                      Delete
-                    </Button>
-                  </CardHeader>
-                  <CardContent>
-                    {project.videos && project.videos.length > 0 && (
-                      <div className="space-y-4 mb-4">
-                        {project.videos.map((video) => (
-                          <div key={video.id} className="space-y-2">
-                            <VimeoEmbed
-                              vimeoId={video.vimeo_id}
-                              title={video.title}
-                            />
-                            {video.title && (
-                              <p className="font-medium">{video.title}</p>
-                            )}
-                            {video.description && (
-                              <p className="text-sm text-muted-foreground">
-                                {video.description}
-                              </p>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-
-                    {project.images && project.images.length > 0 && (
-                      <div className="space-y-4">
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                          {project.images.map((image) => (
-                            <div
-                              key={image.id}
-                              className="space-y-2 relative group"
-                            >
-                              <div
-                                className="aspect-square rounded-md overflow-hidden bg-muted cursor-pointer relative"
-                                onClick={() => openImageModal(image)}
-                              >
-                                <Image
-                                  src={image.resolutions?.high_res || image.url}
-                                  alt={project.title}
-                                  width={500}
-                                  height={500}
-                                  className="object-cover w-full h-full"
-                                />
-                                <div
-                                  className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10"
-                                  onClick={(e) => {
-                                    e.stopPropagation(); // Prevent opening the modal when delete button is clicked
-                                    handleDeleteImage(project.id, image.id);
-                                  }}
-                                >
-                                  <Button
-                                    variant="destructive"
-                                    size="icon"
-                                    className="h-8 w-8 rounded-full"
-                                    disabled={isDeletingImage}
-                                  >
-                                    <Trash2 className="h-4 w-4 text-red-500" />
-                                  </Button>
-                                </div>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {(!project.images || project.images.length === 0) &&
-                      (!project.videos || project.videos.length === 0) && (
-                        <div className="py-8 text-center text-muted-foreground">
-                          No media available for this project
-                        </div>
-                      )}
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          ) : (
-            <div className="py-12 text-center text-muted-foreground">
-              No projects available for this creator
-            </div>
-          )}
+          <div className="space-y-4">
+            <h2 className="text-xl font-semibold">Projects</h2>
+            {renderProjects()}
+          </div>
         </>
       )}
 
@@ -691,25 +559,10 @@ const CreatorDetailPage = ({ params }) => {
               be undone.
             </DialogDescription>
           </DialogHeader>
-
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="project-title">Project</Label>
-              <Input
-                id="project-title"
-                value={projectToDelete?.title || ""}
-                disabled
-              />
-            </div>
-          </div>
-
           <DialogFooter>
             <Button
               variant="outline"
-              onClick={() => {
-                setDeleteDialogOpen(false);
-                setProjectToDelete(null);
-              }}
+              onClick={() => setDeleteDialogOpen(false)}
               disabled={isDeleting}
             >
               Cancel
@@ -720,6 +573,38 @@ const CreatorDetailPage = ({ params }) => {
               disabled={isDeleting}
             >
               {isDeleting ? "Deleting..." : "Delete Project"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Image Dialog */}
+      <Dialog
+        open={deleteImageDialogOpen}
+        onOpenChange={setDeleteImageDialogOpen}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Image</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this image? This action cannot be
+              undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setDeleteImageDialogOpen(false)}
+              disabled={isDeletingImage}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDeleteImage}
+              disabled={isDeletingImage}
+            >
+              {isDeletingImage ? "Deleting..." : "Delete Image"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -745,17 +630,13 @@ const CreatorDetailPage = ({ params }) => {
       </Dialog>
 
       {/* Reject Dialog */}
-      <Dialog
-        open={rejectDialogOpen}
-        onOpenChange={setRejectDialogOpen}
-      >
+      <Dialog open={rejectDialogOpen} onOpenChange={setRejectDialogOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Reject Creator</DialogTitle>
             <DialogDescription>
-              This action will remove the creator and all their content
-              from the platform. Please provide a reason for the
-              rejection.
+              This action will remove the creator and all their content from the
+              platform. Please provide a reason for the rejection.
             </DialogDescription>
           </DialogHeader>
 
@@ -776,9 +657,7 @@ const CreatorDetailPage = ({ params }) => {
                 className="resize-none"
               />
               {rejectError && (
-                <p className="text-sm text-destructive">
-                  {rejectError}
-                </p>
+                <p className="text-sm text-destructive">{rejectError}</p>
               )}
             </div>
           </div>

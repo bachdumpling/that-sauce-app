@@ -283,11 +283,21 @@ export function CreatorCard({
               </Button>
             )}
 
-            {viewMode === "admin" && onReview && (
-              <Button variant="outline" size="sm" onClick={onReview}>
-                <User className="h-4 w-4 mr-2" />
-                Review Creator
-              </Button>
+            {viewMode === "admin" && (
+              <>
+                {onEdit && (
+                  <Button variant="outline" size="sm" onClick={onEdit}>
+                    <Edit className="h-4 w-4 mr-2" />
+                    Edit Creator
+                  </Button>
+                )}
+                {onReview && (
+                  <Button variant="outline" size="sm" onClick={onReview}>
+                    <User className="h-4 w-4 mr-2" />
+                    Review Creator
+                  </Button>
+                )}
+              </>
             )}
           </div>
         </div>

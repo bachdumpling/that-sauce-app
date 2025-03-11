@@ -241,9 +241,8 @@ const CreatorManagementPage = () => {
   };
 
   // Navigate to creator detail page
-  const viewCreator = (id) => {
-    // Include the current page in the URL when navigating to creator detail
-    router.push(`/admin/creators/${id}?page=${pagination.page}`);
+  const viewCreator = (creator) => {
+    router.push(`/admin/creators/${creator.username}?page=${pagination.page}`);
   };
 
   // Switch between active and rejected creators
@@ -264,7 +263,18 @@ const CreatorManagementPage = () => {
   return (
     <>
       <div className="mb-6">
-        <h1 className="text-2xl font-bold mb-4">Creator Management</h1>
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <h1 className="text-2xl font-bold">Creator Management</h1>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => router.push("/admin/creators/rejected")}
+            >
+              View Rejected Creators
+            </Button>
+          </div>
+        </div>
 
         <Tabs
           value={activeTab}
@@ -300,84 +310,82 @@ const CreatorManagementPage = () => {
         </form>
       </div>
 
-      {error && (
-        <Alert variant="destructive" className="mb-4">
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
+      {/* Creator list */}
+      <div className="space-y-6">
+        {loading ? (
+          <Skeleton variant="creator" />
+        ) : error ? (
+          <Alert variant="destructive">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        ) : creators.length === 0 ? (
+          <Alert>
+            <AlertDescription>
+              {searchQuery
+                ? "No creators found matching your search."
+                : "No creators found."}
+            </AlertDescription>
+          </Alert>
+        ) : (
+          creators.map((creator) => (
+            <CreatorCard
+              key={creator.id}
+              creator={creator}
+              viewMode="admin"
+              onEdit={() => viewCreator(creator)}
+            />
+          ))
+        )}
+      </div>
 
-      {loading ? (
-        <Skeleton variant="creator" />
-      ) : (
-        <div className="space-y-6">
-          {creators.length > 0 ? (
-            creators.map((creator) => (
-              <CreatorCard
-                key={creator.id}
-                creator={creator}
-                viewMode="admin"
-                onReview={() => viewCreator(creator.id)}
+      {pagination.totalPages > 1 && (
+        <Pagination>
+          <PaginationContent>
+            <PaginationItem>
+              <PaginationPrevious
+                onClick={() =>
+                  handlePageChange(Math.max(1, pagination.page - 1))
+                }
+                className={
+                  pagination.page === 1 ? "pointer-events-none opacity-50" : ""
+                }
               />
-            ))
-          ) : (
-            <div className="text-center py-8 text-muted-foreground">
-              No creators found.
-            </div>
-          )}
+            </PaginationItem>
 
-          {pagination.totalPages > 1 && (
-            <Pagination>
-              <PaginationContent>
-                <PaginationItem>
-                  <PaginationPrevious
-                    onClick={() =>
-                      handlePageChange(Math.max(1, pagination.page - 1))
-                    }
-                    className={
-                      pagination.page === 1
-                        ? "pointer-events-none opacity-50"
-                        : ""
-                    }
-                  />
+            {Array.from({ length: pagination.totalPages }, (_, i) => i + 1)
+              .filter(
+                (page) =>
+                  page === 1 ||
+                  page === pagination.totalPages ||
+                  (page >= pagination.page - 5 && page <= pagination.page + 5)
+              )
+              .map((page) => (
+                <PaginationItem key={page}>
+                  <PaginationLink
+                    isActive={page === pagination.page}
+                    onClick={() => handlePageChange(page)}
+                  >
+                    {page}
+                  </PaginationLink>
                 </PaginationItem>
+              ))}
 
-                {Array.from({ length: pagination.totalPages }, (_, i) => i + 1)
-                  .filter(
-                    (page) =>
-                      page === 1 ||
-                      page === pagination.totalPages ||
-                      (page >= pagination.page - 5 &&
-                        page <= pagination.page + 5)
+            <PaginationItem>
+              <PaginationNext
+                onClick={() =>
+                  handlePageChange(
+                    Math.min(pagination.totalPages, pagination.page + 1)
                   )
-                  .map((page) => (
-                    <PaginationItem key={page}>
-                      <PaginationLink
-                        isActive={page === pagination.page}
-                        onClick={() => handlePageChange(page)}
-                      >
-                        {page}
-                      </PaginationLink>
-                    </PaginationItem>
-                  ))}
-
-                <PaginationItem>
-                  <PaginationNext
-                    onClick={() =>
-                      handlePageChange(
-                        Math.min(pagination.totalPages, pagination.page + 1)
-                      )
-                    }
-                    className={
-                      pagination.page === pagination.totalPages
-                        ? "pointer-events-none opacity-50"
-                        : ""
-                    }
-                  />
-                </PaginationItem>
-              </PaginationContent>
-            </Pagination>
-          )}
-        </div>
+                }
+                className={
+                  pagination.page === pagination.totalPages
+                    ? "pointer-events-none opacity-50"
+                    : ""
+                }
+              />
+            </PaginationItem>
+          </PaginationContent>
+        </Pagination>
       )}
 
       {/* Image Modal */}

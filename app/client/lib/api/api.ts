@@ -20,8 +20,8 @@ export const API_ENDPOINTS = {
   // Admin endpoints
   admin: {
     creators: "/admin/creators",
-    creatorDetails: (creatorId: string) => `/admin/creators/${creatorId}`,
-    rejectCreator: (creatorId: string) => `/admin/creators/${creatorId}/reject`,
+    creatorDetails: (username: string) => `/admin/creators/${username}`,
+    rejectCreator: (username: string) => `/admin/creators/${username}/reject`,
     rejectedCreators: "/admin/unqualified/creators",
     projects: "/admin/projects",
     projectDetails: (projectId: string) => `/admin/projects/${projectId}`,
