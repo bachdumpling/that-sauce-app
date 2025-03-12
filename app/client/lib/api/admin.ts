@@ -28,7 +28,12 @@ export interface CreatorsResponse {
 /**
  * Fetch creators with pagination
  */
-export const fetchCreators = async (page = 1, limit = 10, search?: string) => {
+export const fetchCreators = async (
+  page = 1,
+  limit = 10,
+  search?: string,
+  status?: string
+) => {
   const params: Record<string, any> = { page, limit };
 
   // Only add search parameter if it's defined and not empty
@@ -36,24 +41,17 @@ export const fetchCreators = async (page = 1, limit = 10, search?: string) => {
     params.search = search.trim();
   }
 
+  // Add status filter if provided
+  if (status !== undefined && status !== null) {
+    params.status = status;
+  }
+
   // Add a timestamp to prevent browser caching
   params._t = Date.now();
-
-  console.log("API Request params:", JSON.stringify(params));
 
   const response = await apiRequest.get<any>(API_ENDPOINTS.admin.creators, {
     params,
   });
-
-  if (response.data && response.data.success) {
-    console.log(
-      `API Response: Success, Creators: ${response.data.data.creators.length}`
-    );
-  } else {
-    console.log(
-      `API Response: Error - ${response.data?.error || "Unknown error"}`
-    );
-  }
 
   return response.data;
 };
@@ -148,10 +146,31 @@ export const rejectCreator = async (username: string, reason: string) => {
  * Approve a creator
  */
 export const approveCreator = async (username: string) => {
-  const response = await apiRequest.post<{ success: boolean }>(
-    `${API_ENDPOINTS.admin.creators}/${username}/approve`
-  );
-  return response.data;
+  try {
+    const response = await apiRequest.post<{
+      success: boolean;
+      message?: string;
+      error?: string;
+    }>(API_ENDPOINTS.admin.approveCreator(username));
+
+    if (response.data.success) {
+      return {
+        success: true,
+        message: response.data.message || "Creator approved successfully",
+      };
+    } else {
+      return {
+        success: false,
+        error: response.data.error || "Failed to approve creator",
+      };
+    }
+  } catch (error: any) {
+    console.error("Error in approveCreator:", error);
+    return {
+      success: false,
+      error: error.message || "Failed to approve creator",
+    };
+  }
 };
 
 /**

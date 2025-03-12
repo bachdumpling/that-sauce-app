@@ -48,9 +48,10 @@ export class AdminController {
       const limit = parseInt(req.query.limit as string) || 10;
       const offset = (page - 1) * limit;
       const searchQuery = req.query.search as string;
+      const statusFilter = req.query.status as string;
 
       logger.info(
-        `Listing creators - Page: ${page}, Limit: ${limit}, Search: "${searchQuery || ""}"`
+        `Listing creators - Page: ${page}, Limit: ${limit}, Search: "${searchQuery || ""}", Status: "${statusFilter || "all"}"`
       );
 
       // Build the query
@@ -59,7 +60,8 @@ export class AdminController {
           id,
           username,
           location,
-          primary_role
+          primary_role,
+          status
         `,
         { count: "exact" }
       );
@@ -73,6 +75,12 @@ export class AdminController {
         query = query.or(
           `username.ilike.%${trimmedSearch}%,location.ilike.%${trimmedSearch}%`
         );
+      }
+
+      // Apply status filter if provided
+      if (statusFilter && statusFilter !== "all") {
+        logger.info(`Applying status filter: "${statusFilter}"`);
+        query = query.eq("status", statusFilter);
       }
 
       // Apply pagination and ordering
@@ -917,6 +925,77 @@ export class AdminController {
       });
     } catch (error: any) {
       logger.error(`Error in deleteProjectImage: ${error.message}`, { error });
+      return res.status(500).json({
+        success: false,
+        error: "Internal server error",
+      });
+    }
+  }
+
+  /**
+   * Approve a creator
+   * POST /api/admin/creators/:username/approve
+   */
+  async approveCreator(req: AuthenticatedRequest, res: Response) {
+    try {
+      const { username } = req.params;
+
+      // First check if the creator exists
+      const { data: creator, error: fetchError } = await supabase
+        .from("creators")
+        .select("id, status")
+        .eq("username", username)
+        .single();
+
+      if (fetchError) {
+        return res.status(404).json({
+          success: false,
+          error: "Creator not found",
+        });
+      }
+
+      // Check if the creator is already approved
+      if (creator.status === "approved") {
+        return res.status(400).json({
+          success: false,
+          error: "Creator is already approved",
+        });
+      }
+
+      // Update the creator status to approved
+      const { error: updateError } = await supabase
+        .from("creators")
+        .update({ status: "approved" })
+        .eq("id", creator.id);
+
+      if (updateError) {
+        logger.error(`Error approving creator: ${updateError.message}`, {
+          updateError,
+        });
+        return res.status(500).json({
+          success: false,
+          error: "Failed to approve creator",
+        });
+      }
+
+      // Invalidate cache
+      invalidateCache(`creator_details_${username}`);
+      invalidateCache("creators_list_");
+
+      // Invalidate any cache that might contain the creator's status
+      const cacheKeys = cache.keys();
+      cacheKeys.forEach((key) => {
+        if (key.includes("creators_list_") || key.includes(username)) {
+          invalidateCache(key);
+        }
+      });
+
+      return res.status(200).json({
+        success: true,
+        message: "Creator approved successfully",
+      });
+    } catch (error: any) {
+      logger.error(`Error in approveCreator: ${error.message}`, { error });
       return res.status(500).json({
         success: false,
         error: "Internal server error",

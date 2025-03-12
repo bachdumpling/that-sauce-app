@@ -11,7 +11,7 @@ export interface Creator {
   social_links?: Record<string, string>;
   years_of_experience?: number;
   projects?: Project[];
-  status?: 'pending' | 'approved' | 'rejected';
+  status?: 'pending' | 'approved';
   email?: string;
   user_id?: string;
   created_at?: string;

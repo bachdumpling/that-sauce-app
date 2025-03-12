@@ -16,7 +16,8 @@ router.get(
   "/creators",
   cacheMiddleware(
     300,
-    (req) => `creators_list_${req.query.page || 1}_${req.query.limit || 10}_${req.query.search || ""}`
+    (req) =>
+      `creators_list_${req.query.page || 1}_${req.query.limit || 10}_${req.query.search || ""}_${req.query.status || "all"}`
   ),
   adminController.listCreators
 );
@@ -59,6 +60,9 @@ router.delete(
 
 // Existing rejection routes
 router.post("/creators/:username/reject", adminController.rejectCreator);
+
+// Add approval route
+router.post("/creators/:username/approve", adminController.approveCreator);
 
 // Rejected creators routes
 router.get(

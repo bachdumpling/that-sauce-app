@@ -34,6 +34,7 @@ import {
   updateCreator,
   deleteProject,
   deleteProjectImage,
+  approveCreator,
 } from "@/lib/api/admin";
 import { VimeoEmbed } from "@/components/ui/vimeo-embed";
 import { toast } from "sonner";
@@ -81,6 +82,7 @@ const CreatorDetailPage = ({ params }) => {
     projectId: null,
     imageId: null,
   });
+  const [isApproving, setIsApproving] = useState(false);
 
   // Convert arrays to options for MultiSelect
   const roleOptions = CREATOR_ROLES.map((role) => ({
@@ -150,7 +152,20 @@ const CreatorDetailPage = ({ params }) => {
         });
 
         setRejectDialogOpen(false);
-        router.push(`/admin/creators?page=${currentPage}`);
+
+        // Get the status filter from the URL if it exists
+        const statusFilter = searchParams.get("status");
+
+        // Create URL parameters
+        const params = new URLSearchParams();
+        params.set("page", currentPage);
+
+        // Add status filter if it exists
+        if (statusFilter) {
+          params.set("status", statusFilter);
+        }
+
+        router.push(`/admin/creators?${params.toString()}`);
       } else {
         throw new Error(response.error || "Failed to reject creator");
       }
@@ -165,7 +180,19 @@ const CreatorDetailPage = ({ params }) => {
   };
 
   const handleGoBack = () => {
-    router.push(`/admin/creators?page=${currentPage}`);
+    // Get the status filter from the URL if it exists
+    const statusFilter = searchParams.get("status");
+
+    // Create URL parameters
+    const params = new URLSearchParams();
+    params.set("page", currentPage);
+
+    // Add status filter if it exists
+    if (statusFilter) {
+      params.set("status", statusFilter);
+    }
+
+    router.push(`/admin/creators?${params.toString()}`);
   };
 
   const handleEditToggle = () => {
@@ -359,6 +386,33 @@ const CreatorDetailPage = ({ params }) => {
     );
   };
 
+  // Add handleApprove function
+  const handleApprove = async () => {
+    setIsApproving(true);
+
+    try {
+      const response = await approveCreator(creatorUsername);
+
+      if (response.success) {
+        toast("Creator Approved", {
+          description: "The creator has been approved successfully.",
+        });
+
+        // Refresh creator details to update the status
+        await loadCreatorDetails(true);
+      } else {
+        throw new Error(response.error || "Failed to approve creator");
+      }
+    } catch (err) {
+      console.error("Error approving creator:", err);
+      toast.error(
+        err.message || "Failed to approve creator. Please try again."
+      );
+    } finally {
+      setIsApproving(false);
+    }
+  };
+
   if (loading) {
     return <Skeleton variant="creator" />;
   }
@@ -384,17 +438,44 @@ const CreatorDetailPage = ({ params }) => {
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back to Creators
             </Button>
-            <div className="flex gap-2">
-              <Button variant="outline" onClick={handleEditToggle}>
-                <Edit className="h-4 w-4 mr-2" />
-                Edit Profile
-              </Button>
-              <Button
-                variant="destructive"
-                onClick={() => setRejectDialogOpen(true)}
-              >
-                Reject Creator
-              </Button>
+            <div className="flex items-center gap-4">
+              {creator.status && (
+                <div
+                  className={`px-3 py-1 rounded-full text-sm font-medium ${
+                    creator.status === "approved"
+                      ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
+                      : "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400"
+                  }`}
+                >
+                  Status:{" "}
+                  {creator.status.charAt(0).toUpperCase() +
+                    creator.status.slice(1)}
+                </div>
+              )}
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={handleEditToggle}>
+                  <Edit className="h-4 w-4 mr-2" />
+                  Edit Profile
+                </Button>
+                <Button
+                  variant="success"
+                  onClick={handleApprove}
+                  disabled={isApproving || creator.status === "approved"}
+                  className="bg-green-600 hover:bg-green-700 text-white"
+                >
+                  {isApproving
+                    ? "Approving..."
+                    : creator.status === "approved"
+                      ? "Already Approved"
+                      : "Approve Creator"}
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={() => setRejectDialogOpen(true)}
+                >
+                  Reject Creator
+                </Button>
+              </div>
             </div>
           </div>
 
@@ -481,7 +562,7 @@ const CreatorDetailPage = ({ params }) => {
                   {creator.status && (
                     <div
                       className={`px-3 py-1 rounded-full text-xs font-medium ${
-                        creator.status === "active"
+                        creator.status === "approved"
                           ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
                           : "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400"
                       }`}

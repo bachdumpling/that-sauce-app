@@ -40,6 +40,7 @@ const CreatorManagementPage = () => {
   const [error, setError] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState("active");
+  const [statusFilter, setStatusFilter] = useState("pending");
   const [selectedImage, setSelectedImage] = useState(null);
   const [imageModalOpen, setImageModalOpen] = useState(false);
   const router = useRouter();
@@ -50,31 +51,25 @@ const CreatorManagementPage = () => {
 
   // Fetch creators from the API
   const loadCreators = useCallback(
-    async (page = 1, search = searchQuery) => {
+    async (page = 1, search = searchQuery, status = statusFilter) => {
       // Normalize the search parameter - explicitly set to undefined if empty
       const normalizedSearch =
         search === undefined ? undefined : (search || "").trim();
       const searchParam =
         normalizedSearch === "" ? undefined : normalizedSearch;
 
-      console.log(
-        `Loading creators - Page: ${page}, Search: "${normalizedSearch || "ALL"}", Timestamp: ${Date.now()}`
-      );
-
       setLoading(true);
       setError(null);
 
       try {
-        console.log("Before API call to fetchCreators");
         const response = await fetchCreators(
           page,
           pagination.limit,
-          searchParam
+          searchParam,
+          status !== "all" ? status : undefined
         );
-        console.log("API response received:", response);
 
         if (response.success) {
-          console.log(`Loaded ${response.data.creators.length} creators`);
           setCreators(response.data.creators);
           setPagination({
             page: response.data.pagination.page,
@@ -89,43 +84,34 @@ const CreatorManagementPage = () => {
           throw new Error(response.error || "Failed to fetch creators");
         }
       } catch (err) {
-        console.error("Error fetching creators:", err);
         setError(err.message || "An error occurred while fetching creators");
         setCreators([]);
       } finally {
         setLoading(false);
       }
     },
-    [searchQuery, pagination.limit]
+    [searchQuery, pagination.limit, statusFilter]
   );
 
   // Initial load when component mounts
   useEffect(() => {
-    console.log("Component mounted - Initial load triggered");
     loadCreators(1);
-
-    // Debug: Check if this effect is running
-    return () => {
-      console.log("Component unmounted - Initial load cleanup");
-    };
   }, [loadCreators]);
 
   // Initial data load and handle URL parameter changes
   useEffect(() => {
     const page = parseInt(searchParams.get("page") || "1");
     const urlSearchQuery = searchParams.get("search") || "";
+    const urlStatusFilter = searchParams.get("status") || "pending";
 
     // Only reload if the search parameters have actually changed
     if (
       previousSearchRef.current === urlSearchQuery &&
-      previousPageRef.current === page
+      previousPageRef.current === page &&
+      statusFilter === urlStatusFilter
     ) {
       return;
     }
-
-    console.log(
-      `URL parameters changed - Page: ${page}, Search: "${urlSearchQuery || "ALL"}"`
-    );
 
     // Update refs with current values
     previousSearchRef.current = urlSearchQuery;
@@ -137,6 +123,10 @@ const CreatorManagementPage = () => {
       setSearchQuery("");
     }
 
+    if (urlStatusFilter !== statusFilter) {
+      setStatusFilter(urlStatusFilter);
+    }
+
     setPagination((prev) => ({
       ...prev,
       page,
@@ -144,11 +134,12 @@ const CreatorManagementPage = () => {
 
     // Pass undefined for empty search to ensure we load all creators
     const searchParam = urlSearchQuery === "" ? undefined : urlSearchQuery;
-    console.log(
-      `Loading creators with searchParam: ${searchParam === undefined ? "undefined (ALL)" : `"${searchParam}"`}`
+    loadCreators(
+      page,
+      searchParam,
+      urlStatusFilter !== "all" ? urlStatusFilter : undefined
     );
-    loadCreators(page, searchParam);
-  }, [searchParams, searchQuery, loadCreators]);
+  }, [searchParams, searchQuery, loadCreators, statusFilter]);
 
   // Handle page change
   const handlePageChange = (newPage) => {
@@ -172,7 +163,12 @@ const CreatorManagementPage = () => {
     // Use Next.js router to update URL without full page reload
     router.push(`${pathname}?${params.toString()}`);
 
-    loadCreators(newPage, previousSearchRef.current);
+    // Pass the current status filter when loading creators
+    loadCreators(
+      newPage,
+      previousSearchRef.current,
+      statusFilter !== "all" ? statusFilter : undefined
+    );
 
     // Scroll to top when changing pages
     window.scrollTo(0, 0);
@@ -188,8 +184,6 @@ const CreatorManagementPage = () => {
     if (trimmedQuery === previousSearchRef.current) {
       return;
     }
-
-    console.log(`Searching for: "${trimmedQuery || "ALL"}"`);
 
     // Update URL with search parameter and reset to page 1
     const params = new URLSearchParams(searchParams.toString());
@@ -210,9 +204,6 @@ const CreatorManagementPage = () => {
 
     // Pass undefined for empty search to ensure we load all creators
     const searchParam = trimmedQuery === "" ? undefined : trimmedQuery;
-    console.log(
-      `Searching with searchParam: ${searchParam === undefined ? "undefined (ALL)" : `"${searchParam}"`}`
-    );
     loadCreators(1, searchParam);
   };
 
@@ -222,8 +213,6 @@ const CreatorManagementPage = () => {
     if (previousSearchRef.current === "") {
       return;
     }
-
-    console.log("Clearing search - Loading ALL creators");
 
     setSearchQuery("");
     previousSearchRef.current = "";
@@ -242,7 +231,15 @@ const CreatorManagementPage = () => {
 
   // Navigate to creator detail page
   const viewCreator = (creator) => {
-    router.push(`/admin/creators/${creator.username}?page=${pagination.page}`);
+    const params = new URLSearchParams();
+    params.set("page", pagination.page.toString());
+
+    // Preserve the current status filter
+    if (statusFilter !== "pending") {
+      params.set("status", statusFilter);
+    }
+
+    router.push(`/admin/creators/${creator.username}?${params.toString()}`);
   };
 
   // Switch between active and rejected creators
@@ -251,6 +248,26 @@ const CreatorManagementPage = () => {
     if (value === "rejected") {
       router.push("/admin/creators/rejected");
     }
+  };
+
+  // Handle status filter change
+  const handleStatusFilterChange = (status) => {
+    setStatusFilter(status);
+
+    // Update URL with status parameter and reset to page 1
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("page", "1");
+
+    if (status !== "all") {
+      params.set("status", status);
+    } else {
+      params.delete("status");
+    }
+
+    // Use Next.js router to update URL without full page reload
+    router.push(`${pathname}?${params.toString()}`);
+
+    loadCreators(1, searchQuery, status);
   };
 
   // Function to open the image modal
@@ -286,6 +303,32 @@ const CreatorManagementPage = () => {
             <TabsTrigger value="rejected">Unqualified Creators</TabsTrigger>
           </TabsList>
         </Tabs>
+
+        <div className="flex flex-col sm:flex-row gap-4 mb-4">
+          <div className="flex gap-2">
+            <Button
+              variant={statusFilter === "all" ? "default" : "outline"}
+              size="sm"
+              onClick={() => handleStatusFilterChange("all")}
+            >
+              All
+            </Button>
+            <Button
+              variant={statusFilter === "pending" ? "default" : "outline"}
+              size="sm"
+              onClick={() => handleStatusFilterChange("pending")}
+            >
+              Pending
+            </Button>
+            <Button
+              variant={statusFilter === "approved" ? "default" : "outline"}
+              size="sm"
+              onClick={() => handleStatusFilterChange("approved")}
+            >
+              Approved
+            </Button>
+          </div>
+        </div>
 
         <form onSubmit={handleSearch} className="flex gap-2">
           <div className="relative flex-grow">
