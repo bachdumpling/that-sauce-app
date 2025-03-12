@@ -16,6 +16,7 @@ export interface Creator {
   primary_role?: string[];
   social_links?: Record<string, string>;
   years_of_experience?: number;
+  work_email?: string;
 }
 
 export interface CreatorsResponse {
@@ -23,6 +24,16 @@ export interface CreatorsResponse {
   total: number;
   page: number;
   limit: number;
+}
+
+export interface CreatorStats {
+  total: number;
+  pending: number;
+  approved: number;
+  rejected: number;
+  totalProjects: number;
+  totalImages: number;
+  totalVideos: number;
 }
 
 /**
@@ -278,6 +289,29 @@ export const deleteProjectImage = async (
     return {
       success: false,
       error: error.message || "Failed to delete image",
+    };
+  }
+};
+
+/**
+ * Fetch creator statistics
+ */
+export const fetchCreatorStats = async (): Promise<CreatorStats> => {
+  try {
+    const response = await apiRequest.get<CreatorStats>(
+      API_ENDPOINTS.admin.creatorStats
+    );
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching creator stats:", error);
+    return {
+      total: 0,
+      pending: 0,
+      approved: 0,
+      rejected: 0,
+      totalProjects: 0,
+      totalImages: 0,
+      totalVideos: 0,
     };
   }
 };

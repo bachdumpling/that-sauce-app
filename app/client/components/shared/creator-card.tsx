@@ -231,6 +231,18 @@ export function CreatorCard({
                   {profile.years_of_experience} years experience
                 </div>
               )}
+              
+              {viewMode === "admin" && profile.work_email && (
+                <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
+                    <rect width="20" height="16" x="2" y="4" rx="2" />
+                    <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
+                  </svg>
+                  <a href={`mailto:${profile.work_email}`} className="hover:underline">
+                    {profile.work_email}
+                  </a>
+                </div>
+              )}
             </div>
 
             {profile.primary_role && profile.primary_role.length > 0 && (
@@ -255,7 +267,7 @@ export function CreatorCard({
             <div className="flex items-center gap-2">
               {profile.social_links &&
                 Object.entries(profile.social_links).map(([platform, url]) => {
-                  if (!url || platform === "website") return null;
+                  if (!url) return null;
                   return (
                     <a
                       key={platform}
@@ -268,17 +280,6 @@ export function CreatorCard({
                     </a>
                   );
                 })}
-
-              {profile.social_links?.website && (
-                <a
-                  href={profile.social_links.website}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  <Globe className="h-4 w-4" />
-                </a>
-              )}
             </div>
 
             {/* Action buttons based on view mode */}

@@ -20,6 +20,7 @@ export const API_ENDPOINTS = {
   // Admin endpoints
   admin: {
     creators: "/admin/creators",
+    creatorStats: "/admin/creators/stats",
     creatorDetails: (username: string) => `/admin/creators/${username}`,
     rejectCreator: (username: string) => `/admin/creators/${username}/reject`,
     approveCreator: (username: string) => `/admin/creators/${username}/approve`,

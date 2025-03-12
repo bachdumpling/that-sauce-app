@@ -35,9 +35,82 @@ interface Creator {
   email?: string;
   social_links?: Record<string, string>;
   years_of_experience?: number;
+  work_email?: string;
 }
 
 export class AdminController {
+  /**
+   * Get creator statistics
+   * GET /api/admin/creators/stats
+   */
+  async getCreatorStats(req: AuthenticatedRequest, res: Response) {
+    try {
+      // Fetch all the stats in parallel
+      const [
+        totalCreatorsResult,
+        pendingCreatorsResult,
+        approvedCreatorsResult,
+        rejectedCreatorsResult,
+        totalProjectsResult,
+        totalImagesResult,
+        totalVideosResult,
+      ] = await Promise.all([
+        // Total creators
+        supabase.from("creators").select("id", { count: "exact", head: true }),
+
+        // Pending creators
+        supabase
+          .from("creators")
+          .select("id", { count: "exact", head: true })
+          .eq("status", "pending"),
+
+        // Approved creators
+        supabase
+          .from("creators")
+          .select("id", { count: "exact", head: true })
+          .eq("status", "approved"),
+
+        // Rejected creators (from unqualified_creators table)
+        supabase
+          .from("unqualified_creators")
+          .select("id", { count: "exact", head: true }),
+
+        // Total projects
+        supabase.from("projects").select("id", { count: "exact", head: true }),
+
+        // Total images
+        supabase.from("images").select("id", { count: "exact", head: true }),
+
+        // Total videos
+        supabase.from("videos").select("id", { count: "exact", head: true }),
+      ]);
+
+      // Compile the stats
+      const stats = {
+        total: totalCreatorsResult.count || 0,
+        pending: pendingCreatorsResult.count || 0,
+        approved: approvedCreatorsResult.count || 0,
+        rejected: rejectedCreatorsResult.count || 0,
+        totalProjects: totalProjectsResult.count || 0,
+        totalImages: totalImagesResult.count || 0,
+        totalVideos: totalVideosResult.count || 0,
+      };
+
+      return res.json(stats);
+    } catch (error) {
+      logger.error("Error fetching creator stats:", error);
+      return res.status(500).json({
+        total: 0,
+        pending: 0,
+        approved: 0,
+        rejected: 0,
+        totalProjects: 0,
+        totalImages: 0,
+        totalVideos: 0,
+      });
+    }
+  }
+
   /**
    * List all creators with pagination
    * GET /api/admin/creators
@@ -236,6 +309,7 @@ export class AdminController {
           primary_role,
           social_links,
           years_of_experience,
+          work_email,
           projects (
             id,
             title,
@@ -332,6 +406,7 @@ export class AdminController {
           primary_role: creator.primary_role,
           social_links: creator.social_links,
           years_of_experience: creator.years_of_experience,
+          work_email: creator.work_email,
           rejection_reason: reason,
           rejected_by: req?.user?.id,
           rejected_at: new Date().toISOString(),
@@ -409,6 +484,7 @@ export class AdminController {
           bio,
           social_links,
           years_of_experience,
+          work_email,
           rejection_reason,
           rejected_at,
           rejected_by,
@@ -463,6 +539,7 @@ export class AdminController {
         bio,
         social_links,
         years_of_experience,
+        work_email,
       } = req.body;
 
       // Validate required fields
@@ -483,6 +560,7 @@ export class AdminController {
       if (social_links !== undefined) updateData.social_links = social_links;
       if (years_of_experience !== undefined)
         updateData.years_of_experience = years_of_experience;
+      if (work_email !== undefined) updateData.work_email = work_email;
 
       // Update the creator profile
       const { data, error } = await supabase

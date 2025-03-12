@@ -13,11 +13,22 @@ import {
   PaginationPrevious,
 } from "@/components/ui/pagination";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Search, X } from "lucide-react";
+import {
+  Search,
+  X,
+  Users,
+  Image as ImageIcon,
+  Video,
+  FolderOpen,
+  Loader2,
+} from "lucide-react";
 import { Input } from "@/components/ui/input";
 import Image from "next/image";
-import { fetchCreators } from "@/lib/api/admin";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  fetchCreators,
+  fetchCreatorStats,
+  CreatorStats,
+} from "@/lib/api/admin";
 import {
   Dialog,
   DialogContent,
@@ -39,10 +50,19 @@ const CreatorManagementPage = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [activeTab, setActiveTab] = useState("active");
   const [statusFilter, setStatusFilter] = useState("pending");
   const [selectedImage, setSelectedImage] = useState(null);
   const [imageModalOpen, setImageModalOpen] = useState(false);
+  const [stats, setStats] = useState<CreatorStats>({
+    total: 0,
+    pending: 0,
+    approved: 0,
+    rejected: 0,
+    totalProjects: 0,
+    totalImages: 0,
+    totalVideos: 0,
+  });
+  const [loadingStats, setLoadingStats] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
   const pathname = usePathname();
@@ -93,9 +113,24 @@ const CreatorManagementPage = () => {
     [searchQuery, pagination.limit, statusFilter]
   );
 
-  // Initial load when component mounts
+  // Fetch creator stats
+  const fetchStats = async () => {
+    setLoadingStats(true);
+    try {
+      const statsData = await fetchCreatorStats();
+      setStats(statsData);
+    } catch (error) {
+      console.error("Error fetching creator stats:", error);
+      // Keep the default values in the state
+    } finally {
+      setLoadingStats(false);
+    }
+  };
+
+  // Fetch creators and stats on initial load
   useEffect(() => {
     loadCreators(1);
+    fetchStats();
   }, [loadCreators]);
 
   // Initial data load and handle URL parameter changes
@@ -242,14 +277,6 @@ const CreatorManagementPage = () => {
     router.push(`/admin/creators/${creator.username}?${params.toString()}`);
   };
 
-  // Switch between active and rejected creators
-  const handleTabChange = (value) => {
-    setActiveTab(value);
-    if (value === "rejected") {
-      router.push("/admin/creators/rejected");
-    }
-  };
-
   // Handle status filter change
   const handleStatusFilterChange = (status) => {
     setStatusFilter(status);
@@ -286,33 +313,143 @@ const CreatorManagementPage = () => {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => router.push("/admin/creators/rejected")}
+              onClick={fetchStats}
+              disabled={loadingStats}
             >
-              View Rejected Creators
+              {loadingStats ? "Refreshing..." : "Refresh Stats"}
             </Button>
           </div>
         </div>
 
-        <Tabs
-          value={activeTab}
-          onValueChange={handleTabChange}
-          className="mb-6"
-        >
-          <TabsList>
-            <TabsTrigger value="active">Active Creators</TabsTrigger>
-            <TabsTrigger value="rejected">Unqualified Creators</TabsTrigger>
-          </TabsList>
-        </Tabs>
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 my-6">
+          <Card>
+            <CardContent className="p-4 flex items-center gap-4">
+              <div className="p-3 rounded-full bg-primary/10">
+                <Users className="h-6 w-6 text-primary" />
+              </div>
+              {loadingStats ? (
+                <div className="flex-1">
+                  <p className="text-sm text-muted-foreground">
+                    Total Creators
+                  </p>
+                  <div className="h-8 flex items-center">
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <p className="text-sm text-muted-foreground">
+                    Total Creators
+                  </p>
+                  <h3 className="text-2xl font-bold">{stats.total}</h3>
+                  <div className="flex gap-2 mt-1 text-xs">
+                    <span className="text-amber-600">
+                      {stats.pending || 0} pending
+                    </span>
+                    <span className="text-green-600">
+                      {stats.approved || 0} approved
+                    </span>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-4 flex items-center gap-4">
+              <div className="p-3 rounded-full bg-blue-500/10">
+                <FolderOpen className="h-6 w-6 text-blue-500" />
+              </div>
+              {loadingStats ? (
+                <div className="flex-1">
+                  <p className="text-sm text-muted-foreground">
+                    Total Projects
+                  </p>
+                  <div className="h-8 flex items-center">
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <p className="text-sm text-muted-foreground">
+                    Total Projects
+                  </p>
+                  <h3 className="text-2xl font-bold">{stats.totalProjects}</h3>
+                  <div className="flex gap-2 mt-1 text-xs">
+                    <span className="text-muted-foreground">
+                      {stats.approved > 0
+                        ? (stats.totalProjects / stats.approved).toFixed(1)
+                        : "0"}{" "}
+                      per creator
+                    </span>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-4 flex items-center gap-4">
+              <div className="p-3 rounded-full bg-purple-500/10">
+                <ImageIcon className="h-6 w-6 text-purple-500" />
+              </div>
+              {loadingStats ? (
+                <div className="flex-1">
+                  <p className="text-sm text-muted-foreground">Total Images</p>
+                  <div className="h-8 flex items-center">
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <p className="text-sm text-muted-foreground">Total Images</p>
+                  <h3 className="text-2xl font-bold">{stats.totalImages}</h3>
+                  <div className="flex gap-2 mt-1 text-xs">
+                    <span className="text-muted-foreground">
+                      {stats.totalProjects > 0
+                        ? (stats.totalImages / stats.totalProjects).toFixed(1)
+                        : "0"}{" "}
+                      per project
+                    </span>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-4 flex items-center gap-4">
+              <div className="p-3 rounded-full bg-orange-500/10">
+                <Video className="h-6 w-6 text-orange-500" />
+              </div>
+              {loadingStats ? (
+                <div className="flex-1">
+                  <p className="text-sm text-muted-foreground">Total Videos</p>
+                  <div className="h-8 flex items-center">
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <p className="text-sm text-muted-foreground">Total Videos</p>
+                  <h3 className="text-2xl font-bold">{stats.totalVideos}</h3>
+                  <div className="flex gap-2 mt-1 text-xs">
+                    <span className="text-muted-foreground">
+                      {stats.totalProjects > 0
+                        ? (stats.totalVideos / stats.totalProjects).toFixed(1)
+                        : "0"}{" "}
+                      per project
+                    </span>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
 
         <div className="flex flex-col sm:flex-row gap-4 mb-4">
           <div className="flex gap-2">
-            <Button
-              variant={statusFilter === "all" ? "default" : "outline"}
-              size="sm"
-              onClick={() => handleStatusFilterChange("all")}
-            >
-              All
-            </Button>
             <Button
               variant={statusFilter === "pending" ? "default" : "outline"}
               size="sm"
@@ -326,6 +463,13 @@ const CreatorManagementPage = () => {
               onClick={() => handleStatusFilterChange("approved")}
             >
               Approved
+            </Button>
+            <Button
+              variant={statusFilter === "rejected" ? "default" : "outline"}
+              size="sm"
+              onClick={() => router.push("/admin/creators/rejected")}
+            >
+              Unqualified
             </Button>
           </div>
         </div>

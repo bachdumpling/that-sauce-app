@@ -69,6 +69,7 @@ const CreatorDetailPage = ({ params }) => {
     primary_role: [],
     social_links: {},
     years_of_experience: "",
+    work_email: "",
   });
   const router = useRouter();
   const [isDeleting, setIsDeleting] = useState(false);
@@ -118,6 +119,7 @@ const CreatorDetailPage = ({ params }) => {
           years_of_experience: response.data.years_of_experience
             ? response.data.years_of_experience.toString()
             : "",
+          work_email: response.data.work_email || "",
         });
       } else {
         setError(response.error);
@@ -208,6 +210,7 @@ const CreatorDetailPage = ({ params }) => {
         years_of_experience: creator.years_of_experience
           ? String(creator.years_of_experience)
           : "",
+        work_email: creator.work_email || "",
       });
     }
   };
@@ -554,6 +557,19 @@ const CreatorDetailPage = ({ params }) => {
                         value={editForm.years_of_experience}
                         onChange={handleInputChange}
                         placeholder="Years of Experience"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="work_email">
+                        Work Email
+                      </Label>
+                      <Input
+                        id="work_email"
+                        name="work_email"
+                        type="email"
+                        value={editForm.work_email}
+                        onChange={handleInputChange}
+                        placeholder="Work Email"
                       />
                     </div>
                   </div>

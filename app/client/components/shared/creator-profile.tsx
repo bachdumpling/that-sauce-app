@@ -18,6 +18,7 @@ import {
   ChevronRight,
   Edit,
   Plus,
+  Trash2,
 } from "lucide-react";
 import { ProjectCard } from "@/components/shared/project-card";
 import {
@@ -116,7 +117,7 @@ export function CreatorProfile({
             <div className="flex flex-wrap gap-2 mt-3">
               {creator.primary_role.map((role) => (
                 <Badge key={role} variant="secondary">
-                  {typeof role === 'string' ? role.replace(/-/g, " ") : role}
+                  {typeof role === "string" ? role.replace(/-/g, " ") : role}
                 </Badge>
               ))}
             </div>
@@ -136,6 +137,18 @@ export function CreatorProfile({
               </div>
             )}
           </div>
+
+          {viewMode === "admin" && creator.work_email && (
+            <div className="flex items-center gap-1 mt-3 text-muted-foreground">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
+                <rect width="20" height="16" x="2" y="4" rx="2" />
+                <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
+              </svg>
+              <a href={`mailto:${creator.work_email}`} className="hover:underline">
+                {creator.work_email}
+              </a>
+            </div>
+          )}
 
           {creator.bio && (
             <p className="mt-4 max-w-2xl text-muted-foreground">
@@ -163,18 +176,6 @@ export function CreatorProfile({
                 </a>
               );
             })}
-
-          {creator.social_links?.website && (
-            <a
-              href={creator.social_links.website}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="p-2 rounded-full bg-secondary hover:bg-secondary/80 transition-colors"
-              aria-label="Website"
-            >
-              <Globe className="h-5 w-5" />
-            </a>
-          )}
 
           {/* Edit Profile Button (for owner view) */}
           {viewMode === "owner" && onEditProfile && (
@@ -295,7 +296,24 @@ export function CreatorProfile({
                       sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, 33vw"
                       style={{ display: "block" }}
                     />
-                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-4">
+                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-between p-4">
+                      {viewMode === "admin" && onDeleteImage && (
+                        <div className="self-end">
+                          <Button
+                            variant="destructive"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (onDeleteImage) {
+                                onDeleteImage(image.projectId, image.id);
+                              }
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      )}
                       <p className="text-white text-sm font-medium">
                         {image.projectTitle}
                       </p>

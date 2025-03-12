@@ -168,18 +168,6 @@ export default function CreatorProfile({ creator }: CreatorProfileProps) {
                 </a>
               );
             })}
-            
-            {creator.social_links?.website && (
-              <a 
-                href={creator.social_links.website}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="p-2 rounded-full bg-secondary hover:bg-secondary/80 transition-colors"
-                aria-label="Website"
-              >
-                <Globe className="h-5 w-5" />
-              </a>
-            )}
           </div>
         </div>
       </div>

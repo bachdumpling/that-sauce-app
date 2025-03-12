@@ -1,14 +1,36 @@
 ﻿"table_name","column_name","data_type","is_nullable","column_default"
-"creators","id","uuid","NO","uuid_generate_v4()"
-"creators","profile_id","uuid","YES","null"
-"creators","username","text","NO","null"
-"creators","location","text","YES","null"
-"creators","bio","text","YES","null"
-"creators","primary_role","ARRAY","YES","'{}'::text[]", "null"
-"creators","social_links","jsonb","YES","'{}'::jsonb"
-"creators","years_of_experience","integer","YES","null"
-"creators","created_at","timestamp with time zone","YES","now()"
-"creators","updated_at","timestamp with time zone","YES","now()"
+create table public.creators (
+  id uuid not null default extensions.uuid_generate_v4 (),
+  profile_id uuid null,
+  username text not null,
+  location text null,
+  bio text null,
+  primary_role text[] null,
+  social_links jsonb null default '{}'::jsonb,
+  years_of_experience integer null,
+  created_at timestamp with time zone null default now(),
+  updated_at timestamp with time zone null default now(),
+  portfolio_scraped boolean null default false,
+  last_scraped timestamp with time zone null,
+  status text not null default 'pending'::text,
+  constraint creators_pkey primary key (id),
+  constraint creators_profile_id_key unique (profile_id),
+  constraint creators_username_key unique (username),
+  constraint creators_profile_id_fkey foreign KEY (profile_id) references profiles (id) on delete CASCADE,
+  constraint creators_status_check check (
+    (
+      status = any (array['pending'::text, 'approved'::text])
+    )
+  )
+) TABLESPACE pg_default;
+
+create index IF not exists idx_creators_username on public.creators using btree (username) TABLESPACE pg_default;
+
+create index IF not exists idx_creators_status on public.creators using btree (status) TABLESPACE pg_default;
+
+create trigger update_creators_updated_at BEFORE
+update on creators for EACH row
+execute FUNCTION update_updated_at_column ();
 "images","id","uuid","NO","uuid_generate_v4()"
 "images","project_id","uuid","NO","null"
 "images","creator_id","uuid","NO","null"
@@ -151,3 +173,21 @@ create index IF not exists idx_images_failed_analysis on public.images using btr
 create trigger update_images_updated_at BEFORE
 update on images for EACH row
 execute FUNCTION update_updated_at_column ();
+
+create table public.unqualified_creators (
+  id uuid not null default extensions.uuid_generate_v4 (),
+  profile_id uuid null,
+  username text not null,
+  location text null,
+  bio text null,
+  primary_role text[] null,
+  social_links jsonb null default '{}'::jsonb,
+  years_of_experience integer null,
+  created_at timestamp with time zone null default now(),
+  updated_at timestamp with time zone null default now(),
+  rejected_at timestamp with time zone null default now(),
+  rejection_reason text not null,
+  rejected_by uuid not null,
+  constraint unqualified_creators_pkey primary key (id),
+  constraint unqualified_creators_rejected_by_fkey foreign KEY (rejected_by) references profiles (id)
+) TABLESPACE pg_default;

@@ -13,6 +13,7 @@ export interface Creator {
   projects?: Project[];
   status?: 'pending' | 'approved';
   email?: string;
+  work_email?: string;
   user_id?: string;
   created_at?: string;
   updated_at?: string;
@@ -69,6 +70,7 @@ export interface SearchResult {
     primary_role?: string[];
     website?: string;
     social_links?: Record<string, string>;
+    work_email?: string;
   };
   score?: number;
   projects: Project[];

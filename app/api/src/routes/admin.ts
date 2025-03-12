@@ -11,6 +11,13 @@ const adminController = new AdminController();
 // Secure all admin routes with authentication and admin role check
 router.use(extractUser, isAdmin);
 
+// Creator stats endpoint
+router.get(
+  "/creators/stats",
+  cacheMiddleware(60, () => "creator_stats"),
+  adminController.getCreatorStats
+);
+
 // Creator management routes
 router.get(
   "/creators",

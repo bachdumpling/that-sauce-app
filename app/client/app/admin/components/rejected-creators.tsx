@@ -21,10 +21,10 @@ import {
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Search, X, ArrowLeft } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { fetchRejectedCreators } from "@/lib/api/admin";
 import { Creator, ViewMode } from "@/components/shared/types";
 import { CreatorCard } from "@/components/shared/creator-card";
+import { Skeleton } from "@/components/ui/skeleton";
 
 // Define the UnqualifiedCreator interface to match the database schema
 interface UnqualifiedCreator {
@@ -73,7 +73,6 @@ const RejectedCreatorsPage = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [activeTab, setActiveTab] = useState("rejected");
   const router = useRouter();
 
   // Fetch rejected creators from the API
@@ -131,14 +130,6 @@ const RejectedCreatorsPage = () => {
     loadRejectedCreators(1);
   };
 
-  // Switch between active and rejected creators
-  const handleTabChange = (value: string) => {
-    setActiveTab(value);
-    if (value === "active") {
-      router.push("/admin/creators");
-    }
-  };
-
   const handleGoBack = () => {
     router.push("/admin/creators");
   };
@@ -146,7 +137,7 @@ const RejectedCreatorsPage = () => {
   // Format date for display
   const formatDate = (dateString?: string) => {
     if (!dateString) return "Unknown date";
-    
+
     try {
       const date = new Date(dateString);
       return date.toLocaleDateString("en-US", {
@@ -176,16 +167,27 @@ const RejectedCreatorsPage = () => {
         </Button>
       </div>
 
-      <Tabs
-        value={activeTab}
-        onValueChange={handleTabChange}
-        className="mb-6"
-      >
-        <TabsList>
-          <TabsTrigger value="active">Active Creators</TabsTrigger>
-          <TabsTrigger value="rejected">Unqualified Creators</TabsTrigger>
-        </TabsList>
-      </Tabs>
+      <div className="flex flex-col sm:flex-row gap-4 mb-4">
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => router.push("/admin/creators?status=pending")}
+          >
+            Pending
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => router.push("/admin/creators?status=approved")}
+          >
+            Approved
+          </Button>
+          <Button variant="default" size="sm">
+            Unqualified
+          </Button>
+        </div>
+      </div>
 
       <form onSubmit={handleSearch} className="flex gap-2">
         <div className="relative flex-grow">
@@ -210,20 +212,10 @@ const RejectedCreatorsPage = () => {
       </form>
 
       {/* Creator list */}
-      <div className="space-y-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {loading ? (
           // Loading skeletons
-          Array(3)
-            .fill(0)
-            .map((_, i) => (
-              <Card key={i} className="overflow-hidden">
-                <CardContent className="p-6">
-                  <div className="h-24 w-full mb-4 bg-gray-200 animate-pulse rounded-md"></div>
-                  <div className="h-4 w-3/4 mb-2 bg-gray-200 animate-pulse rounded-md"></div>
-                  <div className="h-4 w-1/2 bg-gray-200 animate-pulse rounded-md"></div>
-                </CardContent>
-              </Card>
-            ))
+          <Skeleton className="col-span-2" variant="creator" />
         ) : error ? (
           <Alert variant="destructive">
             <AlertDescription>{error}</AlertDescription>
@@ -247,27 +239,27 @@ const RejectedCreatorsPage = () => {
               primary_role: creator.primary_role,
               social_links: creator.social_links,
               years_of_experience: creator.years_of_experience,
-              status: 'rejected',
+              status: "rejected",
               email: creator.profiles?.email,
               created_at: creator.created_at,
-              updated_at: creator.updated_at
+              updated_at: creator.updated_at,
             };
-            
+
             return (
               <Card key={creator.id} className="overflow-hidden">
                 <CardContent className="p-6">
-                  <CreatorCard 
-                    creator={formattedCreator} 
-                    viewMode="admin"
-                  />
-                  
+                  <CreatorCard creator={formattedCreator} viewMode="admin" />
+
                   <div className="mt-4 p-4 bg-red-50 rounded-md border border-red-200">
-                    <h3 className="font-medium text-red-800 mb-1">Rejection Details</h3>
+                    <h3 className="font-medium text-red-800 mb-1">
+                      Rejection Details
+                    </h3>
                     <p className="text-sm text-red-700 mb-2">
                       <strong>Reason:</strong> {creator.rejection_reason}
                     </p>
                     <p className="text-sm text-red-700">
-                      <strong>Rejected on:</strong> {formatDate(creator.rejected_at)}
+                      <strong>Rejected on:</strong>{" "}
+                      {formatDate(creator.rejected_at)}
                     </p>
                   </div>
                 </CardContent>
@@ -286,9 +278,7 @@ const RejectedCreatorsPage = () => {
                   handlePageChange(Math.max(1, pagination.page - 1))
                 }
                 className={
-                  pagination.page === 1
-                    ? "pointer-events-none opacity-50"
-                    : ""
+                  pagination.page === 1 ? "pointer-events-none opacity-50" : ""
                 }
               />
             </PaginationItem>
@@ -298,8 +288,7 @@ const RejectedCreatorsPage = () => {
                 (page) =>
                   page === 1 ||
                   page === pagination.totalPages ||
-                  (page >= pagination.page - 1 &&
-                    page <= pagination.page + 1)
+                  (page >= pagination.page - 1 && page <= pagination.page + 1)
               )
               .map((page) => (
                 <PaginationItem key={page}>
