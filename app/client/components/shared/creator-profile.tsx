@@ -116,7 +116,7 @@ export function CreatorProfile({
             <div className="flex flex-wrap gap-2 mt-3">
               {creator.primary_role.map((role) => (
                 <Badge key={role} variant="secondary">
-                  {role.replace(/-/g, " ")}
+                  {typeof role === 'string' ? role.replace(/-/g, " ") : role}
                 </Badge>
               ))}
             </div>
