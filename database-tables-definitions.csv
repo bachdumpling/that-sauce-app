@@ -4,8 +4,7 @@
 "creators","username","text","NO","null"
 "creators","location","text","YES","null"
 "creators","bio","text","YES","null"
-"creators","primary_role","text","YES","null"
-"creators","creative_fields","ARRAY","YES","'{}'::text[]"
+"creators","primary_role","ARRAY","YES","'{}'::text[]", "null"
 "creators","social_links","jsonb","YES","'{}'::jsonb"
 "creators","years_of_experience","integer","YES","null"
 "creators","created_at","timestamp with time zone","YES","now()"
@@ -56,17 +55,6 @@
 "scrape_history","username","text","NO","null"
 "scrape_history","field","text","NO","null"
 "scrape_history","scraped_at","timestamp with time zone","YES","now()"
-"videos","id","uuid","NO","uuid_generate_v4()"
-"videos","project_id","uuid","NO","null"
-"videos","creator_id","uuid","NO","null"
-"videos","vimeo_id","text","NO","null"
-"videos","title","text","NO","null"
-"videos","description","text","YES","null"
-"videos","categories","ARRAY","YES","'{}'::text[]"
-"videos","ai_analysis","text","YES","null"
-"videos","embedding","USER-DEFINED","YES","null"
-"videos","created_at","timestamp with time zone","YES","now()"
-"videos","updated_at","timestamp with time zone","YES","now()"
 create table public.videos (
   id uuid not null default extensions.uuid_generate_v4 (),
   project_id uuid not null,
@@ -80,10 +68,11 @@ create table public.videos (
   created_at timestamp with time zone null default now(),
   updated_at timestamp with time zone null default now(),
   url text null,
+  youtube_url text null,
   constraint videos_pkey primary key (id),
   constraint videos_vimeo_id_key unique (vimeo_id),
-  constraint videos_creator_id_fkey foreign KEY (creator_id) references creators (id),
-  constraint videos_project_id_fkey foreign KEY (project_id) references projects (id)
+  constraint videos_creator_id_fkey foreign KEY (creator_id) references creators (id) on delete CASCADE,
+  constraint videos_project_id_fkey foreign KEY (project_id) references projects (id) on delete CASCADE
 ) TABLESPACE pg_default;
 
 create index IF not exists idx_videos_creator_id on public.videos using btree (creator_id) TABLESPACE pg_default;
