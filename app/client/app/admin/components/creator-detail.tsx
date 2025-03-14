@@ -436,12 +436,16 @@ const CreatorDetailPage = ({ params }) => {
     <>
       {!isEditing && creator && (
         <div className="space-y-8">
-          <div className="flex justify-between items-center">
-            <Button variant="outline" onClick={handleGoBack}>
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <Button
+              variant="outline"
+              onClick={handleGoBack}
+              className="w-full sm:w-auto"
+            >
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back to Creators
             </Button>
-            <div className="flex items-center gap-4">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 w-full sm:w-auto">
               {creator.status && (
                 <div
                   className={`px-3 py-1 rounded-full text-sm font-medium ${
@@ -455,8 +459,12 @@ const CreatorDetailPage = ({ params }) => {
                     creator.status.slice(1)}
                 </div>
               )}
-              <div className="flex gap-2">
-                <Button variant="outline" onClick={handleEditToggle}>
+              <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+                <Button
+                  variant="outline"
+                  onClick={handleEditToggle}
+                  className="flex-1 sm:flex-none"
+                >
                   <Edit className="h-4 w-4 mr-2" />
                   Edit Profile
                 </Button>
@@ -464,7 +472,7 @@ const CreatorDetailPage = ({ params }) => {
                   variant="success"
                   onClick={handleApprove}
                   disabled={isApproving || creator.status === "approved"}
-                  className="bg-green-600 hover:bg-green-700 text-white"
+                  className="flex-1 sm:flex-none bg-green-600 hover:bg-green-700 text-white"
                 >
                   {isApproving
                     ? "Approving..."
@@ -475,6 +483,7 @@ const CreatorDetailPage = ({ params }) => {
                 <Button
                   variant="destructive"
                   onClick={() => setRejectDialogOpen(true)}
+                  className="flex-1 sm:flex-none"
                 >
                   Reject Creator
                 </Button>
@@ -560,9 +569,7 @@ const CreatorDetailPage = ({ params }) => {
                       />
                     </div>
                     <div>
-                      <Label htmlFor="work_email">
-                        Work Email
-                      </Label>
+                      <Label htmlFor="work_email">Work Email</Label>
                       <Input
                         id="work_email"
                         name="work_email"

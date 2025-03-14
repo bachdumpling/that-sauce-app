@@ -6,6 +6,7 @@ import Image from "next/image";
 import "./globals.css";
 import { Analytics } from "@vercel/analytics/react";
 import localFont from "next/font/local";
+import { MobileNav } from "@/components/mobile-nav";
 
 const defaultUrl = process.env.NEXT_PUBLIC_CLIENT_URL
   ? `https://${process.env.NEXT_PUBLIC_CLIENT_URL}`
@@ -98,9 +99,14 @@ export default function RootLayout({
                       />
                     </Link>
                   </div>
-                  <div className="flex gap-4 items-center">
+                  {/* Desktop navigation */}
+                  <div className="hidden md:flex gap-4 items-center">
                     <HeaderAuth />
                     <ThemeSwitcher />
+                  </div>
+                  {/* Mobile navigation */}
+                  <div className="md:hidden">
+                    <MobileNav />
                   </div>
                 </div>
               </nav>

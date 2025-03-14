@@ -160,7 +160,7 @@ const RejectedCreatorsPage = () => {
           variant="outline"
           size="sm"
           onClick={handleGoBack}
-          className="flex items-center gap-1"
+          className="flex items-center gap-1 w-full sm:w-auto"
         >
           <ArrowLeft className="h-4 w-4" />
           Back to Creator Management
@@ -168,11 +168,12 @@ const RejectedCreatorsPage = () => {
       </div>
 
       <div className="flex flex-col sm:flex-row gap-4 mb-4">
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button
             variant="outline"
             size="sm"
             onClick={() => router.push("/admin/creators?status=pending")}
+            className="w-full sm:w-auto"
           >
             Pending
           </Button>
@@ -180,10 +181,11 @@ const RejectedCreatorsPage = () => {
             variant="outline"
             size="sm"
             onClick={() => router.push("/admin/creators?status=approved")}
+            className="w-full sm:w-auto"
           >
             Approved
           </Button>
-          <Button variant="default" size="sm">
+          <Button variant="default" size="sm" className="w-full sm:w-auto">
             Unqualified
           </Button>
         </div>
@@ -208,7 +210,7 @@ const RejectedCreatorsPage = () => {
             </button>
           )}
         </div>
-        <Button type="submit">Search</Button>
+        <Button type="submit" className="w-full sm:w-auto">Search</Button>
       </form>
 
       {/* Creator list */}

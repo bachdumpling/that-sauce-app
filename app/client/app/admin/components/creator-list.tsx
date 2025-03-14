@@ -449,10 +449,11 @@ const CreatorManagementPage = () => {
         </div>
 
         <div className="flex flex-col sm:flex-row gap-4 mb-4">
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <Button
               variant={statusFilter === "pending" ? "default" : "outline"}
               size="sm"
+              className="w-full sm:w-auto"
               onClick={() => handleStatusFilterChange("pending")}
             >
               Pending
@@ -460,6 +461,7 @@ const CreatorManagementPage = () => {
             <Button
               variant={statusFilter === "approved" ? "default" : "outline"}
               size="sm"
+              className="w-full sm:w-auto"
               onClick={() => handleStatusFilterChange("approved")}
             >
               Approved
@@ -467,6 +469,7 @@ const CreatorManagementPage = () => {
             <Button
               variant={statusFilter === "rejected" ? "default" : "outline"}
               size="sm"
+              className="w-full sm:w-auto"
               onClick={() => router.push("/admin/creators/rejected")}
             >
               Unqualified
@@ -493,7 +496,7 @@ const CreatorManagementPage = () => {
               </button>
             )}
           </div>
-          <Button type="submit">Search</Button>
+          <Button type="submit" className="w-full sm:w-auto">Search</Button>
         </form>
       </div>
 
