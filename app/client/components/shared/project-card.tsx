@@ -123,7 +123,6 @@ export function ProjectCard({
 
   // Determine if the user can delete images
   const canDeleteImages = viewMode === "admin" || viewMode === "owner";
-  console.log(project);
   return (
     <Card className={`overflow-hidden ${className}`}>
       <CardContent className="p-0 flex flex-col h-full">

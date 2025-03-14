@@ -398,8 +398,88 @@ export class AdminController {
         });
       }
 
-      // Begin a transaction to move the creator to unqualified_creators table
-      const { error: insertError } = await supabase
+      // Begin a transaction to move the creator and all their data to unqualified tables
+      // 1. Move creator's projects to unqualified_projects
+      const { data: projects, error: projectsError } = await supabase
+        .from("projects")
+        .select("*")
+        .eq("creator_id", creator.id);
+
+      if (projectsError) {
+        logger.error(
+          `Error fetching creator's projects: ${projectsError.message}`,
+          {
+            projectsError,
+          }
+        );
+        return res.status(500).json({
+          success: false,
+          error: "Failed to process creator's projects",
+        });
+      }
+
+      // 2. Move creator's images to unqualified_images
+      const { data: images, error: imagesError } = await supabase
+        .from("images")
+        .select("*")
+        .eq("creator_id", creator.id);
+
+      if (imagesError) {
+        logger.error(
+          `Error fetching creator's images: ${imagesError.message}`,
+          {
+            imagesError,
+          }
+        );
+        return res.status(500).json({
+          success: false,
+          error: "Failed to process creator's images",
+        });
+      }
+
+      // 3. Move creator's videos to unqualified_videos
+      const { data: videos, error: videosError } = await supabase
+        .from("videos")
+        .select("*")
+        .eq("creator_id", creator.id);
+
+      if (videosError) {
+        logger.error(
+          `Error fetching creator's videos: ${videosError.message}`,
+          {
+            videosError,
+          }
+        );
+        return res.status(500).json({
+          success: false,
+          error: "Failed to process creator's videos",
+        });
+      }
+
+      // 4. Move creator's portfolios to unqualified_portfolios
+      const { data: portfolios, error: portfoliosError } = await supabase
+        .from("portfolios")
+        .select("*")
+        .eq("creator_id", creator.id);
+
+      if (portfoliosError) {
+        logger.error(
+          `Error fetching creator's portfolios: ${portfoliosError.message}`,
+          {
+            portfoliosError,
+          }
+        );
+        return res.status(500).json({
+          success: false,
+          error: "Failed to process creator's portfolios",
+        });
+      }
+
+      // Now insert all data into unqualified tables with rejection information
+      const rejectionTimestamp = new Date().toISOString();
+
+      // First insert creator into unqualified_creators to get the new ID
+      const { data: unqualifiedCreator, error: insertError } = await supabase
         .from("unqualified_creators")
         .insert({
           profile_id: creator.profile_id,
@@ -412,8 +492,10 @@ export class AdminController {
           work_email: creator.work_email,
           rejection_reason: reason,
           rejected_by: req?.user?.id,
-          rejected_at: new Date().toISOString(),
-        });
+          rejected_at: rejectionTimestamp,
+        })
+        .select()
+        .single();
 
       if (insertError) {
         logger.error(
@@ -426,6 +508,322 @@ export class AdminController {
           success: false,
           error: "Failed to reject creator",
         });
+      }
+
+      // Now we have the new unqualified_creator ID to use for foreign key references
+      const unqualifiedCreatorId = unqualifiedCreator.id;
+
+      // Create a mapping of old portfolio IDs to new unqualified portfolio IDs
+      const portfolioIdMap = new Map();
+      
+      // We'll also need a mapping for projects
+      const projectIdMap = new Map();
+
+      // Insert portfolios into unqualified_portfolios with the new creator ID first
+      if (portfolios && portfolios.length > 0) {
+        const unqualifiedPortfolios = portfolios.map((portfolio) => {
+          // Create a new object with only the fields that exist in unqualified_portfolios
+          // Omit the id field to let the database generate a new one
+          const {
+            project_ids,
+            ai_analysis,
+            embedding,
+            last_updated,
+            created_at,
+            updated_at,
+          } = portfolio;
+
+          return {
+            creator_id: unqualifiedCreatorId, // Use the new unqualified creator ID
+            project_ids,
+            ai_analysis,
+            embedding,
+            last_updated,
+            created_at,
+            updated_at,
+            rejected_at: rejectionTimestamp,
+            rejection_reason: reason,
+          };
+        });
+
+        const { data: insertedPortfolios, error: insertPortfoliosError } =
+          await supabase
+            .from("unqualified_portfolios")
+            .insert(unqualifiedPortfolios)
+            .select();
+
+        if (insertPortfoliosError) {
+          logger.error(
+            `Error inserting into unqualified_portfolios: ${insertPortfoliosError.message}`,
+            {
+              insertPortfoliosError,
+            }
+          );
+          return res.status(500).json({
+            success: false,
+            error: "Failed to move portfolios to unqualified table",
+          });
+        }
+
+        // Create mapping of old portfolio IDs to new unqualified portfolio IDs
+        if (insertedPortfolios) {
+          portfolios.forEach((oldPortfolio, index) => {
+            if (insertedPortfolios[index]) {
+              portfolioIdMap.set(oldPortfolio.id, insertedPortfolios[index].id);
+            }
+          });
+        }
+      }
+
+      // Insert projects into unqualified_projects with the new creator ID and updated portfolio IDs
+      if (projects && projects.length > 0) {
+        const unqualifiedProjects = projects.map((project) => {
+          // Update the portfolio_id reference if it exists and has a mapping
+          const newPortfolioId =
+            project.portfolio_id && portfolioIdMap.has(project.portfolio_id)
+              ? portfolioIdMap.get(project.portfolio_id)
+              : null;
+
+          // Create a new object with only the fields that exist in unqualified_projects
+          // Omit the id field to let the database generate a new one
+          const {
+            title,
+            behance_url,
+            description,
+            year,
+            featured,
+            order,
+            ai_analysis,
+            embedding,
+            created_at,
+            updated_at,
+          } = project;
+
+          return {
+            creator_id: unqualifiedCreatorId, // Use the new unqualified creator ID
+            portfolio_id: newPortfolioId, // Use the new portfolio ID or null
+            title,
+            behance_url,
+            description,
+            year,
+            featured,
+            order,
+            ai_analysis,
+            embedding,
+            created_at,
+            updated_at,
+            rejected_at: rejectionTimestamp,
+          };
+        });
+
+        const { data: insertedProjects, error: insertProjectsError } = await supabase
+          .from("unqualified_projects")
+          .insert(unqualifiedProjects)
+          .select();
+
+        if (insertProjectsError) {
+          logger.error(
+            `Error inserting into unqualified_projects: ${insertProjectsError.message}`,
+            {
+              insertProjectsError,
+            }
+          );
+          return res.status(500).json({
+            success: false,
+            error: "Failed to move projects to unqualified table",
+          });
+        }
+
+        // Create mapping of old project IDs to new unqualified project IDs
+        if (insertedProjects) {
+          projects.forEach((oldProject, index) => {
+            if (insertedProjects[index]) {
+              projectIdMap.set(oldProject.id, insertedProjects[index].id);
+            }
+          });
+        }
+      }
+
+      // Insert images into unqualified_images with the new creator ID and updated project IDs
+      if (images && images.length > 0) {
+        const unqualifiedImages = images.map((image) => {
+          // Update the project_id reference if it exists and has a mapping
+          const newProjectId =
+            image.project_id && projectIdMap.has(image.project_id)
+              ? projectIdMap.get(image.project_id)
+              : null;
+
+          // Create a new object with only the fields that exist in unqualified_images
+          // Omit the id field to let the database generate a new one
+          const {
+            url,
+            alt_text,
+            resolutions,
+            ai_analysis,
+            embedding,
+            order,
+            created_at,
+            updated_at,
+          } = image;
+
+          return {
+            project_id: newProjectId, // Use the new project ID
+            creator_id: unqualifiedCreatorId, // Use the new unqualified creator ID
+            url,
+            alt_text,
+            resolutions,
+            ai_analysis,
+            embedding,
+            order,
+            created_at,
+            updated_at,
+            rejected_at: rejectionTimestamp,
+          };
+        });
+
+        const { error: insertImagesError } = await supabase
+          .from("unqualified_images")
+          .insert(unqualifiedImages);
+
+        if (insertImagesError) {
+          logger.error(
+            `Error inserting into unqualified_images: ${insertImagesError.message}`,
+            {
+              insertImagesError,
+            }
+          );
+          return res.status(500).json({
+            success: false,
+            error: "Failed to move images to unqualified table",
+          });
+        }
+      }
+
+      // Insert videos into unqualified_videos with the new creator ID and updated project IDs
+      if (videos && videos.length > 0) {
+        const unqualifiedVideos = videos.map((video) => {
+          // Update the project_id reference if it exists and has a mapping
+          const newProjectId =
+            video.project_id && projectIdMap.has(video.project_id)
+              ? projectIdMap.get(video.project_id)
+              : null;
+
+          // Create a new object with only the fields that exist in unqualified_videos
+          // Omit the id field to let the database generate a new one
+          const {
+            title,
+            description,
+            vimeo_id,
+            youtube_id,
+            url,
+            categories,
+            ai_analysis,
+            embedding,
+            created_at,
+            updated_at,
+          } = video;
+
+          return {
+            project_id: newProjectId, // Use the new project ID
+            creator_id: unqualifiedCreatorId, // Use the new unqualified creator ID
+            title,
+            description,
+            vimeo_id,
+            youtube_id,
+            url,
+            categories,
+            ai_analysis,
+            embedding,
+            created_at,
+            updated_at,
+            rejected_at: rejectionTimestamp,
+          };
+        });
+
+        const { error: insertVideosError } = await supabase
+          .from("unqualified_videos")
+          .insert(unqualifiedVideos);
+
+        if (insertVideosError) {
+          logger.error(
+            `Error inserting into unqualified_videos: ${insertVideosError.message}`,
+            {
+              insertVideosError,
+            }
+          );
+          return res.status(500).json({
+            success: false,
+            error: "Failed to move videos to unqualified table",
+          });
+        }
+      }
+
+      // Now delete the original data after successful insertion into unqualified tables
+
+      // Delete videos
+      if (videos && videos.length > 0) {
+        const { error: deleteVideosError } = await supabase
+          .from("videos")
+          .delete()
+          .eq("creator_id", creator.id);
+
+        if (deleteVideosError) {
+          logger.error(`Error deleting videos: ${deleteVideosError.message}`, {
+            deleteVideosError,
+          });
+          // Continue with the process even if there's an error
+        }
+      }
+
+      // Delete images
+      if (images && images.length > 0) {
+        const { error: deleteImagesError } = await supabase
+          .from("images")
+          .delete()
+          .eq("creator_id", creator.id);
+
+        if (deleteImagesError) {
+          logger.error(`Error deleting images: ${deleteImagesError.message}`, {
+            deleteImagesError,
+          });
+          // Continue with the process even if there's an error
+        }
+      }
+
+      // Delete projects
+      if (projects && projects.length > 0) {
+        const { error: deleteProjectsError } = await supabase
+          .from("projects")
+          .delete()
+          .eq("creator_id", creator.id);
+
+        if (deleteProjectsError) {
+          logger.error(
+            `Error deleting projects: ${deleteProjectsError.message}`,
+            {
+              deleteProjectsError,
+            }
+          );
+          // Continue with the process even if there's an error
+        }
+      }
+
+      // Delete portfolios
+      if (portfolios && portfolios.length > 0) {
+        const { error: deletePortfoliosError } = await supabase
+          .from("portfolios")
+          .delete()
+          .eq("creator_id", creator.id);
+
+        if (deletePortfoliosError) {
+          logger.error(
+            `Error deleting portfolios: ${deletePortfoliosError.message}`,
+            {
+              deletePortfoliosError,
+            }
+          );
+          // Continue with the process even if there's an error
+        }
       }
 
       // Delete the creator from the creators table
