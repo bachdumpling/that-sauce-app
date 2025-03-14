@@ -6,7 +6,7 @@ import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { VimeoEmbed } from "@/components/ui/vimeo-embed";
+import { VimeoEmbed, YouTubeEmbed } from "@/components/ui/vimeo-embed";
 import {
   ExternalLink,
   Edit,
@@ -123,7 +123,7 @@ export function ProjectCard({
 
   // Determine if the user can delete images
   const canDeleteImages = viewMode === "admin" || viewMode === "owner";
-
+  console.log(project);
   return (
     <Card className={`overflow-hidden ${className}`}>
       <CardContent className="p-0 flex flex-col h-full">
@@ -291,14 +291,25 @@ export function ProjectCard({
             <div className="grid grid-cols-1 gap-4">
               {project.videos.map((video) => (
                 <div key={video.id} className="space-y-2">
-                  <VimeoEmbed
-                    vimeoId={video.vimeo_id}
-                    title={video.title || "Video"}
-                  />
-
-                  {video.title && (
-                    <h4 className="font-medium">{video.title}</h4>
+                  {video.youtube_id ? (
+                    <YouTubeEmbed
+                      youtubeId={video.youtube_id}
+                      title={video.title || "Video"}
+                    />
+                  ) : video.vimeo_id ? (
+                    <VimeoEmbed
+                      vimeoId={video.vimeo_id}
+                      title={video.title || "Video"}
+                    />
+                  ) : (
+                    <div className="aspect-video w-full bg-muted flex items-center justify-center">
+                      <p className="text-muted-foreground">Video unavailable</p>
+                    </div>
                   )}
+
+                  {/* {video.title && (
+                    <h4 className="font-medium">{video.title}</h4>
+                  )} */}
 
                   {/* {video.description && (
                     <p className="text-sm text-muted-foreground">

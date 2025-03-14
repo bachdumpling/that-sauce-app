@@ -20,6 +20,8 @@ interface Project {
     id: string;
     url: string;
     thumbnail_url?: string;
+    vimeo_id?: string;
+    youtube_id?: string;
   }>;
   creator_username?: string;
 }
@@ -327,6 +329,7 @@ export class AdminController {
               id,
               title,
               vimeo_id,
+              youtube_id,
               url,
               description
             )

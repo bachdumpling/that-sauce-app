@@ -49,6 +49,7 @@ export class CreatorController {
               id,
               title,
               vimeo_id,
+              youtube_id,
               url,
               description
             )
@@ -159,6 +160,7 @@ export class CreatorController {
             id,
             title,
             vimeo_id,
+            youtube_id,
             url,
             description
           )

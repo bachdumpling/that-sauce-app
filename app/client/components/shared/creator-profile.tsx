@@ -8,6 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { SocialIcon } from "@/components/ui/social-icon";
+import { VimeoEmbed, YouTubeEmbed } from "@/components/ui/vimeo-embed";
 import {
   Globe,
   MapPin,
@@ -140,11 +141,25 @@ export function CreatorProfile({
 
           {viewMode === "admin" && creator.work_email && (
             <div className="flex items-center gap-1 mt-3 text-muted-foreground">
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="h-4 w-4"
+              >
                 <rect width="20" height="16" x="2" y="4" rx="2" />
                 <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
               </svg>
-              <a href={`mailto:${creator.work_email}`} className="hover:underline">
+              <a
+                href={`mailto:${creator.work_email}`}
+                className="hover:underline"
+              >
                 {creator.work_email}
               </a>
             </div>
@@ -336,21 +351,32 @@ export function CreatorProfile({
               {allVideos.map((video) => (
                 <Card key={video.id} className="overflow-hidden">
                   <div className="aspect-video">
-                    <iframe
-                      src={`https://player.vimeo.com/video/${video.vimeo_id}?title=0&byline=0&portrait=0`}
-                      className="w-full h-full"
-                      frameBorder="0"
-                      allow="autoplay; fullscreen; picture-in-picture"
-                      allowFullScreen
-                    ></iframe>
+                    {video.youtube_id ? (
+                      <YouTubeEmbed
+                        youtubeId={video.youtube_id}
+                        title={video.title || "Video"}
+                      />
+                    ) : video.vimeo_id ? (
+                      <VimeoEmbed
+                        vimeoId={video.vimeo_id}
+                        title={video.title || "Video"}
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-muted flex items-center justify-center">
+                        <p className="text-muted-foreground">
+                          Video unavailable
+                        </p>
+                      </div>
+                    )}
                   </div>
                   <CardContent className="p-4">
                     <h3 className="font-medium">
-                      {video.title || "Untitled Video"}
-                    </h3>
-                    <p className="text-sm text-muted-foreground mt-1">
+                      {/* {video.title || "Untitled Video"} */}
                       {video.projectTitle}
-                    </p>
+                    </h3>
+                    {/* <p className="text-sm text-muted-foreground mt-1">
+                      {video.projectTitle}
+                    </p> */}
                     {/* {video.description && (
                       <p className="text-sm mt-2">{video.description}</p>
                     )} */}
