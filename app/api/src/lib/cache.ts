@@ -7,7 +7,7 @@ import logger from "../config/logger";
  */
 export const cache = new NodeCache({
   stdTTL: 300, // Default TTL: 5 minutes
-  checkperiod: 60, // Check for expired keys every 60 seconds
+  checkperiod: 10, // Check for expired keys every 10 seconds
   useClones: false, // Use references instead of deep copies for better performance
 });
 

@@ -9,7 +9,6 @@ import { extractUser } from "../src/middleware/extractUser";
 
 // Routes
 import searchRouter from "../src/routes/search";
-import mediaAnalysisRouter from "../src/routes/mediaAnalysis";
 import adminRouter from "../src/routes/admin";
 import projectRoutes from "../src/routes/projectRoutes";
 import creatorsRouter from "../src/routes/creators";
@@ -84,7 +83,6 @@ app.get("/test-db", async (req, res) => {
 
 // Routes
 app.use("/api/search", searchRouter);
-app.use("/api/media", mediaAnalysisRouter);
 app.use("/api/admin", adminRouter);
 app.use("/api/projects", projectRoutes);
 app.use("/api/creators", creatorsRouter);

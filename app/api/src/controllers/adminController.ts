@@ -515,7 +515,7 @@ export class AdminController {
 
       // Create a mapping of old portfolio IDs to new unqualified portfolio IDs
       const portfolioIdMap = new Map();
-      
+
       // We'll also need a mapping for projects
       const projectIdMap = new Map();
 
@@ -616,10 +616,11 @@ export class AdminController {
           };
         });
 
-        const { data: insertedProjects, error: insertProjectsError } = await supabase
-          .from("unqualified_projects")
-          .insert(unqualifiedProjects)
-          .select();
+        const { data: insertedProjects, error: insertProjectsError } =
+          await supabase
+            .from("unqualified_projects")
+            .insert(unqualifiedProjects)
+            .select();
 
         if (insertProjectsError) {
           logger.error(
