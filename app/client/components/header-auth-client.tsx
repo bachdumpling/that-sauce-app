@@ -1,23 +1,45 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import Link from "next/link";
-import { Button } from "./ui/button";
+import { useEffect, useState } from "react";
 import { createClient } from "@/utils/supabase/client";
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 export default function HeaderAuthClient() {
   const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [creatorUsername, setCreatorUsername] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
   const supabase = createClient();
 
   useEffect(() => {
-    const getUser = async () => {
-      const { data } = await supabase.auth.getUser();
-      setUser(data.user);
-      setLoading(false);
-    };
+    async function getUser() {
+      try {
+        const { data, error } = await supabase.auth.getUser();
+        if (error) {
+          console.error("Error fetching user:", error);
+          setUser(null);
+        } else if (data?.user) {
+          setUser(data.user);
+
+          // Check if user has a creator profile
+          const { data: creator } = await supabase
+            .from("creators")
+            .select("username")
+            .eq("profile_id", data.user.id)
+            .single();
+          console.log("creator", creator);
+          if (creator) {
+            setCreatorUsername(creator.username);
+          }
+        }
+      } catch (error) {
+        console.error("Unexpected error:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    }
 
     getUser();
 
@@ -25,6 +47,9 @@ export default function HeaderAuthClient() {
     const { data: authListener } = supabase.auth.onAuthStateChange(
       (event, session) => {
         setUser(session?.user || null);
+        if (!session?.user) {
+          setCreatorUsername(null);
+        }
       }
     );
 
@@ -38,7 +63,7 @@ export default function HeaderAuthClient() {
     router.refresh();
   };
 
-  if (loading) {
+  if (isLoading) {
     return <div className="h-9 w-20 bg-muted animate-pulse rounded-md"></div>;
   }
 
@@ -59,8 +84,18 @@ export default function HeaderAuthClient() {
         variant={"outline"}
         className="w-full justify-center py-4"
       >
-        <Link href="/profile">Profile</Link>
+        <Link href="/settings">Settings</Link>
       </Button>
+      {creatorUsername && (
+        <Button
+          asChild
+          size="sm"
+          variant={"outline"}
+          className="w-full justify-center py-4"
+        >
+          <Link href={`/creator/${creatorUsername}`}>My Portfolio</Link>
+        </Button>
+      )}
       <Button
         asChild
         size="sm"

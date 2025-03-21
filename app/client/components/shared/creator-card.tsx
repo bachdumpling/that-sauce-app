@@ -214,10 +214,19 @@ export function CreatorCard({
                       : "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400"
                   }`}
                 >
-                  {creator.status.charAt(0).toUpperCase() + creator.status.slice(1)}
+                  {creator.status.charAt(0).toUpperCase() +
+                    creator.status.slice(1)}
                 </div>
               )}
             </div>
+
+            {(profile.first_name || profile.last_name) && (
+              <p className="text-sm text-muted-foreground -mt-2">
+                {[profile.first_name, profile.last_name]
+                  .filter(Boolean)
+                  .join(" ")}
+              </p>
+            )}
 
             <div className="flex flex-wrap gap-3">
               {profile.location && (
@@ -231,14 +240,28 @@ export function CreatorCard({
                   {profile.years_of_experience} years experience
                 </div>
               )}
-              
+
               {viewMode === "admin" && profile.work_email && (
                 <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="h-4 w-4"
+                  >
                     <rect width="20" height="16" x="2" y="4" rx="2" />
                     <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
                   </svg>
-                  <a href={`mailto:${profile.work_email}`} className="hover:underline">
+                  <a
+                    href={`mailto:${profile.work_email}`}
+                    className="hover:underline"
+                  >
                     {profile.work_email}
                   </a>
                 </div>

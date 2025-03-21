@@ -2,7 +2,7 @@ export interface SearchQueryParams {
   q: string;
   limit?: number;
   page?: number;
-  contentType?: "all" | "videos";
+  contentType?: "all" | "videos" | "images";
 }
 
 export interface SearchResult {
@@ -24,6 +24,10 @@ export interface ProjectSearchResult {
   description?: string;
   images: ImageSearchResult[];
   videos: VideoSearchResult[];
+  creator?: {
+    id: string;
+    username: string;
+  };
 }
 
 export interface ImageSearchResult {

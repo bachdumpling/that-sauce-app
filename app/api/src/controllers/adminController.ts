@@ -40,12 +40,27 @@ interface Creator {
   work_email?: string;
 }
 
+interface Media {
+  id: string;
+  url: string;
+  project_id: string;
+  creator_id: string;
+  media_type: "image" | "video";
+  alt_text?: string;
+  title?: string;
+  description?: string;
+  order: number;
+  status: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export class AdminController {
   /**
-   * Get creator statistics
-   * GET /api/admin/creators/stats
+   * Get system statistics
+   * GET /api/admin/stats
    */
-  async getCreatorStats(req: AuthenticatedRequest, res: Response) {
+  async getSystemStats(req: AuthenticatedRequest, res: Response) {
     try {
       // Fetch all the stats in parallel
       const [
@@ -80,35 +95,50 @@ export class AdminController {
         // Total projects
         supabase.from("projects").select("id", { count: "exact", head: true }),
 
-        // Total images
+        // Total images - updated to use the images table
         supabase.from("images").select("id", { count: "exact", head: true }),
 
-        // Total videos
+        // Total videos - updated to use the videos table
         supabase.from("videos").select("id", { count: "exact", head: true }),
       ]);
 
       // Compile the stats
       const stats = {
-        total: totalCreatorsResult.count || 0,
-        pending: pendingCreatorsResult.count || 0,
-        approved: approvedCreatorsResult.count || 0,
-        rejected: rejectedCreatorsResult.count || 0,
-        totalProjects: totalProjectsResult.count || 0,
-        totalImages: totalImagesResult.count || 0,
-        totalVideos: totalVideosResult.count || 0,
+        creators: {
+          total: totalCreatorsResult.count || 0,
+          pending: pendingCreatorsResult.count || 0,
+          approved: approvedCreatorsResult.count || 0,
+          rejected: rejectedCreatorsResult.count || 0,
+        },
+        projects: {
+          total: totalProjectsResult.count || 0,
+        },
+        media: {
+          total:
+            (totalImagesResult.count || 0) + (totalVideosResult.count || 0),
+          images: totalImagesResult.count || 0,
+          videos: totalVideosResult.count || 0,
+        },
       };
 
       return res.json(stats);
     } catch (error) {
-      logger.error("Error fetching creator stats:", error);
+      logger.error("Error fetching system stats:", error);
       return res.status(500).json({
-        total: 0,
-        pending: 0,
-        approved: 0,
-        rejected: 0,
-        totalProjects: 0,
-        totalImages: 0,
-        totalVideos: 0,
+        creators: {
+          total: 0,
+          pending: 0,
+          approved: 0,
+          rejected: 0,
+        },
+        projects: {
+          total: 0,
+        },
+        media: {
+          total: 0,
+          images: 0,
+          videos: 0,
+        },
       });
     }
   }
@@ -370,7 +400,7 @@ export class AdminController {
 
   /**
    * Reject a creator
-   * POST /api/admin/creators/:id/reject
+   * POST /api/admin/creators/:username/reject
    */
   async rejectCreator(req: AuthenticatedRequest, res: Response) {
     try {
@@ -525,7 +555,6 @@ export class AdminController {
           // Create a new object with only the fields that exist in unqualified_portfolios
           // Omit the id field to let the database generate a new one
           const {
-            project_ids,
             ai_analysis,
             embedding,
             last_updated,
@@ -535,7 +564,6 @@ export class AdminController {
 
           return {
             creator_id: unqualifiedCreatorId, // Use the new unqualified creator ID
-            project_ids,
             ai_analysis,
             embedding,
             last_updated,
@@ -1479,6 +1507,401 @@ export class AdminController {
       return res.status(500).json({
         success: false,
         error: "Internal server error",
+      });
+    }
+  }
+
+  /**
+   * Update creator status (approve/reject)
+   * POST /api/admin/creators/:username/status
+   */
+  async updateCreatorStatus(req: AuthenticatedRequest, res: Response) {
+    try {
+      const { username } = req.params;
+      const { status, reason } = req.body;
+
+      console.log("username", username);
+      console.log("status", status);
+      console.log("reason", reason);
+
+      if (!username) {
+        return res.status(400).json({
+          success: false,
+          error: "Username is required",
+        });
+      }
+
+      if (!status || !["approved", "rejected", "pending"].includes(status)) {
+        return res.status(400).json({
+          success: false,
+          error: "Valid status (approved/rejected/pending) is required",
+        });
+      }
+
+      // Get the creator
+      const { data: creator, error: creatorError } = await supabase
+        .from("creators")
+        .select("*")
+        .eq("username", username)
+        .single();
+
+      console.log("creator", creator);
+
+      if (creatorError || !creator) {
+        console.error(`Error finding creator ${username}:`, creatorError);
+        logger.error(`Error finding creator ${username}:`, creatorError);
+        return res.status(404).json({
+          success: false,
+          error: "Creator not found",
+        });
+      }
+
+      if (status === "rejected") {
+        if (!reason) {
+          return res.status(400).json({
+            success: false,
+            error: "Reason is required for rejection",
+          });
+        }
+
+        // First update status in creators table
+        const { error: updateError } = await supabase
+          .from("creators")
+          .update({ status: "rejected" })
+          .eq("id", creator.id);
+
+        if (updateError) {
+          logger.error(`Error updating creator status:`, updateError);
+          throw updateError;
+        }
+
+        // Then add to unqualified_creators table
+        const { error: insertError } = await supabase
+          .from("unqualified_creators")
+          .insert({
+            profile_id: creator.profile_id,
+            username: creator.username,
+            location: creator.location,
+            bio: creator.bio,
+            primary_role: creator.primary_role,
+            social_links: creator.social_links,
+            years_of_experience: creator.years_of_experience,
+            work_email: creator.work_email,
+            rejection_reason: reason,
+            rejected_by: req.user?.id || "system",
+            rejected_at: new Date().toISOString(),
+          });
+
+        if (insertError) {
+          logger.error(`Error adding to unqualified_creators:`, insertError);
+          throw insertError;
+        }
+
+        return res.json({
+          success: true,
+          message: `Creator ${username} has been rejected`,
+          status: "rejected",
+        });
+      } else {
+        // For approve or pending, just update the status
+        const { error: updateError } = await supabase
+          .from("creators")
+          .update({ status })
+          .eq("id", creator.id);
+
+        if (updateError) {
+          logger.error(`Error updating creator status:`, updateError);
+          throw updateError;
+        }
+
+        // If previously rejected and now approved, remove from unqualified_creators
+        if (status === "approved") {
+          await supabase
+            .from("unqualified_creators")
+            .delete()
+            .eq("username", creator.username);
+        }
+
+        return res.json({
+          success: true,
+          message: `Creator ${username} status updated to ${status}`,
+          status,
+        });
+      }
+    } catch (error) {
+      logger.error("Error updating creator status:", error);
+      return res.status(500).json({
+        success: false,
+        error: "Failed to update creator status",
+      });
+    }
+  }
+
+  /**
+   * List all media (images and videos)
+   * GET /api/admin/media
+   */
+  async listMedia(req: AuthenticatedRequest, res: Response) {
+    try {
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 20;
+      const offset = (page - 1) * limit;
+      const projectId = req.query.project_id as string;
+      const mediaType = req.query.type as string;
+
+      let imagesData: any[] = [];
+      let videosData: any[] = [];
+      let imagesCount = 0;
+      let videosCount = 0;
+
+      // Based on mediaType parameter, fetch images, videos, or both
+      if (!mediaType || mediaType === "all" || mediaType === "image") {
+        // Fetch images
+        let imagesQuery = supabase.from("images").select(
+          `
+            id,
+            url,
+            project_id,
+            creator_id,
+            alt_text,
+            status,
+            created_at,
+            updated_at,
+            projects(title),
+            creators(username)
+            `,
+          { count: "exact" }
+        );
+
+        // Apply project filter if specified
+        if (projectId && projectId !== "all") {
+          imagesQuery = imagesQuery.eq("project_id", projectId);
+        }
+
+        const { data: images, count } = await imagesQuery;
+
+        if (images && images.length > 0) {
+          imagesData = images.map((item: any) => ({
+            id: item.id,
+            url: item.url,
+            project_id: item.project_id,
+            project_title: item.projects?.title || "Unknown project",
+            creator_id: item.creator_id,
+            creator_username: item.creators?.username || "Unknown creator",
+            media_type: "image",
+            alt_text: item.alt_text,
+            title: item.title || "",
+            description: item.description || "",
+            order: item.order || 0,
+            status: item.status,
+            created_at: item.created_at,
+            updated_at: item.updated_at,
+          }));
+          imagesCount = count || 0;
+        }
+      }
+
+      if (!mediaType || mediaType === "all" || mediaType === "video") {
+        // Fetch videos
+        let videosQuery = supabase.from("videos").select(
+          `
+            id,
+            url,
+            project_id,
+            creator_id,
+            thumbnail_url,
+            status,
+            created_at,
+            updated_at,
+            projects(title),
+            creators(username)
+            `,
+          { count: "exact" }
+        );
+
+        // Apply project filter if specified
+        if (projectId && projectId !== "all") {
+          videosQuery = videosQuery.eq("project_id", projectId);
+        }
+
+        const { data: videos, count } = await videosQuery;
+
+        if (videos && videos.length > 0) {
+          videosData = videos.map((item: any) => ({
+            id: item.id,
+            url: item.url,
+            project_id: item.project_id,
+            project_title: item.projects?.title || "Unknown project",
+            creator_id: item.creator_id,
+            creator_username: item.creators?.username || "Unknown creator",
+            media_type: "video",
+            alt_text: "",
+            title: item.title || "",
+            description: item.description || "",
+            thumbnail_url: item.thumbnail_url,
+            order: item.order || 0,
+            status: item.status,
+            created_at: item.created_at,
+            updated_at: item.updated_at,
+          }));
+          videosCount = count || 0;
+        }
+      }
+
+      // Combine and sort data
+      const combinedMedia = [...imagesData, ...videosData].sort(
+        (a, b) =>
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      );
+
+      // Apply pagination to combined data
+      const paginatedMedia = combinedMedia.slice(offset, offset + limit);
+      const totalCount = imagesCount + videosCount;
+
+      return res.json({
+        media: paginatedMedia || [],
+        page,
+        limit,
+        total: totalCount,
+      });
+    } catch (error) {
+      logger.error("Error listing media:", error);
+      return res.status(500).json({ error: "Failed to list media" });
+    }
+  }
+
+  /**
+   * Delete media (image or video)
+   * DELETE /api/admin/media/:id
+   */
+  async deleteMedia(req: AuthenticatedRequest, res: Response) {
+    try {
+      const { id } = req.params;
+
+      if (!id) {
+        return res.status(400).json({
+          success: false,
+          error: "Media ID is required",
+        });
+      }
+
+      // Check if this ID exists in the database
+      // Try to find in images table first
+      const { data: image, error: imageError } = await supabase
+        .from("images")
+        .select("id, url")
+        .eq("id", id)
+        .single();
+
+      // If not found in images, try videos
+      if (imageError || !image) {
+        const { data: video, error: videoError } = await supabase
+          .from("videos")
+          .select("id, url")
+          .eq("id", id)
+          .single();
+
+        if (videoError || !video) {
+          // Return success true with a message for UI compatibility
+          // This prevents client-side errors when the media is already deleted
+          return res.status(200).json({
+            success: true,
+            message: `Media with ID ${id} no longer exists`,
+            warning: "Media not found in database",
+          });
+        }
+
+        // Found in videos, delete it
+        const { error: deleteVideoError } = await supabase
+          .from("videos")
+          .delete()
+          .eq("id", id);
+
+        if (deleteVideoError) {
+          logger.error(`Error deleting video:`, deleteVideoError);
+          throw deleteVideoError;
+        }
+
+        // Extract file path from the URL to delete from storage
+        try {
+          if (video.url) {
+            const url = new URL(video.url);
+            const filePath = url.pathname.replace(
+              "/storage/v1/object/public/",
+              ""
+            );
+
+            // Delete video from Supabase Storage
+            const { error: storageError } = await supabase.storage
+              .from(filePath.split("/")[0])
+              .remove([filePath.split("/").slice(1).join("/")]);
+
+            if (storageError) {
+              logger.warn(
+                `Could not delete video file from storage:`,
+                storageError
+              );
+            }
+          }
+        } catch (storageError) {
+          logger.warn(
+            `Error parsing URL or deleting video from storage:`,
+            storageError
+          );
+          // Continue anyway since the database record is deleted
+        }
+
+        return res.json({
+          success: true,
+          message: `Video with ID ${id} has been deleted`,
+        });
+      }
+
+      // Found in images, delete it
+      const { error: deleteImageError } = await supabase
+        .from("images")
+        .delete()
+        .eq("id", id);
+
+      if (deleteImageError) {
+        logger.error(`Error deleting image:`, deleteImageError);
+        throw deleteImageError;
+      }
+
+      // Extract file path from the URL to delete from storage
+      try {
+        const url = new URL(image.url);
+        const filePath = url.pathname.replace("/storage/v1/object/public/", "");
+
+        // Delete image from Supabase Storage
+        const { error: storageError } = await supabase.storage
+          .from(filePath.split("/")[0])
+          .remove([filePath.split("/").slice(1).join("/")]);
+
+        if (storageError) {
+          logger.warn(
+            `Could not delete image file from storage:`,
+            storageError
+          );
+          // Continue anyway since the database record is deleted
+        }
+      } catch (storageError) {
+        logger.warn(
+          `Error parsing URL or deleting image from storage:`,
+          storageError
+        );
+        // Continue anyway since the database record is deleted
+      }
+
+      return res.json({
+        success: true,
+        message: `Image with ID ${id} has been deleted`,
+      });
+    } catch (error) {
+      logger.error("Error deleting media:", error);
+      return res.status(500).json({
+        success: false,
+        error: "Failed to delete media",
       });
     }
   }

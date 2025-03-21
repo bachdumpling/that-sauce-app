@@ -5,13 +5,15 @@
 export interface Creator {
   id: string;
   username: string;
+  first_name?: string;
+  last_name?: string;
   location?: string;
   bio?: string;
   primary_role?: string[];
   social_links?: Record<string, string>;
   years_of_experience?: number;
   projects?: Project[];
-  status?: 'pending' | 'approved';
+  status?: "pending" | "approved";
   email?: string;
   work_email?: string;
   user_id?: string;
@@ -32,7 +34,7 @@ export interface Project {
   creator_username?: string;
   created_at?: string;
   updated_at?: string;
-  
+
   // Search-specific fields
   vector_score?: number;
   video_score?: number;
@@ -54,7 +56,8 @@ export interface Image {
 export interface Video {
   id: string;
   title?: string;
-  vimeo_id: string;
+  vimeo_id?: string;
+  youtube_id?: string;
   url?: string;
   description?: string;
   similarity_score?: number;
@@ -89,4 +92,4 @@ export interface MediaEntry {
   };
 }
 
-export type ViewMode = 'public' | 'owner' | 'admin'; 
+export type ViewMode = "public" | "owner" | "admin";

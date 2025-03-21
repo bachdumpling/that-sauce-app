@@ -8,6 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { SocialIcon } from "@/components/ui/social-icon";
+import { ProjectCard } from "@/components/shared/project-card";
 import { 
   Globe, 
   MapPin, 
@@ -194,7 +195,7 @@ export default function CreatorProfile({ creator }: CreatorProfileProps) {
               {creator.projects.map((project) => (
                 <ProjectCard 
                   key={project.id} 
-                  project={project} 
+                  project={project}
                   onImageClick={(index) => openImageModal(project, index)}
                 />
               ))}
@@ -277,7 +278,7 @@ export default function CreatorProfile({ creator }: CreatorProfileProps) {
               {featuredProjects.map((project) => (
                 <ProjectCard 
                   key={project.id} 
-                  project={project} 
+                  project={project}
                   onImageClick={(index) => openImageModal(project, index)}
                 />
               ))}
@@ -344,100 +345,5 @@ export default function CreatorProfile({ creator }: CreatorProfileProps) {
         </div>
       )}
     </div>
-  );
-}
-
-// Project Card Component
-function ProjectCard({ 
-  project, 
-  onImageClick 
-}: { 
-  project: Project; 
-  onImageClick: (index: number) => void;
-}) {
-  return (
-    <Card className="overflow-hidden">
-      <CardContent className="p-0">
-        <div className="p-6">
-          <div className="flex justify-between items-start">
-            <div>
-              <h2 className="text-2xl font-semibold">{project.title}</h2>
-              {project.year && (
-                <p className="text-sm text-muted-foreground mt-1">{project.year}</p>
-              )}
-            </div>
-            
-            {project.behance_url && (
-              <a
-                href={project.behance_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-muted-foreground hover:text-foreground transition-colors"
-              >
-                <ExternalLink className="h-5 w-5" />
-                <span className="sr-only">View on Behance</span>
-              </a>
-            )}
-          </div>
-          
-          {project.description && (
-            <p className="mt-4 text-muted-foreground">{project.description}</p>
-          )}
-        </div>
-        
-        {/* Project Images */}
-        {project.images && project.images.length > 0 && (
-          <div className="mt-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 p-2">
-              {project.images.slice(0, 4).map((image, index) => (
-                <div 
-                  key={image.id} 
-                  className="relative aspect-[4/3] overflow-hidden rounded-md cursor-pointer group"
-                  onClick={() => onImageClick(index)}
-                >
-                  <Image
-                    src={image.resolutions.low_res || image.url}
-                    alt={image.alt_text || project.title}
-                    fill
-                    className="object-cover transition-transform group-hover:scale-105"
-                    sizes="(max-width: 640px) 100vw, 50vw"
-                  />
-                  
-                  {project.images && index === 3 && project.images.length > 4 && (
-                    <div className="absolute inset-0 bg-black/70 flex items-center justify-center">
-                      <p className="text-white text-xl font-medium">+{project.images.length - 4} more</p>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-        
-        {/* Project Videos */}
-        {project.videos && project.videos.length > 0 && (
-          <div className="mt-4 p-4">
-            <h3 className="text-lg font-medium mb-4 flex items-center gap-2">
-              <Video className="h-5 w-5" />
-              Videos
-            </h3>
-            
-            <div className="grid grid-cols-1 gap-4">
-              {project.videos.map((video) => (
-                <div key={video.id} className="aspect-video">
-                  <iframe
-                    src={`https://player.vimeo.com/video/${video.vimeo_id}?title=0&byline=0&portrait=0`}
-                    className="w-full h-full rounded-md"
-                    frameBorder="0"
-                    allow="autoplay; fullscreen; picture-in-picture"
-                    allowFullScreen
-                  ></iframe>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-      </CardContent>
-    </Card>
   );
 } 

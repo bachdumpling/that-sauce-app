@@ -10,7 +10,7 @@ export interface EmbeddingResponse {
   processed_text: string;
 }
 
-type SearchType = "creators" | "projects" | "images";
+type SearchType = "creators" | "projects" | "images" | "media";
 
 const searchPrompts = {
   creators: `Process this search query to enhance its relevance for searching creative professionals based on their style and expertise and their work.
@@ -55,6 +55,17 @@ const searchPrompts = {
   "b&w street photograpy" → "black white street photography urban"
   
   Original query: `,
+
+  media: `Process this search query to enhance its relevance for searching media content (images and videos).
+  Rules:
+  1. KEEP ALL ORIGINAL QUERY TERMS intact
+  2. Only add up to 3 highly relevant terms if necessary
+  3. Do not replace or remove any original terms
+  4. Fix any misspellings but preserve intentional slang/creative terms
+  5. Keep grammar natural, don't over-formalize
+  6. Return the processed query with original terms plus any additions (max 3)
+  
+  Original query: `
 };
 
 export class EmbeddingRepository {

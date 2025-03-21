@@ -72,4 +72,34 @@ export const invalidateCache = (pattern: string) => {
   }
 };
 
+/**
+ * Middleware for invalidating cache after data modification (POST, PUT, DELETE operations)
+ * @param patterns Array of patterns to invalidate or a single pattern
+ */
+export const cacheClearMiddleware = (patterns: string | string[]) => {
+  return (req: any, res: any, next: any) => {
+    // Store the original end method
+    const originalEnd = res.end;
+
+    // Override the end method to clear cache after the response has been sent
+    res.end = function (chunk?: any, encoding?: any) {
+      // Only invalidate cache for successful operations
+      if (res.statusCode >= 200 && res.statusCode < 300) {
+        const patternsArray = Array.isArray(patterns) ? patterns : [patterns];
+        
+        patternsArray.forEach(pattern => {
+          invalidateCache(pattern);
+        });
+        
+        logger.debug(`Cache invalidated for ${patternsArray.length} pattern(s) after ${req.method} operation`);
+      }
+
+      // Call the original method
+      return originalEnd.call(this, chunk, encoding);
+    };
+
+    next();
+  };
+};
+
 export default cache;

@@ -3,7 +3,7 @@ import { createClient } from "@/utils/supabase/server";
 import { redirect } from "next/navigation";
 import { ProfileClientWrapper } from "./components/profile-client-wrapper";
 
-async function ProfilePage() {
+export default async function ProfilePage() {
   const supabase = await createClient();
 
   // Get the current user
@@ -17,28 +17,17 @@ async function ProfilePage() {
   }
 
   // Get creator profile
-  const { data: creator, error: creatorError } = await supabase
-    .from("profiles")
-    .select("*")
-    .eq("id", user.id)
+  const { data: creator } = await supabase
+    .from("creators")
+    .select("username")
+    .eq("profile_id", user.id)
     .single();
 
-  // Get user projects
-  const { data: projects, error: projectsError } = await supabase
-    .from("projects")
-    .select("*")
-    .eq("creator_id", user.id)
-    .order("created_at", { ascending: false });
-
-  return (
-      <ProfileClientWrapper
-        user={user}
-        creator={creator || null}
-        initialProjects={projects || []}
-        creatorError={creatorError?.message}
-        projectsError={projectsError?.message}
-      />
-  );
+  // If user has a creator profile, redirect to their creator page
+  if (creator && creator.username) {
+    redirect(`/creator/${creator.username}`);
+  } else {
+    // If user doesn't have a creator profile, redirect to settings
+    redirect("/settings");
+  }
 }
-
-export default ProfilePage;

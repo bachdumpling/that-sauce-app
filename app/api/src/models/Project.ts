@@ -1,34 +1,34 @@
+import { ImageMedia, VideoMedia } from "./Media";
+
 export interface Project {
   id: string;
   title: string;
-  description: string | null;
+  description: string;
   creator_id: string;
-  portfolio_id: string;
+  created_at: string;
+  updated_at: string;
+  tags?: string[];
+  is_public: boolean;
+}
+
+export interface Creator {
+  id: string;
+  profile_id: string;
+  username: string;
+  display_name?: string;
+  bio?: string;
+  avatar_url?: string;
+  website?: string;
   created_at: string;
   updated_at: string;
 }
 
+export interface ProjectWithCreator extends Project {
+  creators: Creator;
+}
+
 export interface ProjectWithMedia extends Project {
-  media: (ImageMedia | VideoMedia)[];
-}
-
-export interface ImageMedia {
-  id: string;
-  project_id: string;
-  url: string;
-  order: number;
-  created_at: string;
-  analysis?: string;
-  embedding?: number[];
-  file_type: 'image';
-}
-
-export interface VideoMedia {
-  id: string;
-  project_id: string;
-  url: string;
-  created_at: string;
-  analysis?: string;
-  embedding?: number[];
-  file_type: 'video';
+  images?: ImageMedia[];
+  videos?: VideoMedia[];
+  creators: Creator;
 } 

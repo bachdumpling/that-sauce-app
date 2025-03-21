@@ -40,6 +40,7 @@ interface CreatorProfileProps {
   onAddProject?: () => void;
   onAddMedia?: (project: Project) => void;
   onDeleteImage?: (projectId: string, imageId: string) => void;
+  onDeleteVideo?: (projectId: string, videoId: string) => void;
 }
 
 export function CreatorProfile({
@@ -52,6 +53,7 @@ export function CreatorProfile({
   onAddProject,
   onAddMedia,
   onDeleteImage,
+  onDeleteVideo,
 }: CreatorProfileProps) {
   const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(
     null
@@ -113,6 +115,14 @@ export function CreatorProfile({
       <div className="flex flex-col md:flex-row justify-between items-start gap-6">
         <div>
           <h1 className="text-3xl font-bold">{creator.username}</h1>
+
+          {(creator.first_name || creator.last_name) && (
+            <p className="text-lg text-muted-foreground mt-1">
+              {[creator.first_name, creator.last_name]
+                .filter(Boolean)
+                .join(" ")}
+            </p>
+          )}
 
           {creator.primary_role && creator.primary_role.length > 0 && (
             <div className="flex flex-wrap gap-2 mt-3">
@@ -249,6 +259,7 @@ export function CreatorProfile({
                   onImageClick={(index) => openImageModal(project, index)}
                   onAddMedia={onAddMedia}
                   onDeleteImage={onDeleteImage}
+                  onDeleteVideo={onDeleteVideo}
                 />
               ))}
             </div>
@@ -270,6 +281,7 @@ export function CreatorProfile({
                   onImageClick={(index) => openImageModal(project, index)}
                   onAddMedia={onAddMedia}
                   onDeleteImage={onDeleteImage}
+                  onDeleteVideo={onDeleteVideo}
                 />
               ))}
             </div>
@@ -283,13 +295,13 @@ export function CreatorProfile({
               <p className="text-muted-foreground">No images available</p>
             </div>
           ) : (
-            <div className="columns-1 sm:columns-2 md:columns-3 gap-4 space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
               {allImages.map((image, index) => (
                 <div
                   key={image.id}
-                  className="relative break-inside-avoid overflow-hidden rounded-md cursor-pointer group mb-4"
+                  className="relative aspect-square overflow-hidden rounded-md cursor-pointer group"
                   onClick={() => {
-                    const project = creator.projects?.find(
+                    const project = creator.projects.find(
                       (p) => p.id === image.projectId
                     );
                     if (project) {
@@ -312,23 +324,24 @@ export function CreatorProfile({
                       style={{ display: "block" }}
                     />
                     <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-between p-4">
-                      {viewMode === "admin" && onDeleteImage && (
-                        <div className="self-end">
-                          <Button
-                            variant="destructive"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (onDeleteImage) {
-                                onDeleteImage(image.projectId, image.id);
-                              }
-                            }}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      )}
+                      {(viewMode === "admin" || viewMode === "owner") &&
+                        onDeleteImage && (
+                          <div className="self-end">
+                            <Button
+                              variant="destructive"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (onDeleteImage) {
+                                  onDeleteImage(image.projectId, image.id);
+                                }
+                              }}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        )}
                       <p className="text-white text-sm font-medium">
                         {image.projectTitle}
                       </p>
@@ -361,6 +374,17 @@ export function CreatorProfile({
                         vimeoId={video.vimeo_id}
                         title={video.title || "Video"}
                       />
+                    ) : video.url ? (
+                      <video
+                        controls
+                        src={video.url}
+                        className="w-full h-full object-cover"
+                        poster={creator.projects?.[0]?.images?.[0]?.resolutions?.high_res || 
+                               creator.projects?.[0]?.images?.[0]?.url}
+                      >
+                        <source src={video.url} type="video/mp4" />
+                        Your browser does not support the video tag.
+                      </video>
                     ) : (
                       <div className="w-full h-full bg-muted flex items-center justify-center">
                         <p className="text-muted-foreground">
@@ -370,16 +394,27 @@ export function CreatorProfile({
                     )}
                   </div>
                   <CardContent className="p-4">
-                    <h3 className="font-medium">
-                      {/* {video.title || "Untitled Video"} */}
-                      {video.projectTitle}
-                    </h3>
-                    {/* <p className="text-sm text-muted-foreground mt-1">
-                      {video.projectTitle}
-                    </p> */}
-                    {/* {video.description && (
-                      <p className="text-sm mt-2">{video.description}</p>
-                    )} */}
+                    <div className="flex justify-between items-center">
+                      <h3 className="font-medium">{video.projectTitle}</h3>
+                      {(viewMode === "owner" || viewMode === "admin") && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+
+                            if (onDeleteVideo && video.projectId && video.id) {
+                              onDeleteVideo(video.projectId, video.id);
+                            }
+                          }}
+                          className="h-8 w-8 text-destructive hover:text-destructive/80"
+                          type="button"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
                     {showScores && video.similarity_score !== undefined && (
                       <div className="flex justify-end mt-2">
                         <Badge variant="secondary">

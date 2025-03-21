@@ -30,11 +30,12 @@ import { X, ArrowLeft, ExternalLink, Edit, Save, Trash2 } from "lucide-react";
 import { SocialIcon } from "@/components/ui/social-icon";
 import {
   fetchCreatorDetails,
-  rejectCreator,
+  updateCreatorStatus,
   updateCreator,
   deleteProject,
   deleteProjectImage,
-  approveCreator,
+  deleteMediaItem,
+  rejectCreator,
 } from "@/lib/api/admin";
 import { VimeoEmbed } from "@/components/ui/vimeo-embed";
 import { toast } from "sonner";
@@ -84,6 +85,12 @@ const CreatorDetailPage = ({ params }) => {
     imageId: null,
   });
   const [isApproving, setIsApproving] = useState(false);
+  const [videoToDelete, setVideoToDelete] = useState({
+    projectId: null,
+    videoId: null,
+  });
+  const [deleteVideoDialogOpen, setDeleteVideoDialogOpen] = useState(false);
+  const [isDeletingVideo, setIsDeletingVideo] = useState(false);
 
   // Convert arrays to options for MultiSelect
   const roleOptions = CREATOR_ROLES.map((role) => ({
@@ -310,16 +317,14 @@ const CreatorDetailPage = ({ params }) => {
   };
 
   const handleDeleteImage = async () => {
-    if (!imageToDelete.projectId || !imageToDelete.imageId) return;
+    if (!imageToDelete.imageId) return;
 
     setIsDeletingImage(true);
     try {
-      const response = await deleteProjectImage(
-        imageToDelete.projectId,
-        imageToDelete.imageId
-      );
+      const response = await deleteMediaItem(imageToDelete.imageId);
+
       if (response.success) {
-        toast.success("Image deleted successfully");
+        toast.success("Media deleted successfully");
         // Update the creator object by removing the deleted image
         setCreator((prevCreator) => ({
           ...prevCreator,
@@ -338,11 +343,11 @@ const CreatorDetailPage = ({ params }) => {
         setDeleteImageDialogOpen(false);
         setImageToDelete({ projectId: null, imageId: null });
       } else {
-        throw new Error(response.error || "Failed to delete image");
+        throw new Error(response.error || "Failed to delete media");
       }
     } catch (err) {
-      console.error("Error deleting image:", err);
-      toast.error(err.message || "An error occurred while deleting the image");
+      console.error("Error deleting media:", err);
+      toast.error(err.message || "An error occurred while deleting the media");
     } finally {
       setIsDeletingImage(false);
     }
@@ -358,6 +363,54 @@ const CreatorDetailPage = ({ params }) => {
   const openDeleteImageDialog = (projectId, imageId) => {
     setImageToDelete({ projectId, imageId });
     setDeleteImageDialogOpen(true);
+  };
+
+  // Function to handle video deletion
+  const handleDeleteVideo = async (projectId, videoId) => {
+    if (!projectId || !videoId) return;
+    
+    // Set the video to delete and show the confirmation dialog
+    setVideoToDelete({ projectId, videoId });
+    setDeleteVideoDialogOpen(true);
+  };
+  
+  // Function to confirm and execute video deletion
+  const confirmDeleteVideo = async () => {
+    const { projectId, videoId } = videoToDelete;
+    if (!projectId || !videoId) return;
+    
+    setIsDeletingVideo(true);
+    try {
+      const response = await deleteMediaItem(videoId);
+
+      if (response.success) {
+        toast.success("Video deleted successfully");
+        // Update the creator object by removing the deleted video
+        setCreator((prevCreator) => ({
+          ...prevCreator,
+          projects: prevCreator.projects.map((project) => {
+            if (project.id === projectId) {
+              return {
+                ...project,
+                videos: project.videos.filter(
+                  (video) => video.id !== videoId
+                ),
+              };
+            }
+            return project;
+          }),
+        }));
+      } else {
+        throw new Error(response.error || "Failed to delete video");
+      }
+    } catch (err) {
+      console.error("Error deleting video:", err);
+      toast.error(err.message || "An error occurred while deleting the video");
+    } finally {
+      setIsDeletingVideo(false);
+      setVideoToDelete({ projectId: null, videoId: null });
+      setDeleteVideoDialogOpen(false);
+    }
   };
 
   // Render projects section
@@ -394,7 +447,7 @@ const CreatorDetailPage = ({ params }) => {
     setIsApproving(true);
 
     try {
-      const response = await approveCreator(creatorUsername);
+      const response = await updateCreatorStatus(creatorUsername, "approved");
 
       if (response.success) {
         toast("Creator Approved", {
@@ -500,6 +553,7 @@ const CreatorDetailPage = ({ params }) => {
               setDeleteDialogOpen(true);
             }}
             onDeleteImage={openDeleteImageDialog}
+            onDeleteVideo={handleDeleteVideo}
           />
         </div>
       )}
@@ -709,6 +763,38 @@ const CreatorDetailPage = ({ params }) => {
               disabled={isDeletingImage}
             >
               {isDeletingImage ? "Deleting..." : "Delete Image"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Video Dialog */}
+      <Dialog
+        open={deleteVideoDialogOpen}
+        onOpenChange={setDeleteVideoDialogOpen}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Video</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this video? This action cannot be
+              undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setDeleteVideoDialogOpen(false)}
+              disabled={isDeletingVideo}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={confirmDeleteVideo}
+              disabled={isDeletingVideo}
+            >
+              {isDeletingVideo ? "Deleting..." : "Delete Video"}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -1,365 +1,548 @@
 # Admin API Documentation
 
-This document outlines the API endpoints available for admin users to manage creators' profiles and their projects.
+The Admin API provides endpoints for managing creators, projects, and media content. These endpoints are restricted to administrators only.
 
 ## Authentication
 
-All admin endpoints require authentication and admin privileges. The API uses JWT tokens for authentication.
+All Admin API endpoints require authentication and admin privileges. Include the authentication token in the `Authorization` header:
+
+```
+Authorization: Bearer YOUR_ACCESS_TOKEN
+```
 
 ## Base URL
 
+All API endpoints are relative to: `/api/admin`
+
+## Endpoints
+
+### System Statistics
+
+#### Get System Statistics
+
 ```
-/api/admin
+GET /stats
 ```
 
-## Creator Management Endpoints
+Returns overall system statistics including counts of creators, projects, and media.
 
-### List Creators
+**Response Example:**
 
-Retrieves a paginated list of creators.
+```json
+{
+  "creators": {
+    "total": 250,
+    "pending": 15,
+    "approved": 220,
+    "rejected": 15
+  },
+  "projects": {
+    "total": 560
+  },
+  "media": {
+    "total": 2800,
+    "images": 2500,
+    "videos": 300
+  }
+}
+```
 
-- **URL**: `/creators`
-- **Method**: `GET`
-- **Query Parameters**:
-  - `page` (optional): Page number (default: 1)
-  - `limit` (optional): Number of items per page (default: 10)
-  - `search` (optional): Search term to filter creators by username
+### Creator Management
 
-**Response**:
+#### List Creators
+
+```
+GET /creators
+```
+
+Returns a paginated list of creators with basic information.
+
+**Query Parameters:**
+
+| Parameter | Type   | Default | Description                                     |
+| --------- | ------ | ------- | ----------------------------------------------- |
+| page      | number | 1       | Page number                                     |
+| limit     | number | 10      | Number of creators per page                     |
+| search    | string | null    | Search term to filter by username or location   |
+| status    | string | "all"   | Filter by status ("all", "pending", "approved") |
+
+**Response Example:**
 
 ```json
 {
   "creators": [
     {
-      "id": "string",
-      "username": "string",
-      "location": "string",
-      "primary_role": ["string"],
-      "projects": [
+      "id": "f8e5d4c3-b2a1-9876-5432-1098765432f1",
+      "username": "creative_designer",
+      "location": "New York, NY",
+      "primary_role": ["Graphic Designer", "Illustrator"],
+      "status": "approved"
+    }
+  ],
+  "page": 1,
+  "limit": 10,
+  "total": 250
+}
+```
+
+#### Get Creator Details
+
+```
+GET /creators/:username
+```
+
+Returns detailed information about a specific creator.
+
+**Path Parameters:**
+
+| Parameter | Type   | Description               |
+| --------- | ------ | ------------------------- |
+| username  | string | Creator's unique username |
+
+**Response Example:**
+
+```json
+{
+  "id": "f8e5d4c3-b2a1-9876-5432-1098765432f1",
+  "username": "creative_designer",
+  "location": "New York, NY",
+  "bio": "Experienced designer with 10+ years in branding and identity design",
+  "primary_role": ["Graphic Designer", "Illustrator"],
+  "social_links": {
+    "instagram": "https://instagram.com/creative_designer",
+    "twitter": "https://twitter.com/creative_designer"
+  },
+  "projects": [
+    {
+      "id": "a1b2c3d4-e5f6-7890-abcd-1234567890ab",
+      "title": "Brand Identity for Tech Startup",
+      "description": "Complete brand identity including logo, color palette, and guidelines",
+      "images": [
         {
-          "id": "string",
-          "title": "string",
-          "images": [
-            {
-              "id": "string",
-              "url": "string",
-              "resolutions": {}
-            }
-          ]
+          "id": "i1d2i3d4",
+          "url": "https://example.com/images/tech-brand-logo.jpg"
         }
       ]
     }
   ],
-  "pagination": {
-    "total": 0,
-    "page": 1,
-    "limit": 10,
-    "pages": 0
+  "status": "approved",
+  "created_at": "2023-05-15T14:30:45Z",
+  "updated_at": "2023-06-20T09:15:22Z"
+}
+```
+
+#### Update Creator
+
+```
+PUT /creators/:username
+```
+
+Updates a creator's information.
+
+**Path Parameters:**
+
+| Parameter | Type   | Description               |
+| --------- | ------ | ------------------------- |
+| username  | string | Creator's unique username |
+
+**Request Body:**
+
+```json
+{
+  "location": "Los Angeles, CA",
+  "bio": "Updated professional bio",
+  "primary_role": ["UI Designer", "Brand Designer"],
+  "social_links": {
+    "instagram": "https://instagram.com/new_handle",
+    "behance": "https://behance.net/new_handle"
   }
 }
 ```
 
-### Get Creator Details
-
-Retrieves detailed information about a specific creator.
-
-- **URL**: `/creators/:id`
-- **Method**: `GET`
-- **URL Parameters**:
-  - `id`: Creator ID
-
-**Response**:
+**Response Example:**
 
 ```json
 {
-  "creator": {
-    "id": "string",
-    "username": "string",
-    "location": "string",
-    "primary_role": ["string"],
-    "bio": "string",
-    "website": "string",
-    "social_links": {},
-    "projects": [
-      {
-        "id": "string",
-        "title": "string",
-        "description": "string",
-        "images": [
-          {
-            "id": "string",
-            "url": "string",
-            "resolutions": {}
-          }
-        ]
-      }
-    ]
-  }
+  "id": "f8e5d4c3-b2a1-9876-5432-1098765432f1",
+  "username": "creative_designer",
+  "location": "Los Angeles, CA",
+  "bio": "Updated professional bio",
+  "primary_role": ["UI Designer", "Brand Designer"],
+  "social_links": {
+    "instagram": "https://instagram.com/new_handle",
+    "behance": "https://behance.net/new_handle"
+  },
+  "updated_at": "2023-08-01T11:22:33Z"
 }
 ```
 
-### Update Creator
+#### Delete Creator
 
-Updates a creator's profile information.
+```
+DELETE /creators/:username
+```
 
-- **URL**: `/creators/:id`
-- **Method**: `PUT`
-- **URL Parameters**:
-  - `id`: Creator ID
-- **Request Body**:
+Deletes a creator account and all associated data.
+
+**Path Parameters:**
+
+| Parameter | Type   | Description               |
+| --------- | ------ | ------------------------- |
+| username  | string | Creator's unique username |
+
+**Response Example:**
 
 ```json
 {
-  "username": "string",
-  "location": "string",
-  "primary_role": ["string"],
-  "bio": "string",
-  "website": "string",
-  "social_links": {}
+  "message": "Creator 'creative_designer' has been deleted"
 }
 ```
 
-**Response**:
+#### Update Creator Status
+
+```
+POST /creators/:username/status
+```
+
+Updates a creator's status (approve or reject).
+
+**Path Parameters:**
+
+| Parameter | Type   | Description               |
+| --------- | ------ | ------------------------- |
+| username  | string | Creator's unique username |
+
+**Request Body:**
 
 ```json
 {
-  "message": "Creator profile updated successfully",
-  "creator": {
-    "id": "string",
-    "username": "string",
-    "location": "string",
-    "primary_role": ["string"],
-    "bio": "string",
-    "website": "string",
-    "social_links": {}
-  }
+  "status": "approved"
 }
 ```
 
-### Delete Creator
-
-Deletes a creator's profile.
-
-- **URL**: `/creators/:id`
-- **Method**: `DELETE`
-- **URL Parameters**:
-  - `id`: Creator ID
-
-**Response**:
+Or for rejection:
 
 ```json
 {
-  "message": "Creator deleted successfully"
+  "status": "rejected",
+  "reason": "Insufficient portfolio quality"
 }
 ```
 
-### Reject Creator
-
-Marks a creator as rejected/unqualified.
-
-- **URL**: `/creators/:id/reject`
-- **Method**: `POST`
-- **URL Parameters**:
-  - `id`: Creator ID
-
-**Response**:
+**Response Example:**
 
 ```json
 {
+  "message": "Creator 'creative_designer' status updated to approved",
+  "status": "approved"
+}
+```
+
+#### Reject Creator
+
+```
+POST /creators/:username/reject
+```
+
+Rejects a creator, moving their data to the unqualified tables.
+
+**Path Parameters:**
+
+| Parameter | Type   | Description               |
+| --------- | ------ | ------------------------- |
+| username  | string | Creator's unique username |
+
+**Request Body:**
+
+```json
+{
+  "reason": "Insufficient portfolio quality"
+}
+```
+
+**Response Example:**
+
+```json
+{
+  "success": true,
   "message": "Creator rejected successfully"
 }
 ```
 
-### List Rejected Creators
+**Error Responses:**
 
-Retrieves a paginated list of rejected creators.
+- `400 Bad Request` - Missing rejection reason
+- `404 Not Found` - Creator not found
+- `500 Internal Server Error` - Server-side error during processing
 
-- **URL**: `/unqualified/creators`
-- **Method**: `GET`
-- **Query Parameters**:
-  - `page` (optional): Page number (default: 1)
-  - `limit` (optional): Number of items per page (default: 10)
+### Project Management
 
-**Response**:
+#### List Projects
 
-```json
-{
-  "creators": [
-    {
-      "id": "string",
-      "username": "string",
-      "location": "string",
-      "primary_role": ["string"]
-    }
-  ],
-  "pagination": {
-    "total": 0,
-    "page": 1,
-    "limit": 10,
-    "pages": 0
-  }
-}
+```
+GET /projects
 ```
 
-## Project Management Endpoints
+Returns a paginated list of projects.
 
-### List Projects
+**Query Parameters:**
 
-Retrieves a paginated list of projects.
+| Parameter  | Type   | Default | Description                                   |
+| ---------- | ------ | ------- | --------------------------------------------- |
+| page       | number | 1       | Page number                                   |
+| limit      | number | 10      | Number of projects per page                   |
+| creator_id | string | "all"   | Filter by creator ID                          |
+| status     | string | "all"   | Filter by status ("published", "draft", etc.) |
 
-- **URL**: `/projects`
-- **Method**: `GET`
-- **Query Parameters**:
-  - `page` (optional): Page number (default: 1)
-  - `limit` (optional): Number of items per page (default: 10)
-  - `creator_id` (optional): Filter projects by creator ID
-  - `search` (optional): Search term to filter projects by title
-
-**Response**:
+**Response Example:**
 
 ```json
 {
   "projects": [
     {
-      "id": "string",
-      "title": "string",
-      "description": "string",
-      "created_at": "string",
-      "updated_at": "string",
-      "creator_id": "string",
-      "creators": {
-        "id": "string",
-        "username": "string"
-      },
-      "preview_image": {
-        "id": "string",
-        "url": "string",
-        "resolutions": {}
-      }
+      "id": "a1b2c3d4-e5f6-7890-abcd-1234567890ab",
+      "title": "Brand Identity for Tech Startup",
+      "description": "Complete brand identity including logo, color palette, and guidelines",
+      "creator_id": "f8e5d4c3-b2a1-9876-5432-1098765432f1",
+      "creator_username": "creative_designer",
+      "status": "published",
+      "image_count": 12,
+      "video_count": 1,
+      "created_at": "2023-06-15T08:30:22Z",
+      "updated_at": "2023-06-20T14:45:10Z"
     }
   ],
-  "pagination": {
-    "total": 0,
-    "page": 1,
-    "limit": 10,
-    "pages": 0
-  }
+  "page": 1,
+  "limit": 10,
+  "total": 560
 }
 ```
 
-### Get Project Details
+#### Get Project Details
 
-Retrieves detailed information about a specific project.
+```
+GET /projects/:id
+```
 
-- **URL**: `/projects/:id`
-- **Method**: `GET`
-- **URL Parameters**:
-  - `id`: Project ID
+Returns detailed information about a specific project.
 
-**Response**:
+**Path Parameters:**
+
+| Parameter | Type   | Description         |
+| --------- | ------ | ------------------- |
+| id        | string | Project's unique ID |
+
+**Response Example:**
 
 ```json
 {
-  "project": {
-    "id": "string",
-    "title": "string",
-    "description": "string",
-    "created_at": "string",
-    "updated_at": "string",
-    "creator_id": "string",
-    "creators": {
-      "id": "string",
-      "username": "string",
-      "location": "string",
-      "primary_role": ["string"],
-      "bio": "string",
-      "website": "string",
-      "social_links": {}
-    },
+  "id": "a1b2c3d4-e5f6-7890-abcd-1234567890ab",
+  "title": "Brand Identity for Tech Startup",
+  "description": "Complete brand identity including logo, color palette, and guidelines",
+  "creator_id": "f8e5d4c3-b2a1-9876-5432-1098765432f1",
+  "creator_username": "creative_designer",
+  "status": "published",
+  "media": {
     "images": [
       {
-        "id": "string",
-        "url": "string",
-        "resolutions": {},
-        "order": 0
+        "id": "i1d2i3d4",
+        "url": "https://example.com/images/tech-brand-logo.jpg",
+        "alt_text": "Brand logo",
+        "order": 1
       }
     ],
     "videos": [
       {
-        "id": "string",
-        "url": "string",
-        "thumbnail_url": "string"
+        "id": "v1d2v3d4",
+        "url": "https://example.com/videos/brand-presentation.mp4",
+        "title": "Brand Presentation",
+        "description": "Overview of the brand identity",
+        "order": 1
       }
     ]
-  }
+  },
+  "created_at": "2023-06-15T08:30:22Z",
+  "updated_at": "2023-06-20T14:45:10Z"
 }
 ```
 
-### Update Project
+#### Update Project
+
+```
+PUT /projects/:id
+```
 
 Updates a project's information.
 
-- **URL**: `/projects/:id`
-- **Method**: `PUT`
-- **URL Parameters**:
-  - `id`: Project ID
-- **Request Body**:
+**Path Parameters:**
+
+| Parameter | Type   | Description         |
+| --------- | ------ | ------------------- |
+| id        | string | Project's unique ID |
+
+**Request Body:**
 
 ```json
 {
-  "title": "string",
-  "description": "string"
+  "title": "Updated Brand Identity for Tech Startup",
+  "description": "Comprehensive brand identity system for innovative tech company",
+  "status": "published"
 }
 ```
 
-**Response**:
+**Response Example:**
 
 ```json
 {
-  "message": "Project updated successfully",
-  "project": {
-    "id": "string",
-    "title": "string",
-    "description": "string",
-    "created_at": "string",
-    "updated_at": "string",
-    "creator_id": "string"
-  }
+  "id": "a1b2c3d4-e5f6-7890-abcd-1234567890ab",
+  "title": "Updated Brand Identity for Tech Startup",
+  "description": "Comprehensive brand identity system for innovative tech company",
+  "status": "published",
+  "updated_at": "2023-08-01T16:30:45Z"
 }
 ```
 
-### Delete Project
+#### Delete Project
 
-Deletes a project.
+```
+DELETE /projects/:id
+```
 
-- **URL**: `/projects/:id`
-- **Method**: `DELETE`
-- **URL Parameters**:
-  - `id`: Project ID
+Deletes a project and all associated media.
 
-**Response**:
+**Path Parameters:**
+
+| Parameter | Type   | Description         |
+| --------- | ------ | ------------------- |
+| id        | string | Project's unique ID |
+
+**Response Example:**
 
 ```json
 {
-  "message": "Project deleted successfully"
+  "message": "Project 'Updated Brand Identity for Tech Startup' has been deleted"
+}
+```
+
+### Media Management
+
+#### List Media
+
+```
+GET /media
+```
+
+Returns a paginated list of media (images and videos).
+
+**Query Parameters:**
+
+| Parameter  | Type   | Default | Description                               |
+| ---------- | ------ | ------- | ----------------------------------------- |
+| page       | number | 1       | Page number                               |
+| limit      | number | 20      | Number of media items per page            |
+| project_id | string | "all"   | Filter by project ID                      |
+| type       | string | "all"   | Filter by media type ("image" or "video") |
+
+**Response Example:**
+
+```json
+{
+  "media": [
+    {
+      "id": "i1d2i3d4",
+      "url": "https://example.com/images/tech-brand-logo.jpg",
+      "project_id": "a1b2c3d4-e5f6-7890-abcd-1234567890ab",
+      "project_title": "Brand Identity for Tech Startup",
+      "creator_id": "f8e5d4c3-b2a1-9876-5432-1098765432f1",
+      "creator_username": "creative_designer",
+      "media_type": "image",
+      "alt_text": "Brand logo",
+      "order": 1,
+      "status": "published",
+      "created_at": "2023-06-15T09:30:22Z",
+      "updated_at": "2023-06-15T09:30:22Z"
+    }
+  ],
+  "page": 1,
+  "limit": 20,
+  "total": 2800
+}
+```
+
+#### Delete Media
+
+```
+DELETE /media/:id
+```
+
+Deletes a specific media item.
+
+**Path Parameters:**
+
+| Parameter | Type   | Description       |
+| --------- | ------ | ----------------- |
+| id        | string | Media's unique ID |
+
+**Response Example:**
+
+```json
+{
+  "message": "image with ID i1d2i3d4 has been deleted"
+}
+```
+
+### Rejected Creators
+
+#### List Rejected Creators
+
+```
+GET /unqualified/creators
+```
+
+Returns a paginated list of rejected creators.
+
+**Query Parameters:**
+
+| Parameter | Type   | Default | Description                 |
+| --------- | ------ | ------- | --------------------------- |
+| page      | number | 1       | Page number                 |
+| limit     | number | 10      | Number of creators per page |
+
+**Response Example:**
+
+```json
+{
+  "creators": [
+    {
+      "id": "r8j5k4l3-c2d1-9876-5432-1098765432r1",
+      "username": "rejected_user",
+      "email": "rejected@example.com",
+      "reason": "Insufficient portfolio quality",
+      "rejected_at": "2023-07-12T10:25:33Z",
+      "rejected_by": "admin_user_id"
+    }
+  ],
+  "page": 1,
+  "limit": 10,
+  "total": 15
 }
 ```
 
 ## Error Responses
 
-All endpoints return appropriate HTTP status codes:
+All API endpoints return appropriate HTTP status codes:
 
-- `200 OK`: Request successful
-- `400 Bad Request`: Invalid request parameters
-- `401 Unauthorized`: Missing or invalid authentication
-- `403 Forbidden`: User does not have admin privileges
-- `404 Not Found`: Resource not found
-- `500 Internal Server Error`: Server error
+- `200 OK` - The request was successful
+- `400 Bad Request` - The request was invalid or missing required parameters
+- `401 Unauthorized` - Missing or invalid authentication token
+- `403 Forbidden` - Insufficient permissions (non-admin user)
+- `404 Not Found` - The requested resource was not found
+- `500 Internal Server Error` - Server-side error
 
-Error response format:
+Error responses have the following format:
 
 ```json
 {
-  "error": "Error message"
+  "error": "Descriptive error message"
 }
-``` 
+```

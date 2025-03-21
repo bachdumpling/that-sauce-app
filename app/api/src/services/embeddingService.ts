@@ -1,6 +1,9 @@
-import { EmbeddingRepository, EmbeddingResponse } from "../repositories/EmbeddingRepository";
+import {
+  EmbeddingRepository,
+  EmbeddingResponse,
+} from "../repositories/EmbeddingRepository";
 
-type SearchType = "creators" | "projects" | "images";
+export type SearchType = "creators" | "projects" | "images" | "media";
 
 export class EmbeddingService {
   private embeddingRepo: EmbeddingRepository;
@@ -27,4 +30,4 @@ export async function generateEmbedding(
 ): Promise<EmbeddingResponse | null> {
   const service = new EmbeddingService();
   return service.generateEmbedding(text, type);
-} 
+}

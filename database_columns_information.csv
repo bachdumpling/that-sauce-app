@@ -1,141 +1,138 @@
-﻿| table_name             | column_name          | data_type                | is_nullable | column_default     |
-| ---------------------- | -------------------- | ------------------------ | ----------- | ------------------ |
-| creators               | id                   | uuid                     | NO          | uuid_generate_v4() |
-| creators               | profile_id           | uuid                     | YES         | null               |
-| creators               | username             | text                     | NO          | null               |
-| creators               | location             | text                     | YES         | null               |
-| creators               | bio                  | text                     | YES         | null               |
-| creators               | primary_role         | ARRAY                    | YES         | null               |
-| creators               | social_links         | jsonb                    | YES         | '{}'::jsonb        |
-| creators               | years_of_experience  | integer                  | YES         | null               |
-| creators               | created_at           | timestamp with time zone | YES         | now()              |
-| creators               | updated_at           | timestamp with time zone | YES         | now()              |
-| creators               | portfolio_scraped    | boolean                  | YES         | false              |
-| creators               | last_scraped         | timestamp with time zone | YES         | null               |
-| creators               | status               | text                     | NO          | 'pending'::text    |
-| creators               | work_email           | text                     | YES         | null               |
-| images                 | id                   | uuid                     | NO          | uuid_generate_v4() |
-| images                 | project_id           | uuid                     | NO          | null               |
-| images                 | creator_id           | uuid                     | NO          | null               |
-| images                 | url                  | text                     | NO          | null               |
-| images                 | alt_text             | text                     | YES         | null               |
-| images                 | resolutions          | jsonb                    | YES         | '{}'::jsonb        |
-| images                 | ai_analysis          | text                     | YES         | null               |
-| images                 | embedding            | USER-DEFINED             | YES         | null               |
-| images                 | order                | integer                  | YES         | null               |
-| images                 | created_at           | timestamp with time zone | YES         | now()              |
-| images                 | updated_at           | timestamp with time zone | YES         | now()              |
-| images                 | failed_analysis      | boolean                  | YES         | false              |
-| images                 | failure_reason       | text                     | YES         | null               |
-| portfolios             | id                   | uuid                     | NO          | uuid_generate_v4() |
-| portfolios             | creator_id           | uuid                     | NO          | null               |
-| portfolios             | project_ids          | ARRAY                    | YES         | '{}'::uuid[]       |
-| portfolios             | ai_analysis          | text                     | YES         | null               |
-| portfolios             | embedding            | USER-DEFINED             | YES         | null               |
-| portfolios             | last_updated         | timestamp with time zone | YES         | null               |
-| portfolios             | created_at           | timestamp with time zone | YES         | now()              |
-| portfolios             | updated_at           | timestamp with time zone | YES         | now()              |
-| profiles               | id                   | uuid                     | NO          | null               |
-| profiles               | first_name           | text                     | YES         | null               |
-| profiles               | last_name            | text                     | YES         | null               |
-| profiles               | role                 | text                     | NO          | 'user'::text       |
-| profiles               | tier                 | text                     | NO          | 'free'::text       |
-| profiles               | search_count         | integer                  | YES         | 0                  |
-| profiles               | max_searches         | integer                  | YES         | 10                 |
-| profiles               | onboarding_completed | boolean                  | NO          | false              |
-| profiles               | created_at           | timestamp with time zone | YES         | now()              |
-| profiles               | updated_at           | timestamp with time zone | YES         | now()              |
-| projects               | id                   | uuid                     | NO          | uuid_generate_v4() |
-| projects               | creator_id           | uuid                     | NO          | null               |
-| projects               | portfolio_id         | uuid                     | NO          | null               |
-| projects               | title                | text                     | NO          | null               |
-| projects               | behance_url          | text                     | YES         | null               |
-| projects               | description          | text                     | YES         | null               |
-| projects               | year                 | integer                  | YES         | null               |
-| projects               | featured             | boolean                  | YES         | false              |
-| projects               | order                | integer                  | YES         | null               |
-| projects               | ai_analysis          | text                     | YES         | null               |
-| projects               | embedding            | USER-DEFINED             | YES         | null               |
-| projects               | created_at           | timestamp with time zone | YES         | now()              |
-| projects               | updated_at           | timestamp with time zone | YES         | now()              |
-| scrape_history         | id                   | bigint                   | NO          | null               |
-| scrape_history         | username             | text                     | NO          | null               |
-| scrape_history         | field                | text                     | NO          | null               |
-| scrape_history         | scraped_at           | timestamp with time zone | YES         | now()              |
-| unqualified_creators   | id                   | uuid                     | NO          | uuid_generate_v4() |
-| unqualified_creators   | profile_id           | uuid                     | YES         | null               |
-| unqualified_creators   | username             | text                     | NO          | null               |
-| unqualified_creators   | location             | text                     | YES         | null               |
-| unqualified_creators   | bio                  | text                     | YES         | null               |
-| unqualified_creators   | primary_role         | ARRAY                    | YES         | null               |
-| unqualified_creators   | social_links         | jsonb                    | YES         | '{}'::jsonb        |
-| unqualified_creators   | years_of_experience  | integer                  | YES         | null               |
-| unqualified_creators   | created_at           | timestamp with time zone | YES         | now()              |
-| unqualified_creators   | updated_at           | timestamp with time zone | YES         | now()              |
-| unqualified_creators   | rejected_at          | timestamp with time zone | YES         | now()              |
-| unqualified_creators   | rejection_reason     | text                     | NO          | null               |
-| unqualified_creators   | rejected_by          | uuid                     | NO          | null               |
-| unqualified_creators   | work_email           | text                     | YES         | null               |
-| unqualified_images     | id                   | uuid                     | NO          | uuid_generate_v4() |
-| unqualified_images     | project_id           | uuid                     | NO          | null               |
-| unqualified_images     | creator_id           | uuid                     | NO          | null               |
-| unqualified_images     | url                  | text                     | NO          | null               |
-| unqualified_images     | alt_text             | text                     | YES         | null               |
-| unqualified_images     | resolutions          | jsonb                    | YES         | '{}'::jsonb        |
-| unqualified_images     | ai_analysis          | text                     | YES         | null               |
-| unqualified_images     | embedding            | USER-DEFINED             | YES         | null               |
-| unqualified_images     | order                | integer                  | YES         | null               |
-| unqualified_images     | created_at           | timestamp with time zone | YES         | now()              |
-| unqualified_images     | updated_at           | timestamp with time zone | YES         | now()              |
-| unqualified_images     | rejected_at          | timestamp with time zone | YES         | now()              |
-| unqualified_portfolios | id                   | uuid                     | NO          | uuid_generate_v4() |
-| unqualified_portfolios | creator_id           | uuid                     | NO          | null               |
-| unqualified_portfolios | project_ids          | ARRAY                    | YES         | '{}'::uuid[]       |
-| unqualified_portfolios | ai_analysis          | text                     | YES         | null               |
-| unqualified_portfolios | embedding            | USER-DEFINED             | YES         | null               |
-| unqualified_portfolios | last_updated         | timestamp with time zone | YES         | null               |
-| unqualified_portfolios | created_at           | timestamp with time zone | YES         | now()              |
-| unqualified_portfolios | updated_at           | timestamp with time zone | YES         | now()              |
-| unqualified_portfolios | rejected_at          | timestamp with time zone | YES         | now()              |
-| unqualified_portfolios | rejection_reason     | text                     | NO          | null               |
-| unqualified_projects   | id                   | uuid                     | NO          | uuid_generate_v4() |
-| unqualified_projects   | creator_id           | uuid                     | NO          | null               |
-| unqualified_projects   | portfolio_id         | uuid                     | NO          | null               |
-| unqualified_projects   | title                | text                     | NO          | null               |
-| unqualified_projects   | behance_url          | text                     | YES         | null               |
-| unqualified_projects   | description          | text                     | YES         | null               |
-| unqualified_projects   | year                 | integer                  | YES         | null               |
-| unqualified_projects   | featured             | boolean                  | YES         | false              |
-| unqualified_projects   | order                | integer                  | YES         | null               |
-| unqualified_projects   | ai_analysis          | text                     | YES         | null               |
-| unqualified_projects   | embedding            | USER-DEFINED             | YES         | null               |
-| unqualified_projects   | created_at           | timestamp with time zone | YES         | now()              |
-| unqualified_projects   | updated_at           | timestamp with time zone | YES         | now()              |
-| unqualified_projects   | rejected_at          | timestamp with time zone | YES         | now()              |
-| unqualified_videos     | id                   | uuid                     | NO          | uuid_generate_v4() |
-| unqualified_videos     | project_id           | uuid                     | NO          | null               |
-| unqualified_videos     | creator_id           | uuid                     | NO          | null               |
-| unqualified_videos     | vimeo_id             | text                     | YES         | null               |
-| unqualified_videos     | title                | text                     | NO          | null               |
-| unqualified_videos     | description          | text                     | YES         | null               |
-| unqualified_videos     | categories           | ARRAY                    | YES         | '{}'::text[]       |
-| unqualified_videos     | ai_analysis          | text                     | YES         | null               |
-| unqualified_videos     | embedding            | USER-DEFINED             | YES         | null               |
-| unqualified_videos     | created_at           | timestamp with time zone | YES         | now()              |
-| unqualified_videos     | updated_at           | timestamp with time zone | YES         | now()              |
-| unqualified_videos     | url                  | text                     | YES         | null               |
-| unqualified_videos     | rejected_at          | timestamp with time zone | YES         | now()              |
-| unqualified_videos     | youtube_id           | text                     | YES         | null               |
-| videos                 | id                   | uuid                     | NO          | uuid_generate_v4() |
-| videos                 | project_id           | uuid                     | NO          | null               |
-| videos                 | creator_id           | uuid                     | NO          | null               |
-| videos                 | vimeo_id             | text                     | YES         | null               |
-| videos                 | title                | text                     | NO          | null               |
-| videos                 | description          | text                     | YES         | null               |
-| videos                 | categories           | ARRAY                    | YES         | '{}'::text[]       |
-| videos                 | ai_analysis          | text                     | YES         | null               |
-| videos                 | embedding            | USER-DEFINED             | YES         | null               |
-| videos                 | created_at           | timestamp with time zone | YES         | now()              |
-| videos                 | updated_at           | timestamp with time zone | YES         | now()              |
-| videos                 | url                  | text                     | YES         | null               |
-| videos                 | youtube_id           | text                     | YES         | null               |
+﻿"table_name","column_name","data_type","is_nullable","column_default"
+"creators","id","uuid","NO","uuid_generate_v4()"
+"creators","profile_id","uuid","YES","null"
+"creators","username","text","NO","null"
+"creators","location","text","YES","null"
+"creators","bio","text","YES","null"
+"creators","primary_role","ARRAY","YES","null"
+"creators","social_links","jsonb","YES","'{}'::jsonb"
+"creators","years_of_experience","integer","YES","null"
+"creators","created_at","timestamp with time zone","YES","now()"
+"creators","updated_at","timestamp with time zone","YES","now()"
+"creators","portfolio_scraped","boolean","YES","false"
+"creators","last_scraped","timestamp with time zone","YES","null"
+"creators","status","text","NO","'pending'::text"
+"creators","work_email","text","YES","null"
+"images","id","uuid","NO","uuid_generate_v4()"
+"images","project_id","uuid","NO","null"
+"images","creator_id","uuid","NO","null"
+"images","url","text","NO","null"
+"images","alt_text","text","YES","null"
+"images","resolutions","jsonb","YES","'{}'::jsonb"
+"images","ai_analysis","text","YES","null"
+"images","embedding","USER-DEFINED","YES","null"
+"images","order","integer","YES","null"
+"images","created_at","timestamp with time zone","YES","now()"
+"images","updated_at","timestamp with time zone","YES","now()"
+"images","failed_analysis","boolean","YES","false"
+"images","failure_reason","text","YES","null"
+"portfolios","id","uuid","NO","uuid_generate_v4()"
+"portfolios","creator_id","uuid","NO","null"
+"portfolios","ai_analysis","text","YES","null"
+"portfolios","embedding","USER-DEFINED","YES","null"
+"portfolios","last_updated","timestamp with time zone","YES","null"
+"portfolios","created_at","timestamp with time zone","YES","now()"
+"portfolios","updated_at","timestamp with time zone","YES","now()"
+"profiles","id","uuid","NO","null"
+"profiles","first_name","text","YES","null"
+"profiles","last_name","text","YES","null"
+"profiles","role","text","NO","'user'::text"
+"profiles","tier","text","NO","'free'::text"
+"profiles","search_count","integer","YES","0"
+"profiles","max_searches","integer","YES","10"
+"profiles","onboarding_completed","boolean","NO","false"
+"profiles","created_at","timestamp with time zone","YES","now()"
+"profiles","updated_at","timestamp with time zone","YES","now()"
+"projects","id","uuid","NO","uuid_generate_v4()"
+"projects","creator_id","uuid","NO","null"
+"projects","portfolio_id","uuid","NO","null"
+"projects","title","text","NO","null"
+"projects","behance_url","text","YES","null"
+"projects","description","text","YES","null"
+"projects","year","integer","YES","null"
+"projects","featured","boolean","YES","false"
+"projects","order","integer","YES","null"
+"projects","ai_analysis","text","YES","null"
+"projects","embedding","USER-DEFINED","YES","null"
+"projects","created_at","timestamp with time zone","YES","now()"
+"projects","updated_at","timestamp with time zone","YES","now()"
+"scrape_history","id","bigint","NO","null"
+"scrape_history","username","text","NO","null"
+"scrape_history","field","text","NO","null"
+"scrape_history","scraped_at","timestamp with time zone","YES","now()"
+"unqualified_creators","id","uuid","NO","uuid_generate_v4()"
+"unqualified_creators","profile_id","uuid","YES","null"
+"unqualified_creators","username","text","NO","null"
+"unqualified_creators","location","text","YES","null"
+"unqualified_creators","bio","text","YES","null"
+"unqualified_creators","primary_role","ARRAY","YES","null"
+"unqualified_creators","social_links","jsonb","YES","'{}'::jsonb"
+"unqualified_creators","years_of_experience","integer","YES","null"
+"unqualified_creators","created_at","timestamp with time zone","YES","now()"
+"unqualified_creators","updated_at","timestamp with time zone","YES","now()"
+"unqualified_creators","rejected_at","timestamp with time zone","YES","now()"
+"unqualified_creators","rejection_reason","text","NO","null"
+"unqualified_creators","rejected_by","uuid","NO","null"
+"unqualified_creators","work_email","text","YES","null"
+"unqualified_images","id","uuid","NO","uuid_generate_v4()"
+"unqualified_images","project_id","uuid","NO","null"
+"unqualified_images","creator_id","uuid","NO","null"
+"unqualified_images","url","text","NO","null"
+"unqualified_images","alt_text","text","YES","null"
+"unqualified_images","resolutions","jsonb","YES","'{}'::jsonb"
+"unqualified_images","ai_analysis","text","YES","null"
+"unqualified_images","embedding","USER-DEFINED","YES","null"
+"unqualified_images","order","integer","YES","null"
+"unqualified_images","created_at","timestamp with time zone","YES","now()"
+"unqualified_images","updated_at","timestamp with time zone","YES","now()"
+"unqualified_images","rejected_at","timestamp with time zone","YES","now()"
+"unqualified_portfolios","id","uuid","NO","uuid_generate_v4()"
+"unqualified_portfolios","creator_id","uuid","NO","null"
+"unqualified_portfolios","ai_analysis","text","YES","null"
+"unqualified_portfolios","embedding","USER-DEFINED","YES","null"
+"unqualified_portfolios","last_updated","timestamp with time zone","YES","null"
+"unqualified_portfolios","created_at","timestamp with time zone","YES","now()"
+"unqualified_portfolios","updated_at","timestamp with time zone","YES","now()"
+"unqualified_portfolios","rejected_at","timestamp with time zone","YES","now()"
+"unqualified_portfolios","rejection_reason","text","NO","null"
+"unqualified_projects","id","uuid","NO","uuid_generate_v4()"
+"unqualified_projects","creator_id","uuid","NO","null"
+"unqualified_projects","portfolio_id","uuid","NO","null"
+"unqualified_projects","title","text","NO","null"
+"unqualified_projects","behance_url","text","YES","null"
+"unqualified_projects","description","text","YES","null"
+"unqualified_projects","year","integer","YES","null"
+"unqualified_projects","featured","boolean","YES","false"
+"unqualified_projects","order","integer","YES","null"
+"unqualified_projects","ai_analysis","text","YES","null"
+"unqualified_projects","embedding","USER-DEFINED","YES","null"
+"unqualified_projects","created_at","timestamp with time zone","YES","now()"
+"unqualified_projects","updated_at","timestamp with time zone","YES","now()"
+"unqualified_projects","rejected_at","timestamp with time zone","YES","now()"
+"unqualified_videos","id","uuid","NO","uuid_generate_v4()"
+"unqualified_videos","project_id","uuid","NO","null"
+"unqualified_videos","creator_id","uuid","NO","null"
+"unqualified_videos","vimeo_id","text","YES","null"
+"unqualified_videos","title","text","NO","null"
+"unqualified_videos","description","text","YES","null"
+"unqualified_videos","categories","ARRAY","YES","'{}'::text[]"
+"unqualified_videos","ai_analysis","text","YES","null"
+"unqualified_videos","embedding","USER-DEFINED","YES","null"
+"unqualified_videos","created_at","timestamp with time zone","YES","now()"
+"unqualified_videos","updated_at","timestamp with time zone","YES","now()"
+"unqualified_videos","url","text","YES","null"
+"unqualified_videos","rejected_at","timestamp with time zone","YES","now()"
+"unqualified_videos","youtube_id","text","YES","null"
+"videos","id","uuid","NO","uuid_generate_v4()"
+"videos","project_id","uuid","NO","null"
+"videos","creator_id","uuid","NO","null"
+"videos","vimeo_id","text","YES","null"
+"videos","title","text","NO","null"
+"videos","description","text","YES","null"
+"videos","categories","ARRAY","YES","'{}'::text[]"
+"videos","ai_analysis","text","YES","null"
+"videos","embedding","USER-DEFINED","YES","null"
+"videos","created_at","timestamp with time zone","YES","now()"
+"videos","updated_at","timestamp with time zone","YES","now()"
+"videos","url","text","YES","null"
+"videos","youtube_id","text","YES","null"

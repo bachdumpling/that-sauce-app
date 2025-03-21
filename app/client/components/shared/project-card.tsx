@@ -17,11 +17,24 @@ import {
 } from "lucide-react";
 import { Project, ViewMode } from "@/components/shared/types";
 import { deleteProjectImage } from "@/lib/api/creators";
+import { deleteProjectVideo } from "@/lib/api/media";
+import { deleteProject } from "@/lib/api/projects";
 import {
   deleteProjectImage as adminDeleteProjectImage,
   deleteProject as adminDeleteProject,
 } from "@/lib/api/admin";
 import { toast } from "sonner";
+import { useRouter } from "next/navigation";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface ProjectCardProps {
   project: Project;
@@ -32,6 +45,7 @@ interface ProjectCardProps {
   onImageClick?: (imageIndex: number) => void;
   onAddMedia?: (project: Project) => void;
   onDeleteImage?: (projectId: string, imageId: string) => void;
+  onDeleteVideo?: (projectId: string, videoId: string) => void;
   className?: string;
 }
 
@@ -44,11 +58,17 @@ export function ProjectCard({
   onImageClick,
   onAddMedia,
   onDeleteImage,
+  onDeleteVideo,
   className = "",
 }: ProjectCardProps) {
+  const router = useRouter();
   const [isMediaLoading, setIsMediaLoading] = useState(true);
   const [mediaError, setMediaError] = useState(false);
   const [isDeletingImage, setIsDeletingImage] = useState(false);
+  const [isDeletingVideo, setIsDeletingVideo] = useState(false);
+  const [isDeletingProject, setIsDeletingProject] = useState(false);
+  const [selectedVideoId, setSelectedVideoId] = useState<string | null>(null);
+  const [showVideoDeleteDialog, setShowVideoDeleteDialog] = useState(false);
 
   const handleMediaLoad = () => {
     setIsMediaLoading(false);
@@ -57,6 +77,14 @@ export function ProjectCard({
   const handleMediaError = () => {
     setIsMediaLoading(false);
     setMediaError(true);
+  };
+
+  // Function to generate URL-friendly slug from project title
+  const getProjectSlug = (title: string) => {
+    return title
+      .toLowerCase()
+      .replace(/\s+/g, "-")
+      .replace(/[^\w-]+/g, "");
   };
 
   // Function to handle image deletion
@@ -105,6 +133,109 @@ export function ProjectCard({
     }
   };
 
+  // Function to prepare for video deletion
+  const prepareDeleteVideo = (e: React.MouseEvent, videoId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (!project.id || isDeletingVideo) return;
+
+    // If onDeleteVideo prop is provided, use it instead of the default behavior
+    if (onDeleteVideo) {
+      onDeleteVideo(project.id, videoId);
+      return;
+    }
+
+    // Otherwise, use the internal delete flow with dialog
+    setSelectedVideoId(videoId);
+    setShowVideoDeleteDialog(true);
+  };
+
+  // Function to handle video deletion
+  const handleDeleteVideo = async () => {
+    if (!project.id || !selectedVideoId || isDeletingVideo) return;
+
+    setIsDeletingVideo(true);
+
+    try {
+      const response = await deleteProjectVideo(project.id, selectedVideoId);
+
+      if (response.success) {
+        toast.success("Video deleted successfully");
+
+        // Update the UI without refreshing the page
+        if (onDeleteVideo) {
+          // If the parent component provided a callback, use it
+          onDeleteVideo(project.id, selectedVideoId);
+        } else {
+          // Otherwise, update the local state to reflect the deletion
+          // (though this would require the parent to refresh the project data)
+          // We'll rely on the parent to handle updating the UI
+          toast.success("Video deleted successfully");
+        }
+      } else {
+        toast.error(response.error || "Failed to delete video");
+      }
+    } catch (error) {
+      console.error("Error deleting video:", error);
+      toast.error("An unexpected error occurred");
+    } finally {
+      setIsDeletingVideo(false);
+      setSelectedVideoId(null);
+      setShowVideoDeleteDialog(false);
+    }
+  };
+
+  // Function to handle project deletion
+  const handleDeleteProject = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (!project.id || isDeletingProject) return;
+
+    // If onDelete prop is provided, use it instead of the default behavior
+    if (onDelete) {
+      onDelete(project);
+      return;
+    }
+
+    if (
+      confirm(
+        "Are you sure you want to delete this entire project? This action cannot be undone and will delete all associated images and videos."
+      )
+    ) {
+      setIsDeletingProject(true);
+
+      try {
+        let response;
+
+        // Use the appropriate API function based on viewMode
+        if (viewMode === "admin") {
+          response = await adminDeleteProject(project.id);
+        } else {
+          response = await deleteProject(project.id);
+        }
+
+        if (response.success) {
+          toast.success("Project deleted successfully");
+          // Redirect to creator profile page or refresh
+          if (project.creator_username) {
+            router.push(`/creator/${project.creator_username}`);
+          } else {
+            window.location.reload();
+          }
+        } else {
+          toast.error(response.error || "Failed to delete project");
+        }
+      } catch (error) {
+        console.error("Error deleting project:", error);
+        toast.error("An unexpected error occurred");
+      } finally {
+        setIsDeletingProject(false);
+      }
+    }
+  };
+
   // Determine if we should show scores
   const shouldShowScores =
     showScores &&
@@ -113,162 +244,256 @@ export function ProjectCard({
       (project.videos &&
         project.videos.some((v) => v.similarity_score !== undefined)));
 
-  // Function to generate URL-friendly slug from project title
-  const getProjectSlug = (title: string) => {
-    return title
-      .toLowerCase()
-      .replace(/\s+/g, "-")
-      .replace(/[^\w-]+/g, "");
-  };
-
   // Determine if the user can delete images
   const canDeleteImages = viewMode === "admin" || viewMode === "owner";
   return (
-    <Card className={`overflow-hidden ${className}`}>
-      <CardContent className="p-0 flex flex-col h-full">
+    <Card className={`overflow-hidden border-none shadow-md ${className}`}>
+      <CardContent className="p-0">
         {/* Project Header */}
-        <div className="px-4 pt-4">
-          <div className="flex justify-between items-center">
+        <div className="p-6">
+          <div className="flex justify-between items-start gap-4">
             <div>
-              {viewMode === "public" ? (
+              {project.creator_username ? (
                 <Link
-                  href={`/creator/${project.creator_username || "unknown"}/${getProjectSlug(project.title)}`}
-                  className="hover:text-primary transition-colors"
+                  href={`/creator/${project.creator_username}/${getProjectSlug(project.title)}`}
+                  className="group"
                 >
-                  <h3 className="text-md font-semibold">{project.title}</h3>
-                </Link>
-              ) : viewMode === "admin" ? (
-                <Link
-                  href={`/creator/${project.creator_username || "unknown"}/${getProjectSlug(project.title)}`}
-                  className="hover:text-primary transition-colors"
-                >
-                  <h3 className="text-md font-semibold">{project.title}</h3>
+                  <h3 className="text-xl font-semibold group-hover:text-primary transition-colors">
+                    {project.title}
+                  </h3>
                 </Link>
               ) : (
-                <h3 className="text-md font-semibold">{project.title}</h3>
-              )}
-              {project.year && (
-                <p className="text-sm text-muted-foreground">{project.year}</p>
+                <h3 className="text-xl font-semibold">{project.title}</h3>
               )}
 
-              {shouldShowScores && (
+              {project.description && (
+                <p className="mt-2 text-muted-foreground">
+                  {project.description}
+                </p>
+              )}
+
+              {showScores && (
                 <div className="flex flex-wrap gap-2 mt-2">
                   {project.vector_score !== undefined && (
                     <Badge variant="secondary">
-                      Content Match: {(project.vector_score * 100).toFixed(1)}%
+                      Images: {(project.vector_score * 100).toFixed(1)}%
                     </Badge>
                   )}
                   {project.video_score !== undefined && (
                     <Badge variant="secondary">
-                      Video Score: {(project.video_score * 100).toFixed(1)}%
+                      Videos: {(project.video_score * 100).toFixed(1)}%
+                    </Badge>
+                  )}
+                  {project.final_score !== undefined && (
+                    <Badge variant="outline">
+                      Overall: {(project.final_score * 100).toFixed(1)}%
                     </Badge>
                   )}
                 </div>
               )}
             </div>
 
-            {/* Action buttons */}
-            <div className="flex gap-2">
-              {/* Edit button */}
-              {/* {onEdit && (
+            <div className="flex items-center gap-2">
+              {project.behance_url && (
+                <a
+                  href={project.behance_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-muted-foreground hover:text-primary transition-colors"
+                >
+                  <ExternalLink className="h-5 w-5" />
+                  <span className="sr-only">View on Behance</span>
+                </a>
+              )}
+
+              {/* Edit button (for owner or admin) */}
+              {viewMode !== "public" && onEdit && (
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-8 w-8"
                   onClick={(e) => {
                     e.preventDefault();
-                    e.stopPropagation();
                     onEdit(project);
                   }}
                 >
-                  <Edit className="h-4 w-4" />
-                </Button>
-              )} */}
-
-              {/* Delete button */}
-              {onDelete && viewMode === "admin" && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 text-destructive hover:text-destructive"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    onDelete(project);
-                  }}
-                >
-                  <Trash2 className="h-4 w-4" />
+                  <Edit className="h-5 w-5" />
+                  <span className="sr-only">Edit project</span>
                 </Button>
               )}
 
-              {/* External link button */}
-              {project.behance_url && (
-                <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
-                  <a
-                    href={project.behance_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    <ExternalLink className="h-4 w-4" />
-                  </a>
+              {/* Delete project button (for owner or admin) */}
+              {viewMode !== "public" && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleDeleteProject}
+                  disabled={isDeletingProject}
+                  className="text-destructive hover:text-destructive/80"
+                >
+                  <Trash2 className="h-5 w-5" />
+                  <span className="sr-only">Delete project</span>
                 </Button>
               )}
             </div>
           </div>
-
-          {/* {project.description && (
-            <p className="mt-4 text-muted-foreground">{project.description}</p>
-          )} */}
         </div>
 
-        {/* Project Images - using mt-auto to push to bottom */}
-        <div className="mt-auto">
+        {/* Project Media */}
+        <div className="grid grid-cols-1 gap-6 p-6 pt-0">
+          {/* Images Section */}
           {project.images && project.images.length > 0 && (
-            <div className="p-4">
-              {/* Display images (single or multiple) */}
-              <div className="columns-2 sm:columns-3 gap-2 space-y-2 mt-2">
-                {project.images.slice(0, 3).map((image, index) => (
-                  <div
-                    key={image.id}
-                    className="relative break-inside-avoid overflow-hidden rounded-md cursor-pointer group mb-2"
-                    onClick={() => {
-                      if (onImageClick) {
-                        onImageClick(index);
-                      } else if (viewMode === "public") {
-                        // If no click handler is provided and in public view, use the link
-                        window.location.href = `/creator/${project.creator_username || "unknown"}/${getProjectSlug(project.title)}`;
-                      }
+            <div>
+              <div className="flex justify-between items-center mb-4">
+                <h4 className="text-sm font-medium flex items-center gap-2">
+                  <ImageIcon className="h-4 w-4" />
+                  Images ({project.images.length})
+                </h4>
+
+                {viewMode !== "public" && onAddMedia && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      onAddMedia(project);
                     }}
                   >
-                    <div className="w-full relative">
-                      <Image
-                        src={image.resolutions?.low_res || image.url}
-                        alt={image.alt_text || project.title}
-                        width={300}
-                        height={300}
-                        className="w-full h-auto transition-transform group-hover:scale-105"
-                        style={{ display: "block" }}
-                      />
-                      <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-2">
-                        <p className="text-white text-xs font-medium truncate w-full">
-                          {image.alt_text || `Image ${index + 1}`}
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Media
+                  </Button>
+                )}
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                {project.images.slice(0, 6).map((image, index) => (
+                  <div
+                    key={image.id}
+                    className="relative aspect-[4/3] overflow-hidden rounded-md cursor-pointer group"
+                    onClick={() => onImageClick && onImageClick(index)}
+                  >
+                    {isMediaLoading && (
+                      <div className="absolute inset-0 bg-muted animate-pulse" />
+                    )}
+                    {mediaError ? (
+                      <div className="absolute inset-0 bg-muted flex items-center justify-center">
+                        <p className="text-sm text-muted-foreground">
+                          Image unavailable
                         </p>
                       </div>
+                    ) : (
+                      <>
+                        <Image
+                          src={image.resolutions.high_res || image.url}
+                          alt={image.alt_text || project.title}
+                          fill
+                          className="object-cover transition-transform group-hover:scale-105"
+                          onLoad={handleMediaLoad}
+                          onError={handleMediaError}
+                          sizes="(max-width: 768px) 100vw, 33vw"
+                        />
+                        {/* Overlay with delete button */}
+                        {viewMode !== "public" && (
+                          <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                            <Button
+                              variant="destructive"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={(e) => handleDeleteImage(e, image.id)}
+                              disabled={isDeletingImage}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
+                ))}
+              </div>
 
-                      {/* Delete button for admin/owner */}
-                      {canDeleteImages && (
-                        <div
-                          className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10"
-                          onClick={(e) => handleDeleteImage(e, image.id)}
+              {project.images.length > 6 && (
+                <div className="mt-4 text-center">
+                  <Button
+                    variant="ghost"
+                    onClick={() => onImageClick && onImageClick(0)}
+                  >
+                    View all {project.images.length} images
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Videos Section */}
+          {project.videos && project.videos.length > 0 && (
+            <div className="mt-6">
+              <div className="flex justify-between items-center mb-4">
+                <h4 className="text-sm font-medium flex items-center gap-2">
+                  <Video className="h-4 w-4" />
+                  Videos ({project.videos.length})
+                </h4>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                {project.videos.map((video) => (
+                  <div
+                    key={video.id}
+                    className="relative overflow-hidden rounded-md bg-muted"
+                  >
+                    <div className="aspect-video">
+                      {video.youtube_id ? (
+                        <YouTubeEmbed
+                          youtubeId={video.youtube_id}
+                          title={video.title || "Video"}
+                        />
+                      ) : video.vimeo_id ? (
+                        <VimeoEmbed
+                          vimeoId={video.vimeo_id}
+                          title={video.title || "Video"}
+                        />
+                      ) : video.url ? (
+                        <video
+                          controls
+                          src={video.url}
+                          className="w-full h-full object-cover"
+                          poster={
+                            project.images?.[0]?.resolutions?.high_res ||
+                            project.images?.[0]?.url
+                          }
                         >
+                          <source src={video.url} type="video/mp4" />
+                          Your browser does not support the video tag.
+                        </video>
+                      ) : (
+                        <div className="w-full h-full bg-muted flex items-center justify-center">
+                          <p className="text-muted-foreground">
+                            Video unavailable
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                    <div className="p-4">
+                      <div className="flex justify-between items-center">
+                        <h5 className="font-medium text-sm">
+                          {video.title || "Untitled Video"}
+                        </h5>
+                        {viewMode !== "public" && (
                           <Button
-                            variant="destructive"
+                            variant="ghost"
                             size="icon"
-                            className="h-8 w-8 rounded-full"
-                            disabled={isDeletingImage}
+                            onClick={(e) => prepareDeleteVideo(e, video.id)}
+                            disabled={isDeletingVideo}
+                            className="h-8 w-8 text-destructive hover:text-destructive/80"
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
+                        )}
+                      </div>
+                      {showScores && video.similarity_score !== undefined && (
+                        <div className="flex justify-end mt-2">
+                          <Badge variant="secondary">
+                            Match: {(video.similarity_score * 100).toFixed(1)}%
+                          </Badge>
                         </div>
                       )}
                     </div>
@@ -277,88 +502,53 @@ export function ProjectCard({
               </div>
             </div>
           )}
-        </div>
 
-        {/* Project Videos */}
-        {project.videos && project.videos.length > 0 && (
-          <div className="mt-4 p-4">
-            <h3 className="text-lg font-medium mb-4 flex items-center gap-2">
-              <Video className="h-5 w-5" />
-              Videos
-            </h3>
-
-            <div className="grid grid-cols-1 gap-4">
-              {project.videos.map((video) => (
-                <div key={video.id} className="space-y-2">
-                  {video.youtube_id ? (
-                    <YouTubeEmbed
-                      youtubeId={video.youtube_id}
-                      title={video.title || "Video"}
-                    />
-                  ) : video.vimeo_id ? (
-                    <VimeoEmbed
-                      vimeoId={video.vimeo_id}
-                      title={video.title || "Video"}
-                    />
-                  ) : (
-                    <div className="aspect-video w-full bg-muted flex items-center justify-center">
-                      <p className="text-muted-foreground">Video unavailable</p>
-                    </div>
-                  )}
-
-                  {/* {video.title && (
-                    <h4 className="font-medium">{video.title}</h4>
-                  )} */}
-
-                  {/* {video.description && (
-                    <p className="text-sm text-muted-foreground">
-                      {video.description}
-                    </p>
-                  )} */}
-
-                  {showScores && video.similarity_score !== undefined && (
-                    <div className="flex justify-end">
-                      <Badge variant="secondary">
-                        Match: {(video.similarity_score * 100).toFixed(1)}%
-                      </Badge>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Add Media Button (for owner view) */}
-        {viewMode === "owner" && onAddMedia && (
-          <div className="p-4 flex justify-center">
-            <Button variant="outline" onClick={() => onAddMedia(project)}>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Media
-            </Button>
-          </div>
-        )}
-
-        {/* Empty State */}
-        {(!project.images || project.images.length === 0) &&
-          (!project.videos || project.videos.length === 0) &&
-          viewMode === "owner" &&
-          onAddMedia && (
-            <div className="p-8 flex flex-col items-center justify-center text-center">
-              <div className="bg-muted rounded-full p-3 mb-4">
-                <ImageIcon className="h-6 w-6 text-muted-foreground" />
+          {/* Empty state for no media */}
+          {(!project.images || project.images.length === 0) &&
+            (!project.videos || project.videos.length === 0) && (
+              <div className="py-8 text-center">
+                <p className="text-muted-foreground">No media available</p>
+                {viewMode !== "public" && onAddMedia && (
+                  <Button
+                    variant="outline"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      onAddMedia(project);
+                    }}
+                    className="mt-4"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Media
+                  </Button>
+                )}
               </div>
-              <h4 className="text-lg font-medium mb-2">No media yet</h4>
-              <p className="text-muted-foreground mb-4">
-                Add images or videos to showcase your work
-              </p>
-              <Button onClick={() => onAddMedia(project)}>
-                <Plus className="h-4 w-4 mr-2" />
-                Add Media
-              </Button>
-            </div>
-          )}
+            )}
+        </div>
       </CardContent>
+
+      {/* Video Delete Dialog */}
+      {showVideoDeleteDialog && (
+        <AlertDialog
+          open={showVideoDeleteDialog}
+          onOpenChange={setShowVideoDeleteDialog}
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Confirm Video Deletion</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to delete this video? This action cannot
+                be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={handleDeleteVideo}>
+                Delete
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
     </Card>
   );
 }

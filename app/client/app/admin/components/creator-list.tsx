@@ -28,6 +28,7 @@ import {
   fetchCreators,
   fetchCreatorStats,
   CreatorStats,
+  getSystemStats,
 } from "@/lib/api/admin";
 import {
   Dialog,
@@ -117,10 +118,18 @@ const CreatorManagementPage = () => {
   const fetchStats = async () => {
     setLoadingStats(true);
     try {
-      const statsData = await fetchCreatorStats();
-      setStats(statsData);
+      const statsData = await getSystemStats();
+      setStats({
+        total: statsData.creators.total,
+        pending: statsData.creators.pending,
+        approved: statsData.creators.approved,
+        rejected: statsData.creators.rejected,
+        totalProjects: statsData.projects.total,
+        totalImages: statsData.media.images,
+        totalVideos: statsData.media.videos,
+      });
     } catch (error) {
-      console.error("Error fetching creator stats:", error);
+      console.error("Error fetching system stats:", error);
       // Keep the default values in the state
     } finally {
       setLoadingStats(false);
@@ -496,7 +505,9 @@ const CreatorManagementPage = () => {
               </button>
             )}
           </div>
-          <Button type="submit" className="w-full sm:w-auto">Search</Button>
+          <Button type="submit" className="w-full sm:w-auto">
+            Search
+          </Button>
         </form>
       </div>
 

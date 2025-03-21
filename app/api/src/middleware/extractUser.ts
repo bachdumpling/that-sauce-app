@@ -34,6 +34,7 @@ export const extractUser = async (
     }
 
     const token = authHeader.split(" ")[1];
+    console.log("token", token);
 
     // Verify the token with Supabase
     const {

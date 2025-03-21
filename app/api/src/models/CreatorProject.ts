@@ -6,6 +6,16 @@ export interface CreatorProfile {
   primary_role?: string;
   social_links?: Record<string, string>;
   years_of_experience?: number;
+  work_email?: string;
+  first_name?: string;
+  last_name?: string;
+  created_at?: string;
+  updated_at?: string;
+  profile?: {
+    first_name?: string;
+    last_name?: string;
+    email?: string;
+  };
   projects?: CreatorProject[];
 }
 
@@ -17,6 +27,8 @@ export interface CreatorProject {
   featured?: boolean;
   year?: number;
   creator_username?: string;
+  created_at?: string;
+  updated_at?: string;
   images: CreatorProjectImage[];
   videos: CreatorProjectVideo[];
 }

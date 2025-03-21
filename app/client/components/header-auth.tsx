@@ -10,6 +10,20 @@ export default async function AuthButton() {
     data: { user },
   } = await supabase.auth.getUser();
 
+  // Get creator profile if it exists
+  let creatorUsername = null;
+  if (user) {
+    const { data: creator } = await supabase
+      .from("creators")
+      .select("username")
+      .eq("profile_id", user.id)
+      .single();
+    
+    if (creator) {
+      creatorUsername = creator.username;
+    }
+  }
+
   return user ? (
     <div className="flex items-center gap-4">
       Hey, {user.email}!
@@ -19,8 +33,13 @@ export default async function AuthButton() {
         </Button>
       </form>
       <Button asChild size="sm" variant={"outline"}>
-        <Link href="/profile">Profile</Link>
+        <Link href="/settings">Settings</Link>
       </Button>
+      {creatorUsername && (
+        <Button asChild size="sm" variant={"outline"}>
+          <Link href={`/creator/${creatorUsername}`}>My Portfolio</Link>
+        </Button>
+      )}
       <Button asChild size="sm" variant={"outline"}>
         <Link href="/search">Search</Link>
       </Button>

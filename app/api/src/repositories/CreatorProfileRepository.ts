@@ -1,6 +1,7 @@
 import { supabase } from "../lib/supabase";
 import { CreatorProfile, CreatorProject } from "../models/CreatorProject";
 import logger from "../config/logger";
+import { invalidateCache } from "../lib/cache";
 
 export class CreatorProfileRepository {
   /**
@@ -8,17 +9,20 @@ export class CreatorProfileRepository {
    */
   async getByUsername(username: string): Promise<CreatorProfile | null> {
     try {
+      if (!username) {
+        logger.warn("getByUsername called with empty username");
+        return null;
+      }
+
       const { data, error } = await supabase
         .from("creators")
         .select(
           `
-          id,
-          username,
-          location,
-          bio,
-          primary_role,
-          social_links,
-          years_of_experience,
+          *,
+          profile:profile_id (
+            first_name,
+            last_name
+          ),
           projects (
             id,
             title,
@@ -27,7 +31,7 @@ export class CreatorProfileRepository {
             featured,
             year,
             images (
-              id, 
+              id,
               url,
               alt_text,
               resolutions
@@ -49,22 +53,53 @@ export class CreatorProfileRepository {
       if (error) {
         if (error.code === "PGRST116") {
           // Record not found
+          logger.info(`Creator not found for username: ${username}`);
           return null;
         }
+
+        // More detailed logging for other errors
+        logger.error(
+          `Database error in getByUsername for ${username}: ${error.message}`,
+          {
+            code: error.code,
+            details: error.details,
+            hint: error.hint,
+          }
+        );
         throw error;
       }
 
+      // Handle case where data is null or undefined
+      if (!data) {
+        logger.warn(
+          `No data returned for username ${username} but no error was thrown`
+        );
+        return null;
+      }
+
+      // Map the data to include first_name and last_name at the top level
+      const creator = {
+        ...data,
+        first_name: data.profile?.first_name || null,
+        last_name: data.profile?.last_name || null,
+      };
+
+      delete creator.profile; // Remove the nested profile object
+
       // Add creator_username to each project
-      if (data.projects) {
-        data.projects = data.projects.map((project) => ({
+      if (creator.projects) {
+        creator.projects = creator.projects.map((project: CreatorProject) => ({
           ...project,
           creator_username: username,
         }));
       }
 
-      return data;
-    } catch (error) {
-      logger.error(`Error fetching creator by username: ${error}`);
+      return creator;
+    } catch (error: any) {
+      logger.error(`Error in getByUsername: ${error.message}`, {
+        error,
+        username,
+      });
       throw error;
     }
   }
@@ -189,23 +224,38 @@ export class CreatorProfileRepository {
       // Check if the project exists and belongs to the user
       const { data: projectData, error: projectError } = await supabase
         .from("projects")
-        .select(
-          `
-          id,
-          creators!inner (
-            id,
-            profile_id
-          )
-        `
-        )
+        .select("id, creator_id")
         .eq("id", projectId)
         .single();
 
       if (projectError) {
-        throw projectError;
+        logger.error(`Error fetching project data: ${projectError.message}`);
+        return false; // Project not found or other error
       }
+
+      // Check if project exists
+      if (!projectData) {
+        logger.error(`Project ${projectId} not found`);
+        return false;
+      }
+
+      // Get the creator's profile ID
+      const { data: creatorData, error: creatorError } = await supabase
+        .from("creators")
+        .select("profile_id, username")
+        .eq("id", projectData.creator_id)
+        .single();
+
+      if (creatorError) {
+        logger.error(`Error fetching creator data: ${creatorError.message}`);
+        return false;
+      }
+
       // Verify ownership
-      if (projectData.creators[0].profile_id !== userId) {
+      if (!creatorData || creatorData.profile_id !== userId) {
+        logger.warn(
+          `User ${userId} attempted to delete image from project they don't own`
+        );
         return false; // Unauthorized
       }
 
@@ -218,23 +268,37 @@ export class CreatorProfileRepository {
         .single();
 
       if (imageError) {
-        throw imageError;
+        logger.error(`Error fetching image data: ${imageError.message}`);
+        return false; // Image not found or other error
       }
 
-      // Extract the file path from the URL
-      const url = new URL(image.url);
-      const pathParts = url.pathname.split("/");
-      const filePath = pathParts
-        .slice(pathParts.indexOf("media") + 1)
-        .join("/");
+      if (!image || !image.url) {
+        logger.error(`Image ${imageId} not found or has no URL`);
+        return false;
+      }
 
-      // Delete the image from storage
-      const { error: storageError } = await supabase.storage
-        .from("media")
-        .remove([filePath]);
+      try {
+        // Extract the file path from the URL
+        const url = new URL(image.url);
+        const pathParts = url.pathname.split("/");
+        const filePath = pathParts
+          .slice(pathParts.indexOf("media") + 1)
+          .join("/");
 
-      if (storageError) {
-        throw storageError;
+        // Delete the image from storage
+        const { error: storageError } = await supabase.storage
+          .from("media")
+          .remove([filePath]);
+
+        if (storageError) {
+          logger.error(
+            `Error deleting image from storage: ${storageError.message}`
+          );
+          // Continue anyway to delete the database record
+        }
+      } catch (urlError) {
+        logger.error(`Error parsing image URL: ${urlError}`);
+        // Continue anyway to delete the database record
       }
 
       // Delete the image record
@@ -244,12 +308,22 @@ export class CreatorProfileRepository {
         .eq("id", imageId);
 
       if (deleteError) {
-        throw deleteError;
+        logger.error(`Error deleting image record: ${deleteError.message}`);
+        return false;
+      }
+
+      // Invalidate related caches
+      invalidateCache(`admin_project_details_${projectId}`);
+      invalidateCache(`project_${projectId}`);
+      
+      if (creatorData && creatorData.username) {
+        invalidateCache(`creator_username_${creatorData.username}`);
+        invalidateCache(`creator_project_`);
       }
 
       return true;
-    } catch (error) {
-      logger.error(`Error deleting project image: ${error}`);
+    } catch (error: any) {
+      logger.error(`Error deleting project image: ${error.message}`);
       throw error;
     }
   }

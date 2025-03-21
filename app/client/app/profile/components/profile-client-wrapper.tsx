@@ -15,6 +15,10 @@ import {
   Project,
 } from "@/lib/api/projects";
 import {
+  deleteProjectImage as apiDeleteProjectImage,
+  deleteProjectVideo as apiDeleteProjectVideo,
+} from "@/lib/api/media";
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -25,6 +29,7 @@ import {
 import { CreateProjectForm } from "@/components/create-project-form";
 import { CreatorProfile } from "@/components/shared/creator-profile";
 import { Creator as CreatorType } from "@/components/shared/types";
+import { toast } from "sonner";
 
 interface ProfileClientWrapperProps {
   user: any;
@@ -169,6 +174,46 @@ export function ProfileClientWrapper({
     }
   };
 
+  const handleDeleteImage = async (projectId: string, imageId: string) => {
+    if (!projectId || !imageId) return;
+
+    if (confirm("Are you sure you want to delete this image? This action cannot be undone.")) {
+      try {
+        const response = await apiDeleteProjectImage(projectId, imageId);
+        
+        if (response.success) {
+          toast.success("Image deleted successfully");
+          fetchProjects(); // Refresh the projects to reflect changes
+        } else {
+          toast.error(response.error || "Failed to delete image");
+        }
+      } catch (error) {
+        console.error("Error deleting image:", error);
+        toast.error("An unexpected error occurred");
+      }
+    }
+  };
+
+  const handleDeleteVideo = async (projectId: string, videoId: string) => {
+    if (!projectId || !videoId) return;
+
+    if (confirm("Are you sure you want to delete this video? This action cannot be undone.")) {
+      try {
+        const response = await apiDeleteProjectVideo(projectId, videoId);
+        
+        if (response.success) {
+          toast.success("Video deleted successfully");
+          fetchProjects(); // Refresh the projects to reflect changes
+        } else {
+          toast.error(response.error || "Failed to delete video");
+        }
+      } catch (error) {
+        console.error("Error deleting video:", error);
+        toast.error("An unexpected error occurred");
+      }
+    }
+  };
+
   return (
     <div className="w-full space-y-8">
       {error && (
@@ -270,6 +315,8 @@ export function ProfileClientWrapper({
             `Add media to project ${project.title} functionality to be implemented`
           );
         }}
+        onDeleteImage={handleDeleteImage}
+        onDeleteVideo={handleDeleteVideo}
       />
     </div>
   );

@@ -3,15 +3,17 @@ import { setupCors } from "../src/middleware/cors";
 import { setupSecurity } from "../src/middleware/security";
 import { PORT } from "../src/config/env";
 import logger from "../src/config/logger";
-import fileUpload from "express-fileupload";
 import { supabase } from "../src/lib/supabase";
 import { extractUser } from "../src/middleware/extractUser";
 
 // Routes
-import searchRouter from "../src/routes/search";
+import searchRouter from "../src/routes/searchRoutes";
 import adminRouter from "../src/routes/admin";
 import projectRoutes from "../src/routes/projectRoutes";
 import creatorsRouter from "../src/routes/creators";
+import profileRouter from "../src/routes/profile";
+import mediaRoutes from "../src/routes/mediaRoutes";
+import portfolioRoutes from "../src/routes/portfolioRoutes";
 
 // Middleware
 import { errorHandler } from "../src/middleware/errorHandler";
@@ -33,13 +35,6 @@ app.use((req, res, next) => {
 setupCors(app);
 setupSecurity(app);
 app.use(express.json());
-app.use(
-  fileUpload({
-    limits: { fileSize: 50 * 1024 * 1024 }, // 50MB max file size
-    useTempFiles: true,
-    tempFileDir: "/tmp/",
-  })
-);
 
 // Apply extractUser middleware globally
 app.use(extractUser);
@@ -86,6 +81,9 @@ app.use("/api/search", searchRouter);
 app.use("/api/admin", adminRouter);
 app.use("/api/projects", projectRoutes);
 app.use("/api/creators", creatorsRouter);
+app.use("/api/profile", profileRouter);
+app.use("/api/media", mediaRoutes);
+app.use("/api/portfolios", portfolioRoutes);
 
 // Error handling middleware
 app.use(errorHandler);

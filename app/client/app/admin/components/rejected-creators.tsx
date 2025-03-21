@@ -29,8 +29,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 // Define the UnqualifiedCreator interface to match the database schema
 interface UnqualifiedCreator {
   id: string;
-  profile_id?: string;
   username: string;
+  email: string;
+  reason: string;
+  rejected_at: string;
+  rejected_by: string;
+  // Additional fields that might be available
   location?: string;
   bio?: string;
   primary_role?: string[];
@@ -38,9 +42,7 @@ interface UnqualifiedCreator {
   years_of_experience?: number;
   created_at?: string;
   updated_at?: string;
-  rejected_at: string;
-  rejection_reason: string;
-  rejected_by: string;
+  profile_id?: string;
   profiles?: {
     first_name?: string;
     last_name?: string;
@@ -210,7 +212,9 @@ const RejectedCreatorsPage = () => {
             </button>
           )}
         </div>
-        <Button type="submit" className="w-full sm:w-auto">Search</Button>
+        <Button type="submit" className="w-full sm:w-auto">
+          Search
+        </Button>
       </form>
 
       {/* Creator list */}
@@ -257,7 +261,7 @@ const RejectedCreatorsPage = () => {
                       Rejection Details
                     </h3>
                     <p className="text-sm text-red-700 mb-2">
-                      <strong>Reason:</strong> {creator.rejection_reason}
+                      <strong>Reason:</strong> {creator.reason}
                     </p>
                     <p className="text-sm text-red-700">
                       <strong>Rejected on:</strong>{" "}

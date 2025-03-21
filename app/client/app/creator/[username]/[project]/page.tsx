@@ -30,7 +30,8 @@ export async function generateMetadata({
       };
     }
 
-    const { project: projectData } = response.data;
+    // The project data is directly in response.data
+    const projectData = response.data;
 
     return {
       title: `${projectData.title} by ${username} | that sauce`,
@@ -65,7 +66,19 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
       notFound();
     }
 
-    const { creator, project: projectData } = response.data;
+    // The API returns the project data directly in response.data
+    const projectData = response.data;
+
+    // Create a creator object with just the username
+    const creator = {
+      username: projectData.creator_username || username,
+      user_id: null, // We don't have this from the API response
+    };
+
+    // Check if project data contains the expected fields
+    if (!projectData || Object.keys(projectData).length === 0) {
+      throw new Error("Project data is empty");
+    }
 
     return (
       <div className="container max-w-6xl mx-auto py-8 px-4">
@@ -80,7 +93,6 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
       </div>
     );
   } catch (error) {
-    console.error("Error fetching project:", error);
     notFound();
   }
 }
