@@ -38,6 +38,8 @@ export function groupSearchResultsByCreator(
       score: item.content_score,
       project_id: item.project_id,
       project_title: item.project_title,
+      youtube_id: item.youtube_id,
+      vimeo_id: item.vimeo_id,
     });
   });
 

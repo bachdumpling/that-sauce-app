@@ -2,13 +2,21 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { ArrowLeft, MapPin, X } from "lucide-react";
+import { ArrowLeft, MapPin, X, Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useRouter } from "next/navigation";
 import { search } from "@/lib/api/search";
 import { SearchResult } from "@/components/shared/types";
 import Image from "next/image";
+import { VimeoEmbed, YouTubeEmbed } from "@/components/ui/vimeo-embed";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 
 interface SearchResultsData {
   success: boolean;
@@ -54,6 +62,14 @@ export function SearchResultsClient({
   useEffect(() => {
     performSearch();
   }, [query, role, contentType, subjects, page, limit]);
+
+  // Reset refinements when role changes
+  useEffect(() => {
+    // Clear selected styles when role changes
+    setSelectedStyles([]);
+    // Reset to page 1 when search parameters change
+    setPage(1);
+  }, [role, contentType, subjects]);
 
   const performSearch = async () => {
     setIsLoading(true);
@@ -117,20 +133,30 @@ export function SearchResultsClient({
 
   const handleBackToSearch = () => {
     const params = new URLSearchParams();
+
+    // Keep only essential parameters when going back to search
     params.set("q", query);
     params.set("role", role);
+
+    // Only include content type if not the default
     if (contentType !== "all") {
       params.set("content_type", contentType);
     }
-    if (subjects.length > 0) {
+
+    // Only include subjects if they exist and are not empty
+    if (subjects && subjects.length > 0) {
       params.set("subjects", subjects.join(","));
     }
+
+    // Include document parameters if present
     if (hasDocuments) {
       params.set("has_docs", "true");
       if (documentsCount) {
         params.set("docs_count", documentsCount.toString());
       }
     }
+
+    // Navigate back to search with parameters
     router.push(`/search?${params.toString()}`);
   };
 
@@ -303,7 +329,7 @@ export function SearchResultsClient({
                     <Link
                       href={
                         creator.profile && creator.profile.username
-                          ? `/profile/${creator.profile.username}`
+                          ? `/creator/${creator.profile.username}`
                           : "#"
                       }
                     >
@@ -327,34 +353,71 @@ export function SearchResultsClient({
 
                 {/* Creator projects column */}
                 <div className="col-span-2">
-                  <div className="flex flex-row items-end gap-4 h-60 overflow-x-auto">
+                  <div className="flex flex-row items-end gap-4 h-72 overflow-x-auto">
                     {creator.content && creator.content.length > 0 ? (
                       creator.content.map(
                         (content, index) =>
                           index < 10 && (
                             <div
                               key={content.id}
-                              className="flex-none relative"
+                              className={`flex-none flex items-end ${content.type === "video" ? "h-full aspect-video" : ""}`}
                               style={{ height: "100%" }}
                             >
-                              {content.url ? (
-                                <div className="h-full">
-                                  <Image
-                                    src={content.url}
-                                    alt={
-                                      content.title ||
-                                      content.project_title ||
-                                      "Content"
-                                    }
-                                    width={0}
-                                    height={0}
-                                    sizes="100vw"
-                                    className="h-full w-auto object-contain"
-                                    style={{ objectPosition: "bottom" }}
-                                  />
+                              {content.type === "video" ? (
+                                <div className="w-full bg-black overflow-hidden">
+                                  {content.youtube_id ? (
+                                    <div className="aspect-video">
+                                      <YouTubeEmbed
+                                        youtubeId={content.youtube_id}
+                                        title={content.title || "YouTube video"}
+                                      />
+                                    </div>
+                                  ) : content.vimeo_id ? (
+                                    <div className="aspect-video">
+                                      <VimeoEmbed
+                                        vimeoId={content.vimeo_id}
+                                        title={content.title || "Vimeo video"}
+                                      />
+                                    </div>
+                                  ) : content.url ? (
+                                    <video
+                                      controls
+                                      src={content.url}
+                                      className="w-full"
+                                    >
+                                      <source
+                                        src={content.url}
+                                        type="video/mp4"
+                                      />
+                                      Your browser does not support the video
+                                      tag.
+                                    </video>
+                                  ) : (
+                                    <div className="w-full h-36 flex items-center justify-center bg-gray-800 text-white">
+                                      <span className="text-gray-400">
+                                        Video not available
+                                      </span>
+                                    </div>
+                                  )}
                                 </div>
+                              ) : content.url ? (
+                                <Image
+                                  src={content.url}
+                                  alt={
+                                    content.title ||
+                                    content.project_title ||
+                                    "Content"
+                                  }
+                                  width={0}
+                                  height={0}
+                                  sizes="100vw"
+                                  className="max-h-full w-auto object-cover object-bottom"
+                                  style={{
+                                    display: "block",
+                                  }}
+                                />
                               ) : (
-                                <div className="h-full w-40 flex items-center justify-center bg-gray-100 rounded-md">
+                                <div className="h-36 w-40 flex items-center justify-center bg-gray-100 rounded-md">
                                   <span className="text-gray-400">
                                     No image
                                   </span>

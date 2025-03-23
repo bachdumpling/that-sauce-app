@@ -14,6 +14,8 @@ export interface MediaContent {
   score: number;
   project_id: string;
   project_title: string;
+  youtube_id?: string;
+  vimeo_id?: string; 
 }
 
 export interface CreatorWithContent {

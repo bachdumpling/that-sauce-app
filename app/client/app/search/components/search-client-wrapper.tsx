@@ -343,6 +343,20 @@ export function SearchClientWrapper({
 
   const handleRoleSelect = (role: string) => {
     setSelectedRole(role);
+
+    // Clear refinements and prepare for new search with selected role
+    setSelectedSubjects([]);
+    setShowVideosOnly(false);
+    setMediaFilter("all");
+    setFilesUploaded([]);
+    setSearchQuery("");
+    setResults(null);
+    setIsRefining(false);
+
+    // Update URL to reflect the role change without any query
+    const params = new URLSearchParams();
+    params.set("role", role);
+    router.push(`/search?${params.toString()}`);
   };
 
   const handleFilesSelected = (files: File[]) => {
