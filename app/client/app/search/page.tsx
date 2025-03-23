@@ -10,28 +10,32 @@ const EXAMPLE_QUERIES = [
   "product photographer in a studio",
 ];
 
+const TALENT_ROLES = [
+  "Director",
+  "Photographer",
+  "Cinematographer",
+  "Motion Designer",
+  "Illustrator",
+  "Graphic Designer",
+  "Video Editor",
+  "VFX Artist",
+];
+
 export default async function SearchPage({
   searchParams,
 }: {
-  searchParams: { q?: string; content_type?: string };
+  searchParams: { q?: string; content_type?: string; role?: string };
 }) {
   // Ensure searchParams is properly awaited
   const params = await Promise.resolve(searchParams);
   const initialQuery = params.q || "";
   const initialContentType =
     params.content_type === "videos" ? "videos" : "all";
+  const initialRole = params.role || "";
 
   return (
     <div className="container max-w-6xl mx-auto py-8 px-4">
       <div className="space-y-8">
-        <div>
-          <h1 className="text-3xl font-bold mb-2">Find Creative Talent</h1>
-          <p className="text-muted-foreground">
-            Discover photographers and creators based on their style and
-            expertise
-          </p>
-        </div>
-
         <Suspense
           fallback={
             <div className="h-[500px] w-full">
@@ -42,7 +46,9 @@ export default async function SearchPage({
           <SearchClientWrapper
             initialQuery={initialQuery}
             initialContentType={initialContentType as "all" | "videos"}
+            initialRole={initialRole}
             exampleQueries={EXAMPLE_QUERIES}
+            talentRoles={TALENT_ROLES}
           />
         </Suspense>
       </div>

@@ -5,41 +5,35 @@ export interface SearchQueryParams {
   contentType?: "all" | "videos" | "images";
 }
 
-export interface SearchResult {
+export interface MediaContent {
+  id: string;
+  type: "image" | "video";
+  url: string;
+  title: string;
+  description?: string;
+  score: number;
+  project_id: string;
+  project_title: string;
+}
+
+export interface CreatorWithContent {
   profile: {
     id: string;
     username: string;
     location?: string;
     bio?: string;
-    primary_role?: string;
-    social_links?: Record<string, string>;
+    primary_role?: string[];
   };
-  projects: ProjectSearchResult[];
   score: number;
+  content: MediaContent[];
 }
 
-export interface ProjectSearchResult {
-  id: string;
-  title: string;
-  description?: string;
-  images: ImageSearchResult[];
-  videos: VideoSearchResult[];
-  creator?: {
-    id: string;
-    username: string;
-  };
+export interface SearchResponse {
+  results: CreatorWithContent[];
+  page: number;
+  limit: number;
+  total: number;
+  query: string;
+  content_type: string;
+  processed_query?: string;
 }
-
-export interface ImageSearchResult {
-  id: string;
-  url: string;
-  score: number;
-}
-
-export interface VideoSearchResult {
-  id: string;
-  url: string;
-  title?: string;
-  description?: string;
-  score: number;
-} 

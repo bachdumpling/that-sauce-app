@@ -74,9 +74,21 @@ export interface SearchResult {
     website?: string;
     social_links?: Record<string, string>;
     work_email?: string;
+    bio?: string;
   };
   score?: number;
-  projects: Project[];
+  content: ContentItem[];
+}
+
+export interface ContentItem {
+  id: string;
+  type: "image" | "video";
+  url: string;
+  title?: string;
+  description?: string;
+  score?: number;
+  project_id?: string;
+  project_title?: string;
 }
 
 export interface MediaEntry {
