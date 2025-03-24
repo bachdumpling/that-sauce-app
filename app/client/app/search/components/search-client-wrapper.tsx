@@ -14,6 +14,7 @@ import {
   RotateCcw,
   Info,
   FileText,
+  DollarSign,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -65,6 +66,12 @@ import {
   type CarouselApi,
 } from "@/components/ui/carousel";
 import * as React from "react";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Slider } from "@/components/ui/slider";
 
 interface SearchResults {
   success: boolean;
@@ -76,7 +83,6 @@ interface SearchResults {
     content_type: "all" | "videos" | "images";
   };
 }
-
 
 interface RefinementQuestion {
   question: string;
@@ -271,6 +277,10 @@ export function SearchClientWrapper({
   >({});
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [selectedStyles, setSelectedStyles] = useState<string[]>([]);
+  const [maxBudget, setMaxBudget] = useState<number>(200);
+  const [hasBudgetFilter, setHasBudgetFilter] = useState(false);
+  const [showAllRoles, setShowAllRoles] = useState(false);
+  const visibleRoles = showAllRoles ? talentRoles : talentRoles.slice(0, 15);
 
   // Perform initial search if query and role are provided
   useEffect(() => {
@@ -349,6 +359,11 @@ export function SearchClientWrapper({
       // Add selected styles if any
       if (selectedStyles.length > 0) {
         params.set("styles", selectedStyles.join(","));
+      }
+
+      // Add budget filter if enabled
+      if (hasBudgetFilter) {
+        params.set("max_budget", maxBudget.toString());
       }
 
       // Add documentation info if any
@@ -512,14 +527,14 @@ export function SearchClientWrapper({
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-10">
       {/* Role Selection */}
       <div>
         <h2 className="text-xl font-semibold mb-3">
           What kind of talent are you looking for?
         </h2>
         <div className="flex flex-wrap gap-2">
-          {talentRoles.map((role) => (
+          {visibleRoles.map((role) => (
             <Button
               key={role}
               variant={selectedRole === role ? "default" : "outline"}
@@ -529,9 +544,16 @@ export function SearchClientWrapper({
               {role}
             </Button>
           ))}
-          <Button variant="outline" className="gap-1">
-            More <ArrowUpRight className="h-4 w-4" />
-          </Button>
+          {talentRoles.length > 15 && (
+            <Button
+              variant="outline"
+              className="gap-1"
+              onClick={() => setShowAllRoles(!showAllRoles)}
+            >
+              {showAllRoles ? "Less" : "More"}{" "}
+              <ArrowUpRight className="h-4 w-4" />
+            </Button>
+          )}
         </div>
       </div>
 
@@ -605,6 +627,85 @@ export function SearchClientWrapper({
           )}
 
           <div className="absolute right-0 -top-2 flex items-center gap-2">
+            {/* Budget Filter */}
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className={
+                    hasBudgetFilter
+                      ? "border-green-500 text-green-500 hover:text-green-600 hover:border-green-600"
+                      : ""
+                  }
+                >
+                  <DollarSign className="h-4 w-4 mr-2 mb-1" />
+                  {hasBudgetFilter ? `Up to $${maxBudget}/hr` : "Budget"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-80 p-4">
+                <div className="space-y-4">
+                  <h4 className="font-medium text-sm">
+                    Maximum Budget (per hour)
+                  </h4>
+                  <div className="space-y-5">
+                    <Slider
+                      defaultValue={[200]}
+                      min={25}
+                      max={500}
+                      step={5}
+                      value={[maxBudget]}
+                      onValueChange={(values) => {
+                        setMaxBudget(values[0]);
+                      }}
+                      className="mt-6"
+                    />
+                    <div className="flex items-center justify-between">
+                      <div className="text-sm">$25</div>
+                      <div className="border rounded-md px-2 py-1 w-24">
+                        <div className="text-xs text-muted-foreground mb-1">
+                          Max ($)
+                        </div>
+                        <input
+                          type="number"
+                          min={25}
+                          max={500}
+                          value={maxBudget}
+                          onChange={(e) => {
+                            const value = parseInt(e.target.value);
+                            if (!isNaN(value) && value >= 25 && value <= 500) {
+                              setMaxBudget(value);
+                            }
+                          }}
+                          className="w-full focus:outline-none text-sm"
+                        />
+                      </div>
+                      <div className="text-sm">$500</div>
+                    </div>
+                  </div>
+                  <div className="flex justify-end gap-2 pt-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setMaxBudget(200);
+                        setHasBudgetFilter(false);
+                      }}
+                    >
+                      Reset
+                    </Button>
+                    <Button
+                      variant="default"
+                      size="sm"
+                      onClick={() => setHasBudgetFilter(true)}
+                    >
+                      Apply
+                    </Button>
+                  </div>
+                </div>
+              </PopoverContent>
+            </Popover>
+
             <Dialog
               open={isUploadDialogOpen}
               onOpenChange={setIsUploadDialogOpen}
@@ -619,7 +720,7 @@ export function SearchClientWrapper({
                       : ""
                   }
                 >
-                  <Upload className="h-4 w-4 mr-1" />
+                  <Upload className="h-4 w-4 mr-2 mb-1" />
                   {filesUploaded.length > 0
                     ? `${filesUploaded.length} document${filesUploaded.length > 1 ? "s" : ""}`
                     : "Add Inspo"}
@@ -823,7 +924,7 @@ export function SearchClientWrapper({
               className="px-6 bg-black"
               disabled={isLoading || !searchQuery.trim() || !selectedRole}
             >
-              {isLoading ? "Searching..." : "Search Now (over 180+ creators)"}
+              {isLoading ? "Searching..." : "Search Now"}
             </Button>
           </div>
         )}

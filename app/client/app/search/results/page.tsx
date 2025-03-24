@@ -11,6 +11,7 @@ export default async function SearchResultsPage({
     content_type?: string;
     subjects?: string;
     styles?: string;
+    max_budget?: string;
     limit?: string;
     page?: string;
     has_docs?: string;
@@ -29,6 +30,9 @@ export default async function SearchResultsPage({
         : "all";
   const subjects = params.subjects ? params.subjects.split(",") : [];
   const styles = params.styles ? params.styles.split(",") : [];
+  const maxBudget = params.max_budget
+    ? parseInt(params.max_budget, 10)
+    : undefined;
   const limit = params.limit ? parseInt(params.limit, 10) : 5;
   const page = params.page ? parseInt(params.page, 10) : 1;
   const hasDocuments = params.has_docs === "true";
@@ -61,6 +65,7 @@ export default async function SearchResultsPage({
           contentType={contentType as "all" | "videos" | "images"}
           subjects={subjects}
           styles={styles}
+          maxBudget={maxBudget}
           initialLimit={limit}
           initialPage={page}
           hasDocuments={hasDocuments}

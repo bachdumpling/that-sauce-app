@@ -11,6 +11,7 @@ interface SearchParams {
   role?: string;                             // Filter by creator role
   subjects?: string[];                       // Subject categories/focus areas
   styles?: string[];                         // Style preferences
+  maxBudget?: number;                        // Maximum budget per hour
   hasDocuments?: boolean;                    // Whether uploaded docs were provided
   documentCount?: number;                    // Number of documents uploaded
 }
@@ -35,6 +36,8 @@ export async function search(params: SearchParams) {
     role: params.role,
     subjects: params.subjects ? params.subjects.join(",") : undefined,
     styles: params.styles ? params.styles.join(",") : undefined,
+    min_budget: params.minBudget,
+    max_budget: params.maxBudget,
     has_documents: params.hasDocuments ? "true" : undefined,
     document_count: params.documentCount
   });

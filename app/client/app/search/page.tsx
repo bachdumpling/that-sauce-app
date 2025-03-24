@@ -19,6 +19,18 @@ const TALENT_ROLES = [
   "Graphic Designer",
   "Video Editor",
   "VFX Artist",
+  "3D Artist", 
+  "UI/UX Designer",
+  "Art Director",
+  "Creative Director",
+  "Web Designer", 
+  "Product Designer",
+  "Animator",
+  "Sound Designer",
+  "Fashion Designer",
+  "Stylist",
+  "Makeup Artist",
+  "Set Designer"
 ];
 
 export default async function SearchPage({

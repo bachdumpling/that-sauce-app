@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { ArrowLeft, X } from "lucide-react";
+import { ArrowLeft, X, DollarSign } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useRouter } from "next/navigation";
@@ -28,6 +28,7 @@ interface SearchResultsClientProps {
   contentType: "all" | "videos" | "images";
   subjects: string[];
   styles: string[];
+  maxBudget?: number;
   initialLimit: number;
   initialPage: number;
   hasDocuments?: boolean;
@@ -40,6 +41,7 @@ export function SearchResultsClient({
   contentType,
   subjects,
   styles,
+  maxBudget,
   initialLimit,
   initialPage,
   hasDocuments,
@@ -160,6 +162,11 @@ export function SearchResultsClient({
       params.set("styles", selectedStyles.join(","));
     }
 
+    // Include budget parameter if present
+    if (maxBudget !== undefined) {
+      params.set("max_budget", maxBudget.toString());
+    }
+
     // Include document parameters if present
     if (hasDocuments) {
       params.set("has_docs", "true");
@@ -188,32 +195,55 @@ export function SearchResultsClient({
       </div>
 
       {/* Search summary */}
-      <div className="grid grid-cols-3 gap-8 border-b pb-6">
-        <div>
-          <h3 className="text-sm font-medium text-muted-foreground">Role</h3>
-          <p className="text-xl font-bold">{role}</p>
+      <div className="border-b pb-6 space-y-6">
+        <div className="grid grid-cols-4 gap-8">
+          <div>
+            <h3 className="text-sm font-medium text-muted-foreground">Role</h3>
+            <p className="text-xl font-bold">{role}</p>
+          </div>
+
+          <div>
+            <h3 className="text-sm font-medium text-muted-foreground">
+              Budget
+            </h3>
+            <div className="flex items-center mt-1">
+              {maxBudget ? (
+                <div className="flex items-center space-x-1 text-base">
+                  <span>$ Up to {maxBudget}</span>
+                  <span className="text-base text-muted-foreground ml-1">
+                    /hr
+                  </span>
+                </div>
+              ) : (
+                <p className="text-muted-foreground">No budget specified</p>
+              )}
+            </div>
+          </div>
+          <div className="col-span-2">
+            <h3 className="text-sm font-medium text-muted-foreground">Style</h3>
+            <div className="flex flex-wrap gap-2 mt-1">
+              {selectedStyles.map((style) => (
+                <Button
+                  key={style}
+                  variant="default"
+                  className="bg-black text-white"
+                  onClick={() => handleStyleToggle(style)}
+                >
+                  {style}
+                </Button>
+              ))}
+              {selectedStyles.length === 0 && (
+                <p className="text-muted-foreground">No styles selected</p>
+              )}
+            </div>
+          </div>
         </div>
-        <div>
+
+        <div className="">
           <h3 className="text-sm font-medium text-muted-foreground">
             Description
           </h3>
-          <p className="text-xl">{query}</p>
-        </div>
-        <div>
-          <h3 className="text-sm font-medium text-muted-foreground">Style</h3>
-          <div className="flex flex-wrap gap-2 mt-1">
-            {selectedStyles.map((style) => (
-              <Button
-                key={style}
-                variant="default"
-                className="bg-black text-white"
-                onClick={() => handleStyleToggle(style)}
-              >
-                {style} <X className="h-4 w-4 ml-2" />
-              </Button>
-            ))}
-            {selectedStyles.length === 0 && <p>No styles selected</p>}
-          </div>
+          <p className="text-lg">{query}</p>
         </div>
       </div>
 
