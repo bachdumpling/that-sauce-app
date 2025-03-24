@@ -33,4 +33,13 @@ router.get("/projects", searchController.searchProjects.bind(searchController));
  */
 router.get("/media", searchController.searchMedia.bind(searchController));
 
+/**
+ * @route GET /api/search/enhance-prompt
+ * @desc Enhance a search query with AI-powered suggestions
+ */
+router.get(
+  "/refine",
+  searchController.enhanceSearchPrompt.bind(searchController)
+);
+
 export default router;

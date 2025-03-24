@@ -10,8 +10,16 @@ interface SearchParams {
   contentType?: "all" | "videos" | "images"; // Filter by content type
   role?: string;                             // Filter by creator role
   subjects?: string[];                       // Subject categories/focus areas
+  styles?: string[];                         // Style preferences
   hasDocuments?: boolean;                    // Whether uploaded docs were provided
   documentCount?: number;                    // Number of documents uploaded
+}
+
+/**
+ * Interface for search prompt enhancement parameters
+ */
+interface EnhanceSearchPromptParams {
+  query: string;
 }
 
 /**
@@ -26,6 +34,7 @@ export async function search(params: SearchParams) {
     content_type: params.contentType || "all",
     role: params.role,
     subjects: params.subjects ? params.subjects.join(",") : undefined,
+    styles: params.styles ? params.styles.join(",") : undefined,
     has_documents: params.hasDocuments ? "true" : undefined,
     document_count: params.documentCount
   });
@@ -68,4 +77,28 @@ export async function searchServer(params: SearchParams) {
  */
 export async function searchCreatorsServer(params: SearchParams) {
   return search(params);
+}
+
+/**
+ * Enhances a search query by generating helpful refinement options
+ * Uses the Gemini AI to suggest ways to improve the search
+ */
+export async function enhanceSearchPrompt(params: EnhanceSearchPromptParams) {
+  const url = buildApiUrl(API_ENDPOINTS.enhanceSearchPrompt, {
+    query: params.query
+  });
+
+  const response = await fetch(url, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    credentials: "include"
+  });
+
+  if (!response.ok) {
+    throw new Error(`Search prompt enhancement failed: ${response.statusText}`);
+  }
+
+  return response.json();
 }

@@ -5,6 +5,7 @@ export const API_ENDPOINTS = {
   // Search endpoints
   search: "/search",
   searchCreators: "/search/creators",
+  enhanceSearchPrompt: "/search/refine",
 
   // Creator endpoints
   getCreatorByUsername: (username: string) => `/creators/${username}`,

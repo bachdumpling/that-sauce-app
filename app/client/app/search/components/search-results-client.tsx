@@ -27,6 +27,7 @@ interface SearchResultsClientProps {
   role: string;
   contentType: "all" | "videos" | "images";
   subjects: string[];
+  styles: string[];
   initialLimit: number;
   initialPage: number;
   hasDocuments?: boolean;
@@ -38,6 +39,7 @@ export function SearchResultsClient({
   role,
   contentType,
   subjects,
+  styles,
   initialLimit,
   initialPage,
   hasDocuments,
@@ -48,19 +50,19 @@ export function SearchResultsClient({
   const [isLoading, setIsLoading] = useState(true);
   const [page, setPage] = useState(initialPage);
   const [limit, setLimit] = useState(initialLimit);
-  const [selectedStyles, setSelectedStyles] = useState<string[]>([]);
+  const [selectedStyles, setSelectedStyles] = useState<string[]>(styles || []);
 
   useEffect(() => {
     performSearch();
-  }, [query, role, contentType, subjects, page, limit]);
+  }, [query, role, contentType, subjects, selectedStyles, page, limit]);
 
   // Reset refinements when role changes
   useEffect(() => {
-    // Clear selected styles when role changes
-    setSelectedStyles([]);
+    // Update selected styles when prop changes
+    setSelectedStyles(styles || []);
     // Reset to page 1 when search parameters change
     setPage(1);
-  }, [role, contentType, subjects]);
+  }, [styles, role, contentType, subjects]);
 
   const performSearch = async () => {
     setIsLoading(true);
@@ -72,6 +74,7 @@ export function SearchResultsClient({
         page,
         role,
         subjects,
+        styles: selectedStyles,
         hasDocuments,
         documentCount: documentsCount,
       });
@@ -117,9 +120,22 @@ export function SearchResultsClient({
   };
 
   const handleStyleToggle = (style: string) => {
-    setSelectedStyles((prev) =>
-      prev.includes(style) ? prev.filter((s) => s !== style) : [...prev, style]
-    );
+    const updatedStyles = selectedStyles.includes(style)
+      ? selectedStyles.filter((s) => s !== style)
+      : [...selectedStyles, style];
+
+    setSelectedStyles(updatedStyles);
+
+    // Update URL with new styles
+    const params = new URLSearchParams(window.location.search);
+    if (updatedStyles.length > 0) {
+      params.set("styles", updatedStyles.join(","));
+    } else {
+      params.delete("styles");
+    }
+
+    const newUrl = `${window.location.pathname}?${params.toString()}`;
+    router.push(newUrl);
   };
 
   const handleBackToSearch = () => {
@@ -137,6 +153,11 @@ export function SearchResultsClient({
     // Only include subjects if they exist and are not empty
     if (subjects && subjects.length > 0) {
       params.set("subjects", subjects.join(","));
+    }
+
+    // Include selected styles
+    if (selectedStyles.length > 0) {
+      params.set("styles", selectedStyles.join(","));
     }
 
     // Include document parameters if present
@@ -159,6 +180,8 @@ export function SearchResultsClient({
     <div className="space-y-8">
       {/* Header with search details */}
       <div className="flex items-center space-x-2">
+        {/* TODO: going back from result to search should keep the same refinements as well dont remove it since they can go back and refine and
+        keep searching */}
         <Button variant="ghost" onClick={handleBackToSearch}>
           <ArrowLeft className="h-4 w-4 mr-2" /> Back to Search
         </Button>
@@ -198,10 +221,10 @@ export function SearchResultsClient({
       {results && results.data.results.length > 0 ? (
         <div className="space-y-14">
           {results.data.results.map((creator) => (
-            <CreatorResultCard 
-              key={creator.profile.id} 
-              creator={creator} 
-              role={role} 
+            <CreatorResultCard
+              key={creator.profile.id}
+              creator={creator}
+              role={role}
             />
           ))}
         </div>

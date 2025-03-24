@@ -20,7 +20,7 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Toggle } from "@/components/ui/toggle";
 import { useRouter, useSearchParams } from "next/navigation";
-import { search } from "@/lib/api/search";
+import { search, enhanceSearchPrompt } from "@/lib/api/search";
 import { CreatorCard } from "@/components/shared/creator-card";
 import { SearchResult } from "@/components/shared/types";
 import {
@@ -55,6 +55,16 @@ import {
   DialogClose,
 } from "@/components/ui/dialog";
 import { DropzoneInput } from "@/components/ui/dropzone-input";
+import { Card, CardContent } from "@/components/ui/card";
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+  type CarouselApi,
+} from "@/components/ui/carousel";
+import * as React from "react";
 
 interface SearchResults {
   success: boolean;
@@ -64,6 +74,20 @@ interface SearchResults {
     limit: number;
     total: number;
     content_type: "all" | "videos" | "images";
+  };
+}
+
+
+interface RefinementQuestion {
+  question: string;
+  options: string[];
+}
+
+interface SearchEnhancement {
+  success: boolean;
+  data: {
+    original_query: string;
+    enhancement: RefinementQuestion[];
   };
 }
 
@@ -239,6 +263,14 @@ export function SearchClientWrapper({
   const [isRefining, setIsRefining] = useState(false);
   const [isRefinementLoading, setIsRefinementLoading] = useState(false);
   const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
+  const [refinementEnhancement, setRefinementEnhancement] = useState<
+    RefinementQuestion[]
+  >([]);
+  const [selectedOptions, setSelectedOptions] = useState<
+    Record<string, string>
+  >({});
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [selectedStyles, setSelectedStyles] = useState<string[]>([]);
 
   // Perform initial search if query and role are provided
   useEffect(() => {
@@ -312,6 +344,11 @@ export function SearchClientWrapper({
       // Add selected subjects if any
       if (selectedSubjects.length > 0) {
         params.set("subjects", selectedSubjects.join(","));
+      }
+
+      // Add selected styles if any
+      if (selectedStyles.length > 0) {
+        params.set("styles", selectedStyles.join(","));
       }
 
       // Add documentation info if any
@@ -409,11 +446,57 @@ export function SearchClientWrapper({
   };
 
   const handleRefinementClick = async () => {
+    if (!searchQuery.trim()) return;
+
     setIsRefinementLoading(true);
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    setIsRefinementLoading(false);
-    setIsRefining(true);
+    try {
+      const response = await enhanceSearchPrompt({ query: searchQuery });
+
+      if (response.success && response.data.enhancement) {
+        setRefinementEnhancement(response.data.enhancement);
+        setIsRefining(true);
+
+        // Reset selected options instead of initializing with first option
+        setSelectedOptions({});
+        // Reset styles to ensure we don't have any previous selections
+        setSelectedStyles([]);
+      }
+    } catch (error) {
+      console.error("Error enhancing search prompt:", error);
+    } finally {
+      setIsRefinementLoading(false);
+    }
+  };
+
+  const handleOptionSelect = (question: string, option: string) => {
+    let newOptions = { ...selectedOptions };
+
+    // Check if the option is already selected
+    if (selectedOptions[question] === option) {
+      // If selected, unselect it
+      delete newOptions[question];
+    } else {
+      // If not selected or different option selected, select it
+      newOptions = {
+        ...newOptions,
+        [question]: option,
+      };
+    }
+
+    setSelectedOptions(newOptions);
+
+    // Automatically apply refinements when options are selected/deselected
+    const styles = Object.values(newOptions);
+    setSelectedStyles(styles);
+  };
+
+  const handleNextQuestion = () => {
+    if (refinementEnhancement.length > currentQuestionIndex + 1) {
+      setCurrentQuestionIndex(currentQuestionIndex + 1);
+    } else {
+      // Cycle back to the first question
+      setCurrentQuestionIndex(0);
+    }
   };
 
   const handleSubjectToggle = (subject: string) => {
@@ -478,6 +561,48 @@ export function SearchClientWrapper({
               </button>
             )}
           </div>
+
+          {/* Display selected refinement options */}
+          {selectedStyles.length > 0 && (
+            <div className="mt-3 flex flex-wrap gap-2 items-center">
+              <span className="text-sm text-gray-500 mr-1">Refinements:</span>
+              {selectedStyles.map((style, index) => (
+                <Button
+                  key={index}
+                  variant="secondary"
+                  size="sm"
+                  className="bg-gray-100 hover:bg-gray-200 text-sm font-normal h-7 px-2 py-0 rounded-full"
+                  onClick={() => {
+                    // Find and remove the corresponding option
+                    const questionToRemove = Object.entries(
+                      selectedOptions
+                    ).find(([_, value]) => value === style);
+                    if (questionToRemove) {
+                      const newOptions = { ...selectedOptions };
+                      delete newOptions[questionToRemove[0]];
+                      setSelectedOptions(newOptions);
+                      setSelectedStyles(Object.values(newOptions));
+                    }
+                  }}
+                >
+                  {style} <X className="h-3 w-3 ml-1" />
+                </Button>
+              ))}
+              {selectedStyles.length > 0 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 px-2 py-0 text-xs text-gray-500 hover:text-gray-700"
+                  onClick={() => {
+                    setSelectedOptions({});
+                    setSelectedStyles([]);
+                  }}
+                >
+                  Clear all
+                </Button>
+              )}
+            </div>
+          )}
 
           <div className="absolute right-0 -top-2 flex items-center gap-2">
             <Dialog
@@ -603,7 +728,7 @@ export function SearchClientWrapper({
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-xl font-bold">
                 Refining your search{" "}
-                <span className="inline-block animate-pulse ml-1">⚡</span>
+                <span className="inline-block ml-1">✨</span>
               </h3>
               <Button
                 variant="ghost"
@@ -614,43 +739,61 @@ export function SearchClientWrapper({
               </Button>
             </div>
 
-            <div className="space-y-4">
+            {refinementEnhancement.length > 0 ? (
               <div>
-                <h4 className="text-lg mb-3">
-                  Is there a particular subject focus you're interested in?
+                <h4 className="text-base font-medium mb-3">
+                  {refinementEnhancement[currentQuestionIndex].question}
                 </h4>
                 <div className="flex flex-wrap gap-2">
-                  {SUBJECT_CATEGORIES.slice(0, 4).map((subject) => (
-                    <Button
-                      key={subject}
-                      variant={
-                        selectedSubjects.includes(subject)
-                          ? "default"
-                          : "outline"
-                      }
-                      onClick={() => handleSubjectToggle(subject)}
-                      className={
-                        selectedSubjects.includes(subject)
-                          ? "bg-black text-white"
-                          : ""
-                      }
-                    >
-                      {subject}{" "}
-                      {selectedSubjects.includes(subject) && (
-                        <X className="h-4 w-4 ml-2" />
-                      )}
-                    </Button>
-                  ))}
+                  {refinementEnhancement[currentQuestionIndex].options.map(
+                    (option) => (
+                      <Button
+                        key={option}
+                        variant={
+                          selectedOptions[
+                            refinementEnhancement[currentQuestionIndex].question
+                          ] === option
+                            ? "default"
+                            : "outline"
+                        }
+                        size="sm"
+                        onClick={() =>
+                          handleOptionSelect(
+                            refinementEnhancement[currentQuestionIndex]
+                              .question,
+                            option
+                          )
+                        }
+                        className={
+                          selectedOptions[
+                            refinementEnhancement[currentQuestionIndex].question
+                          ] === option
+                            ? "bg-black text-white"
+                            : ""
+                        }
+                      >
+                        {option}
+                        {selectedOptions[
+                          refinementEnhancement[currentQuestionIndex].question
+                        ] === option && <X className="h-4 w-4 ml-2" />}
+                      </Button>
+                    )
+                  )}
                   <Button
                     variant="outline"
-                    className="p-3"
-                    onClick={handleResetSubjects}
+                    size="sm"
+                    className="border-dashed"
+                    onClick={handleNextQuestion}
                   >
-                    <RotateCcw className="h-4 w-4" />
+                    Another question <ArrowUpRight className="h-4 w-4 ml-1" />
                   </Button>
                 </div>
               </div>
-            </div>
+            ) : (
+              <div className="flex items-center justify-center p-8">
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+              </div>
+            )}
           </div>
         )}
 
