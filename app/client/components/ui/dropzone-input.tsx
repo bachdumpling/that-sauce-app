@@ -121,7 +121,7 @@ export function DropzoneInput({
         </div>
       )}
 
-      {files.length > 0 && (
+      {/* {files.length > 0 && (
         <div className="space-y-2">
           <div className="flex justify-between items-center">
             <h4 className="text-sm font-medium">
@@ -165,7 +165,7 @@ export function DropzoneInput({
             ))}
           </ul>
         </div>
-      )}
+      )} */}
     </div>
   );
 } 

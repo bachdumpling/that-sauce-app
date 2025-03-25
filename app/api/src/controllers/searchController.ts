@@ -14,6 +14,98 @@ import { GEMINI_API_KEY } from "../config/env";
 
 export class SearchController {
   /**
+   * Demo search endpoint that only searches specific creators
+   * GET /api/search/demo
+   */
+  async demoSearch(
+    req: AuthenticatedRequest<{}, any, any, SearchQueryParams>,
+    res: Response
+  ) {
+    try {
+      // Fixed list of usernames for the demo
+      const allowedUsernames = ["omaraqil", "chloekarayiannis", "byconstantine"];
+
+      // Extract query parameters
+      let contentType = req.query.contentType || "all";
+      if (!["all", "images", "videos"].includes(contentType)) {
+        contentType = "all";
+      }
+
+      const { q: query } = req.query;
+      const limit = Number(req.query.limit) || 10;
+      const page = Number(req.query.page) || 1;
+
+      if (!query) {
+        return sendError(
+          res,
+          ErrorCode.MISSING_REQUIRED_FIELD,
+          "Search query is required",
+          400
+        );
+      }
+
+      // Generate embedding for the search query
+      const queryEmbedding = await generateEmbedding(query, "creators");
+
+      if (!queryEmbedding?.values?.length) {
+        return sendSuccess(res, {
+          results: [],
+          page,
+          limit,
+          total: 0,
+          query,
+          content_type: contentType,
+        });
+      }
+
+      // Use the new RPC function with username filter
+      const { data: rawResults, error: searchError } = await supabase.rpc(
+        "search_by_usernames",
+        {
+          query_embedding: queryEmbedding.values,
+          usernames: allowedUsernames,
+          match_threshold: 0.1,
+          match_limit: limit,
+          content_filter: contentType,
+        }
+      );
+
+      if (searchError) {
+        throw searchError;
+      }
+
+      // Get the total count from the first result
+      const totalCount =
+        rawResults && rawResults.length > 0
+          ? Number(rawResults[0].total_count)
+          : 0;
+
+      // Group results by creator
+      const groupedResults = groupSearchResultsByCreator(rawResults || []);
+
+      return sendSuccess(res, {
+        results: groupedResults,
+        page,
+        limit,
+        total: totalCount,
+        query,
+        content_type: contentType,
+        processed_query: queryEmbedding.processed_text,
+        restricted_to: allowedUsernames,
+      });
+    } catch (error) {
+      logger.error("Demo search error:", error);
+      return sendError(
+        res,
+        ErrorCode.SERVER_ERROR,
+        "Search failed",
+        error,
+        500
+      );
+    }
+  }
+
+  /**
    * Search for creative content across all creators, images, and videos
    */
   async searchCreativeContent(

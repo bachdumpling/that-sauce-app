@@ -22,6 +22,8 @@ export function groupSearchResultsByCreator(
           location: item.creator_location,
           bio: item.creator_bio,
           primary_role: item.creator_primary_role,
+          social_links: item.creator_social_links,
+          work_email: item.creator_work_email,
         },
         score: item.creator_score,
         content: [],

@@ -2,21 +2,211 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { MapPin, X, Play } from "lucide-react";
+import { MapPin, X, Play, Sparkles, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SearchResult } from "@/components/shared/types";
 import Image from "next/image";
 import { VimeoEmbed, YouTubeEmbed } from "@/components/ui/vimeo-embed";
 import { ImageLightbox } from "@/components/shared/image-lightbox";
+import { SocialIcon } from "@/components/ui/social-icon";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { User } from "@/components/shared/types";
+import { SOCIAL_PLATFORMS } from "@/lib/constants/creator-options";
+import { ContentItem } from "@/components/shared/types";
+
+const mockContent: ContentItem[][] = [
+  // Group 1
+  [
+    {
+      id: "1a",
+      type: "image",
+      url: "https://mir-s3-cdn-cf.behance.net/project_modules/disp/122f24195704583.6612b2513ecab.gif",
+      title: "Animated Abstract Pattern",
+      description: "Colorful animated geometric shapes in motion",
+      score: 85,
+      project_id: "p001",
+      project_title: "Motion Graphics Collection",
+    },
+    {
+      id: "1b",
+      type: "image",
+      url: "https://mir-s3-cdn-cf.behance.net/project_modules/disp/70ebac195704583.6612d838b1297.gif",
+      title: "Fluid Animation",
+      description: "Smooth flowing liquid animation with vibrant colors",
+      score: 92,
+      project_id: "p001",
+      project_title: "Motion Graphics Collection",
+    },
+    {
+      id: "1c",
+      type: "image",
+      url: "https://mir-s3-cdn-cf.behance.net/project_modules/disp/ab1ab2195704583.6612ba136f288.gif",
+      title: "Dynamic Typography",
+      description: "Animated text with modern effects",
+      score: 88,
+      project_id: "p001",
+      project_title: "Motion Graphics Collection",
+    },
+    {
+      id: "1d",
+      type: "image",
+      url: "https://mir-s3-cdn-cf.behance.net/project_modules/disp/b001c5195704583.6612d839e4870.gif",
+      title: "Particle System",
+      description: "Complex particle animation with dynamic movement",
+      score: 90,
+      project_id: "p001",
+      project_title: "Motion Graphics Collection",
+    },
+    {
+      id: "1e",
+      type: "image",
+      url: "https://mir-s3-cdn-cf.behance.net/project_modules/disp/e4d28d195704583.6612d83b9558c.jpg",
+      title: "Still Frame Composition",
+      description: "High contrast image from animation sequence",
+      score: 82,
+      project_id: "p001",
+      project_title: "Motion Graphics Collection",
+    },
+  ],
+
+  // Group 2
+  [
+    {
+      id: "2a",
+      type: "image",
+      url: "https://mir-s3-cdn-cf.behance.net/project_modules/max_1200/681e87110363433.5feb2fa7b548f.png",
+      title: "Digital Interface Design",
+      description: "Modern UI dashboard with data visualization",
+      score: 89,
+      project_id: "p002",
+      project_title: "UX/UI Portfolio",
+    },
+    {
+      id: "2b",
+      type: "image",
+      url: "https://mir-s3-cdn-cf.behance.net/project_modules/hd/0c9c11110363433.5feb2fa83ed30.png",
+      title: "Mobile App Concept",
+      description: "Clean and minimal mobile interface design",
+      score: 91,
+      project_id: "p002",
+      project_title: "UX/UI Portfolio",
+    },
+    {
+      id: "2c",
+      type: "image",
+      url: "https://mir-s3-cdn-cf.behance.net/project_modules/disp/05b073110363433.5feb2fa83f319.png",
+      title: "Component Library",
+      description: "Consistent UI components for design system",
+      score: 87,
+      project_id: "p002",
+      project_title: "UX/UI Portfolio",
+    },
+    {
+      id: "2d",
+      type: "image",
+      url: "https://mir-s3-cdn-cf.behance.net/project_modules/disp/e6ab5b110363433.5feb2fa83f985.png",
+      title: "Website Wireframe",
+      description: "Responsive layout for content-heavy platform",
+      score: 84,
+      project_id: "p002",
+      project_title: "UX/UI Portfolio",
+    },
+  ],
+
+  // Group 3
+  [
+    {
+      id: "3a",
+      type: "image",
+      url: "https://mir-s3-cdn-cf.behance.net/project_modules/disp/6b9315213795299.67b439fad2228.png",
+      title: "Brand Identity",
+      description: "Modern logo design with color variations",
+      score: 93,
+      project_id: "p003",
+      project_title: "Brand Design Showcase",
+    },
+    {
+      id: "3b",
+      type: "image",
+      url: "https://mir-s3-cdn-cf.behance.net/project_modules/disp/60c8ef186252949.6571da6da9d44.jpg",
+      title: "Editorial Photography",
+      description: "Stylized product photography with creative composition",
+      score: 86,
+      project_id: "p003",
+      project_title: "Brand Design Showcase",
+    },
+    {
+      id: "3c",
+      type: "image",
+      url: "https://mir-s3-cdn-cf.behance.net/project_modules/disp/4e8991186252949.6571da6da6b9f.jpg",
+      title: "Print Design",
+      description: "High-end brochure with custom typography",
+      score: 88,
+      project_id: "p003",
+      project_title: "Brand Design Showcase",
+    },
+    {
+      id: "3d",
+      type: "image",
+      url: "https://mir-s3-cdn-cf.behance.net/project_modules/disp/9dda41186252949.6571da6ed4147.jpg",
+      title: "Packaging Design",
+      description:
+        "Sustainable product packaging with unique unboxing experience",
+      score: 90,
+      project_id: "p003",
+      project_title: "Brand Design Showcase",
+    },
+  ],
+];
 
 interface CreatorResultCardProps {
   creator: SearchResult;
   role: string;
+  user: User;
+  creatorIndex?: number;
 }
 
-export function CreatorResultCard({ creator, role }: CreatorResultCardProps) {
+export function CreatorResultCard({
+  creator,
+  role,
+  user,
+  creatorIndex = 0,
+}: CreatorResultCardProps) {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [contactDialogOpen, setContactDialogOpen] = useState(false);
+  const [successDialogOpen, setSuccessDialogOpen] = useState(false);
+  const [messageContent, setMessageContent] = useState("");
+  const creatorUsername = creator.profile?.username || "Creator";
+
+  // Use the creator index to determine which mockContent array to use
+  const contentIndex = creatorIndex % mockContent.length;
+  const creatorContent = mockContent[contentIndex];
+
+  // Default user values to handle cases where user prop might be missing
+  const firstName = user?.first_name || "Your";
+  const lastName = user?.last_name || "Name";
+  const email = user?.email || "your.email@example.com";
+  const company = user?.company || "";
+
+  const defaultMessage = `Hello ${creatorUsername},
+
+We have a project that would be a good fit for you based on your portfolio. I'm looking for a ${role} to help with our upcoming campaign.
+
+Let me know if you're interested in discussing this opportunity further.
+
+Best regards,
+${firstName} ${lastName}
+${email}
+${company}`;
 
   const handleImageClick = (imageUrl: string) => {
     setSelectedImage(imageUrl);
@@ -26,6 +216,21 @@ export function CreatorResultCard({ creator, role }: CreatorResultCardProps) {
   const closeLightbox = () => {
     setLightboxOpen(false);
   };
+
+  const handleContactClick = () => {
+    setMessageContent(defaultMessage);
+    setContactDialogOpen(true);
+  };
+
+  const handleSendMessage = () => {
+    // This would normally send the message to an API
+    setContactDialogOpen(false);
+    // Show success message
+    setSuccessDialogOpen(true);
+  };
+
+  // List of valid social platform IDs
+  const validSocialPlatforms = SOCIAL_PLATFORMS.map((platform) => platform.id);
 
   return (
     <div className="border-b pb-8">
@@ -72,11 +277,14 @@ export function CreatorResultCard({ creator, role }: CreatorResultCardProps) {
                 {role}
               </span>
               <div className="flex gap-4">
-                {/* Social icons - using globe icon as placeholder */}
+                {/* Social icons - only show platforms from our supported list */}
                 {creator.profile &&
                   creator.profile.social_links &&
-                  Object.entries(creator.profile.social_links).map(
-                    ([platform, url], index) => (
+                  Object.entries(creator.profile.social_links)
+                    .filter(([platform]) =>
+                      validSocialPlatforms.includes(platform.toLowerCase())
+                    )
+                    .map(([platform, url], index) => (
                       <a
                         key={platform}
                         href={url}
@@ -85,62 +293,9 @@ export function CreatorResultCard({ creator, role }: CreatorResultCardProps) {
                         className="w-8 h-8 rounded-full flex items-center justify-center border hover:bg-gray-100"
                       >
                         <span className="sr-only">{platform}</span>
-                        {platform === "website" ? (
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            width="18"
-                            height="18"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          >
-                            <circle cx="12" cy="12" r="10" />
-                            <line x1="2" y1="12" x2="22" y2="12" />
-                            <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
-                          </svg>
-                        ) : platform === "linkedin" ? (
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            width="18"
-                            height="18"
-                            viewBox="0 0 24 24"
-                            fill="currentColor"
-                          >
-                            <path d="M20.5 2h-17A1.5 1.5 0 002 3.5v17A1.5 1.5 0 003.5 22h17a1.5 1.5 0 001.5-1.5v-17A1.5 1.5 0 0020.5 2zM8 19H5v-9h3zM6.5 8.25A1.75 1.75 0 118.3 6.5a1.78 1.78 0 01-1.8 1.75zM19 19h-3v-4.74c0-1.42-.6-1.93-1.38-1.93A1.74 1.74 0 0013 14.19a.66.66 0 000 .14V19h-3v-9h2.9v1.3a3.11 3.11 0 012.7-1.4c1.55 0 3.36.86 3.36 3.66z"></path>
-                          </svg>
-                        ) : platform === "behance" ? (
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            width="22"
-                            height="22"
-                            viewBox="0 0 24 24"
-                            fill="currentColor"
-                          >
-                            <path d="M10 10.2h3.3c0-.2-.1-.9-1.7-.9-1.4 0-1.7.8-1.6 .9zm7.9 1.4c-1.1 0-1.5.6-1.6 .9h3.1c-.1-.3-.4-.9-1.5-.9zm-7.9 1.8h3.3c0-.2-.3-.9-1.7-.9-1.5 0-1.7.7-1.6.9zM12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zm1 16h-6v-7h5.7c1.8 0 2.8.9 2.8 2.2 0 .9-.5 1.7-1.6 2 1.1.2 1.9 1 1.9 2.3 0 1.5-1.2 2.5-2.8 2.5zm8-3h-6c0 1.8 1.7 1.8 2 1.8 .3 0 .7-.1.8-.3h2.9c-.4 1.4-1.6 2.2-3.7 2.2-2.5 0-4.1-1.3-4.1-4 0-2.2 1.4-4 4.1-4 2.9 0 4 1.7 4 4.1v.2zm-3-4h-4V8h4v3z"></path>
-                          </svg>
-                        ) : (
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            width="18"
-                            height="18"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          >
-                            <circle cx="12" cy="12" r="10" />
-                            <line x1="2" y1="12" x2="22" y2="12" />
-                            <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
-                          </svg>
-                        )}
+                        <SocialIcon platform={platform} className="h-4 w-4" />
                       </a>
-                    )
-                  )}
+                    ))}
               </div>
             </div>
           </div>
@@ -166,8 +321,9 @@ export function CreatorResultCard({ creator, role }: CreatorResultCardProps) {
             <Button
               variant="default"
               className="bg-black rounded-full px-8 py-6"
+              onClick={handleContactClick}
             >
-              Add to Project
+              Contact <Sparkles className="h-4 w-4 ml-2" />
             </Button>
           </div>
         </div>
@@ -176,6 +332,7 @@ export function CreatorResultCard({ creator, role }: CreatorResultCardProps) {
         <div className="col-span-2">
           <div className="flex flex-row items-end gap-10 h-72 overflow-x-auto">
             {creator.content && creator.content.length > 0 ? (
+              // creator.content.map(
               creator.content.map(
                 (content, index) =>
                   index < 10 && (
@@ -185,7 +342,7 @@ export function CreatorResultCard({ creator, role }: CreatorResultCardProps) {
                       style={{ height: "100%" }}
                     >
                       {content.type === "video" ? (
-                        <div className="w-full bg-black overflow-hidden">
+                        <div className="w-full bg-black overflow-hidden hidden">
                           {content.youtube_id ? (
                             <div className="aspect-video">
                               <YouTubeEmbed
@@ -257,6 +414,54 @@ export function CreatorResultCard({ creator, role }: CreatorResultCardProps) {
           imageUrl={selectedImage}
         />
       )}
+
+      {/* Contact Dialog */}
+      <Dialog open={contactDialogOpen} onOpenChange={setContactDialogOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Contact {creatorUsername}</DialogTitle>
+            <DialogDescription>
+              Send a message to start the conversation with this creator.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <Textarea
+              className="min-h-[350px]"
+              value={messageContent}
+              onChange={(e) => setMessageContent(e.target.value)}
+            />
+          </div>
+          <DialogFooter className="flex sm:justify-end gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setContactDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleSendMessage}>Send Message</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Success Dialog */}
+      <Dialog open={successDialogOpen} onOpenChange={setSuccessDialogOpen}>
+        <DialogContent className="sm:max-w-[400px]">
+          <div className="flex flex-col items-center justify-center py-6 text-center">
+            <CheckCircle2 className="h-16 w-16 text-green-500 mb-4" />
+            <DialogTitle className="text-xl mb-2">Message Sent!</DialogTitle>
+            <DialogDescription>
+              Your message has been sent to {creatorUsername}. They will be
+              notified and can respond directly to your email.
+            </DialogDescription>
+            <Button
+              className="mt-6"
+              onClick={() => setSuccessDialogOpen(false)}
+            >
+              Close
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

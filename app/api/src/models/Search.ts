@@ -15,7 +15,7 @@ export interface MediaContent {
   project_id: string;
   project_title: string;
   youtube_id?: string;
-  vimeo_id?: string; 
+  vimeo_id?: string;
 }
 
 export interface CreatorWithContent {
@@ -25,6 +25,8 @@ export interface CreatorWithContent {
     location?: string;
     bio?: string;
     primary_role?: string[];
+    social_links?: Record<string, string>;
+    work_email?: string;
   };
   score: number;
   content: MediaContent[];

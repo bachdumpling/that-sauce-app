@@ -9,6 +9,13 @@ const searchController = new SearchController();
 // Extract user for all routes (auth optional for search)
 router.use(extractUser);
 
+// Demo search endpoint
+/**
+ * @route GET /api/search/demo
+ * @desc Demo search endpoint for creative content
+ */
+router.get("/demo", searchController.demoSearch.bind(searchController));
+
 /**
  * @route GET /api/search
  * @desc Main search endpoint for creative content

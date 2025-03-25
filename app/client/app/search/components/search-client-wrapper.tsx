@@ -736,7 +736,7 @@ export function SearchClientWrapper({
                 </DialogHeader>
 
                 <div className="space-y-4 py-4">
-                  <div className="bg-muted/50 p-3 rounded-md flex items-start gap-2 text-sm">
+                  {/* <div className="bg-muted/50 p-3 rounded-md flex items-start gap-2 text-sm">
                     <Info className="h-5 w-5 text-blue-500 flex-shrink-0 mt-0.5" />
                     <div>
                       <p className="font-medium mb-1">What we can process:</p>
@@ -747,42 +747,53 @@ export function SearchClientWrapper({
                         <li>Maximum 5 files, up to 5MB each</li>
                       </ul>
                     </div>
-                  </div>
+                  </div> */}
 
                   {filesUploaded.length > 0 && (
                     <div className="mb-4">
                       <h4 className="text-sm font-medium mb-2">
                         Currently Uploaded ({filesUploaded.length}/5):
                       </h4>
-                      <ul className="space-y-2 max-h-32 overflow-y-auto bg-muted/20 rounded-md p-2">
-                        {filesUploaded.map((file, index) => (
-                          <li
-                            key={index}
-                            className="flex justify-between items-center text-sm p-1.5 bg-white rounded border"
-                          >
-                            <div className="flex items-center overflow-hidden">
-                              <FileText className="h-4 w-4 mr-2 flex-shrink-0 text-blue-500" />
-                              <span className="truncate max-w-[200px]">
-                                {file.name}
-                              </span>
-                              <span className="text-muted-foreground ml-2 text-xs">
-                                ({(file.size / 1024 / 1024).toFixed(2)} MB)
-                              </span>
-                            </div>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleRemoveFile(index)}
-                              className="h-7 w-7 p-0"
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 max-h-60 overflow-y-auto p-2 bg-muted/20 rounded-md">
+                        {filesUploaded.map((file, index) => {
+                          // Check if the file is an image
+                          const isImage = file.type.startsWith("image/");
+
+                          return (
+                            <div
+                              key={index}
+                              className="relative group aspect-video rounded-md overflow-hidden"
                             >
-                              <X className="h-4 w-4" />
-                              <span className="sr-only">
-                                Remove {file.name}
-                              </span>
-                            </Button>
-                          </li>
-                        ))}
-                      </ul>
+                              {isImage ? (
+                                <div className="w-full h-full relative">
+                                  <img
+                                    src={URL.createObjectURL(file)}
+                                    alt={file.name}
+                                    className="object-cover w-full h-full"
+                                  />
+                                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all duration-200"></div>
+                                </div>
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center bg-muted/40">
+                                  <FileText className="h-8 w-8 text-blue-500" />
+                                </div>
+                              )}
+
+                              <Button
+                                variant="destructive"
+                                size="icon"
+                                onClick={() => handleRemoveFile(index)}
+                                className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                              >
+                                <X className="h-3 w-3" />
+                                <span className="sr-only">
+                                  Remove {file.name}
+                                </span>
+                              </Button>
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
                   )}
 
