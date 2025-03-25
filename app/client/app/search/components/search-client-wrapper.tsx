@@ -15,6 +15,7 @@ import {
   Info,
   FileText,
   DollarSign,
+  History,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -72,6 +73,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Slider } from "@/components/ui/slider";
+import Link from "next/link";
 
 interface SearchResults {
   success: boolean;
@@ -375,6 +377,7 @@ export function SearchClientWrapper({
       params.set("limit", limit.toString());
       params.set("page", "1");
 
+      // Navigate to search results page
       router.push(`/search/results?${params.toString()}`);
     }
   };
@@ -560,7 +563,16 @@ export function SearchClientWrapper({
       {/* Search Form */}
       <div className="space-y-4">
         <div className="relative">
-          <h2 className="text-xl font-semibold mb-3">Tell us the specifics</h2>
+          <div className="flex space-x-4 items-center mb-3">
+            <h2 className="text-xl font-semibold">Tell us the specifics</h2>
+            <Link
+              href="/search/history"
+              className="flex items-center text-sm text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <History className="h-4 w-4 mr-1" />
+              View search history
+            </Link>
+          </div>
           <div className="relative">
             <textarea
               className="w-full pl-6 pr-6 py-4 h-28 border rounded-md resize-none text-base"

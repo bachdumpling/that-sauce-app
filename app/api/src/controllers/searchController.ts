@@ -11,8 +11,15 @@ import { ErrorCode } from "../models/ApiResponse";
 import { groupSearchResultsByCreator } from "../utils/searchUtils";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { GEMINI_API_KEY } from "../config/env";
+import { SearchHistoryRepository } from "../repositories/SearchHistoryRepository";
 
 export class SearchController {
+  private searchHistoryRepo: SearchHistoryRepository;
+
+  constructor() {
+    this.searchHistoryRepo = new SearchHistoryRepository();
+  }
+
   /**
    * Demo search endpoint that only searches specific creators
    * GET /api/search/demo
@@ -23,7 +30,11 @@ export class SearchController {
   ) {
     try {
       // Fixed list of usernames for the demo
-      const allowedUsernames = ["omaraqil", "chloekarayiannis", "byconstantine"];
+      const allowedUsernames = [
+        "omaraqil",
+        "chloekarayiannis",
+        "byconstantine",
+      ];
 
       // Extract query parameters
       let contentType = req.query.contentType || "all";
@@ -82,6 +93,83 @@ export class SearchController {
 
       // Group results by creator
       const groupedResults = groupSearchResultsByCreator(rawResults || []);
+
+      // Save search to history if user is authenticated
+      if (req.user?.id) {
+        // Check if the same search was made recently (within 30 seconds) to avoid duplicates
+        const searchHistoryRepo = new SearchHistoryRepository();
+
+        try {
+          const { entries: recentSearches } =
+            await searchHistoryRepo.getSearchHistory(
+              req.user.id,
+              10, // Increased to check more recent searches
+              1
+            );
+
+          // Enhanced duplicate detection:
+          // 1. Check for identical queries with same content type
+          // 2. Look at a longer time window (2 minutes) for page reloads
+          // 3. For identical queries check the time gap (if very recent, likely a reload)
+          const isDuplicate = recentSearches.some((entry) => {
+            // Check for identical query and content type
+            const isSameQuery =
+              entry.query === query && entry.content_type === contentType;
+
+            if (!isSameQuery) return false;
+
+            // Calculate time difference in milliseconds
+            const timeDiff =
+              new Date().getTime() - new Date(entry.created_at).getTime();
+
+            // Different time windows for different scenarios:
+            // - Very recent (under 5 seconds): Almost certainly a page reload
+            // - Recent (under 2 minutes): Likely the same search session/refinement
+            if (timeDiff < 5000) {
+              // Under 5 seconds - definitely a reload or rapid duplicate search
+              return true;
+            } else if (timeDiff < 120000) {
+              // Under 2 minutes - check if results count is the same (suggesting identical search)
+              return entry.results_count === totalCount;
+            }
+
+            return false;
+          });
+
+          if (!isDuplicate) {
+            // Not a duplicate, save the search
+            searchHistoryRepo
+              .saveSearch(
+                req.user.id,
+                query,
+                contentType,
+                totalCount,
+                queryEmbedding.values
+              )
+              .catch((error) => {
+                logger.error("Error saving search history:", error);
+                // Non-blocking, continue with response even if history save fails
+              });
+          } else {
+            logger.info("Skipping duplicate search history entry");
+          }
+        } catch (error) {
+          logger.error("Error checking for duplicate searches:", error);
+          // If there's an error checking for duplicates, still try to save the search
+          // to avoid losing search history
+          searchHistoryRepo
+            .saveSearch(
+              req.user.id,
+              query,
+              contentType,
+              totalCount,
+              queryEmbedding.values
+            )
+            .catch((searchError) => {
+              logger.error("Error saving search history:", searchError);
+            });
+        }
+      }
 
       return sendSuccess(res, {
         results: groupedResults,
@@ -179,6 +267,83 @@ export class SearchController {
 
       // Group results by creator
       const groupedResults = groupSearchResultsByCreator(rawResults || []);
+
+      // Save search to history if user is authenticated
+      if (req.user?.id) {
+        // Check if the same search was made recently (within 30 seconds) to avoid duplicates
+        const searchHistoryRepo = new SearchHistoryRepository();
+
+        try {
+          const { entries: recentSearches } =
+            await searchHistoryRepo.getSearchHistory(
+              req.user.id,
+              10, // Increased to check more recent searches
+              1
+            );
+
+          // Enhanced duplicate detection:
+          // 1. Check for identical queries with same content type
+          // 2. Look at a longer time window (2 minutes) for page reloads
+          // 3. For identical queries check the time gap (if very recent, likely a reload)
+          const isDuplicate = recentSearches.some((entry) => {
+            // Check for identical query and content type
+            const isSameQuery =
+              entry.query === query && entry.content_type === contentType;
+
+            if (!isSameQuery) return false;
+
+            // Calculate time difference in milliseconds
+            const timeDiff =
+              new Date().getTime() - new Date(entry.created_at).getTime();
+
+            // Different time windows for different scenarios:
+            // - Very recent (under 5 seconds): Almost certainly a page reload
+            // - Recent (under 2 minutes): Likely the same search session/refinement
+            if (timeDiff < 5000) {
+              // Under 5 seconds - definitely a reload or rapid duplicate search
+              return true;
+            } else if (timeDiff < 120000) {
+              // Under 2 minutes - check if results count is the same (suggesting identical search)
+              return entry.results_count === totalCount;
+            }
+
+            return false;
+          });
+
+          if (!isDuplicate) {
+            // Not a duplicate, save the search with embedding
+            searchHistoryRepo
+              .saveSearch(
+                req.user.id,
+                query,
+                contentType,
+                totalCount,
+                queryEmbedding.values // Add the embedding
+              )
+              .catch((error) => {
+                logger.error("Error saving search history:", error);
+                // Non-blocking, continue with response even if history save fails
+              });
+          } else {
+            logger.info("Skipping duplicate search history entry");
+          }
+        } catch (error) {
+          logger.error("Error checking for duplicate searches:", error);
+          // If there's an error checking for duplicates, still try to save the search
+          // to avoid losing search history
+          searchHistoryRepo
+            .saveSearch(
+              req.user.id,
+              query,
+              contentType,
+              totalCount,
+              queryEmbedding.values // Add the embedding
+            )
+            .catch((searchError) => {
+              logger.error("Error saving search history:", searchError);
+            });
+        }
+      }
 
       return sendSuccess(res, {
         results: groupedResults,

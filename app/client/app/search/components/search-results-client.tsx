@@ -53,10 +53,52 @@ export function SearchResultsClient({
   const [page, setPage] = useState(initialPage);
   const [limit, setLimit] = useState(initialLimit);
   const [selectedStyles, setSelectedStyles] = useState<string[]>(styles || []);
+  const [searchParams, setSearchParams] = useState({
+    query,
+    contentType,
+    role,
+    subjects: subjects || [],
+    styles: selectedStyles,
+    maxBudget,
+    hasDocuments,
+    documentsCount
+  });
 
+  // Initial search when component mounts
   useEffect(() => {
     performSearch();
-  }, [query, role, contentType, subjects, selectedStyles, page, limit]);
+    // We only want this to run once on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // When search parameters change, update the search params state
+  useEffect(() => {
+    // Only update search params and trigger a new search if something meaningful changed
+    const newParams = {
+      query,
+      contentType,
+      role,
+      subjects: subjects || [],
+      styles: selectedStyles,
+      maxBudget,
+      hasDocuments,
+      documentsCount
+    };
+    
+    // Check if anything important has changed
+    const hasChanges = 
+      searchParams.query !== newParams.query ||
+      searchParams.contentType !== newParams.contentType ||
+      searchParams.role !== newParams.role ||
+      searchParams.maxBudget !== newParams.maxBudget ||
+      JSON.stringify(searchParams.subjects) !== JSON.stringify(newParams.subjects) ||
+      JSON.stringify(searchParams.styles) !== JSON.stringify(newParams.styles);
+      
+    if (hasChanges) {
+      setSearchParams(newParams);
+      performSearch();
+    }
+  }, [query, role, contentType, subjects, selectedStyles, maxBudget, page, limit]);
 
   // Reset refinements when role changes
   useEffect(() => {
@@ -77,18 +119,28 @@ export function SearchResultsClient({
         role,
         subjects,
         styles: selectedStyles,
+        maxBudget,
         hasDocuments,
         documentCount: documentsCount,
       });
 
       // Validate the response structure
-      if (
-        data &&
-        data.success &&
-        data.data &&
-        Array.isArray(data.data.results)
-      ) {
+      if (data && data.success !== false && data.data && Array.isArray(data.data.results)) {
         setResults(data);
+      } else if (data && data.success === false) {
+        // Handle error response
+        console.error("Search error:", data.error || "Unknown error");
+        setResults({
+          success: true,
+          data: {
+            results: [],
+            page: page,
+            limit: limit,
+            total: 0,
+            query: query,
+            content_type: contentType,
+          },
+        });
       } else {
         console.error("Invalid search response format:", data);
         setResults({

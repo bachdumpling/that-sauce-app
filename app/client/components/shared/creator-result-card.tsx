@@ -342,7 +342,7 @@ ${company}`;
                       style={{ height: "100%" }}
                     >
                       {content.type === "video" ? (
-                        <div className="w-full bg-black overflow-hidden hidden">
+                        <div className="w-full bg-black overflow-hidden">
                           {content.youtube_id ? (
                             <div className="aspect-video">
                               <YouTubeEmbed

@@ -6,6 +6,9 @@ export const API_ENDPOINTS = {
   search: "/search",
   searchCreators: "/search/creators",
   enhanceSearchPrompt: "/search/refine",
+  searchHistory: "/search/history",
+  searchHistoryEntry: (id: string) => `/search/history/${id}`,
+  popularSearches: "/search/popular",
 
   // Creator endpoints
   getCreatorByUsername: (username: string) => `/creators/${username}`,
