@@ -1,5 +1,3 @@
-import { Suspense } from "react";
-import { Skeleton } from "@/components/ui/skeleton";
 import { SearchClientWrapper } from "./components/search-client-wrapper";
 
 const EXAMPLE_QUERIES = [
@@ -19,18 +17,18 @@ const TALENT_ROLES = [
   "Graphic Designer",
   "Video Editor",
   "VFX Artist",
-  "3D Artist", 
+  "3D Artist",
   "UI/UX Designer",
   "Art Director",
   "Creative Director",
-  "Web Designer", 
+  "Web Designer",
   "Product Designer",
   "Animator",
   "Sound Designer",
   "Fashion Designer",
   "Stylist",
   "Makeup Artist",
-  "Set Designer"
+  "Set Designer",
 ];
 
 export default async function SearchPage({
@@ -47,21 +45,13 @@ export default async function SearchPage({
 
   return (
     <div className="container">
-        <Suspense
-          fallback={
-            <div className="h-[500px] w-full">
-              <Skeleton variant="creator" className="h-full w-full" />
-            </div>
-          }
-        >
-          <SearchClientWrapper
-            initialQuery={initialQuery}
-            initialContentType={initialContentType as "all" | "videos"}
-            initialRole={initialRole}
-            exampleQueries={EXAMPLE_QUERIES}
-            talentRoles={TALENT_ROLES}
-          />
-        </Suspense>
+      <SearchClientWrapper
+        initialQuery={initialQuery}
+        initialContentType={initialContentType as "all" | "videos"}
+        initialRole={initialRole}
+        exampleQueries={EXAMPLE_QUERIES}
+        talentRoles={TALENT_ROLES}
+      />
     </div>
   );
 }

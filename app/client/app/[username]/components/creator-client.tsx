@@ -639,19 +639,19 @@ export function CreatorClient({
                 key={project.id}
                 className="group hover:opacity-90 transition-opacity"
               >
-                <div className="bg-card overflow-hidden rounded-lg shadow">
+                <div className="overflow-hidden">
                   {project.images && project.images.length > 0 ? (
                     <img
                       src={project.images[0].url}
                       alt={project.title}
-                      className="w-full h-48 object-cover"
+                      className="w-full h-72 object-cover rounded-[16px]"
                     />
                   ) : (
-                    <div className="w-full h-48 bg-muted flex items-center justify-center">
+                    <div className="w-full h-72 bg-muted flex items-center justify-center">
                       <ImageIcon className="h-12 w-12 text-muted-foreground" />
                     </div>
                   )}
-                  <div className="p-4">
+                  <div className="pt-4">
                     <h3 className="font-medium text-lg">{project.title}</h3>
                     {project.description && (
                       <p className="text-muted-foreground text-sm line-clamp-2 mt-1">

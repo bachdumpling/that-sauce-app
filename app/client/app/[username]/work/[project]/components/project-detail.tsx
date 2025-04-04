@@ -107,7 +107,7 @@ export function ProjectDetail({ project, creator, isOwner }: ProjectDetailProps)
         <div>
           <h1 className="text-3xl font-bold">{project.title}</h1>
           {project.description && (
-            <p className="text-muted-foreground mt-2 max-w-2xl">
+            <p className="text-muted-foreground mt-2 max-w-2xl truncate">
               {project.description}
             </p>
           )}

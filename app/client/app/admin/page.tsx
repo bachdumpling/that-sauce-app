@@ -10,9 +10,5 @@ export default function AdminHomePage() {
     router.push("/admin/creators");
   }, [router]);
 
-  return (
-    <div className="flex items-center justify-center min-h-screen">
-      <p>Redirecting to creator management...</p>
-    </div>
-  );
+  return <div>Redirecting to creator management...</div>;
 }
