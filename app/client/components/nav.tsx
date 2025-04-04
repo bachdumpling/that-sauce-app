@@ -146,7 +146,7 @@ export default async function Nav() {
                   action={signOutAction}
                   className="w-full cursor-pointer text-sm font-medium"
                 >
-                  Sign out
+                  <button type="submit">Sign out</button>
                 </form>
               </DropdownMenuItem>
             </DropdownMenuGroup>
