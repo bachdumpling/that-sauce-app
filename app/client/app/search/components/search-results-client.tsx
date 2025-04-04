@@ -8,7 +8,7 @@ import { useRouter } from "next/navigation";
 import { search } from "@/lib/api/search";
 import { SearchResult } from "@/components/shared/types";
 import { CreatorResultCard } from "@/components/shared/creator-result-card";
-
+import { Filter } from "lucide-react";
 interface SearchResultsData {
   success: boolean;
   data: {
@@ -61,7 +61,7 @@ export function SearchResultsClient({
     styles: selectedStyles,
     maxBudget,
     hasDocuments,
-    documentsCount
+    documentsCount,
   });
 
   // Initial search when component mounts
@@ -82,23 +82,33 @@ export function SearchResultsClient({
       styles: selectedStyles,
       maxBudget,
       hasDocuments,
-      documentsCount
+      documentsCount,
     };
-    
+
     // Check if anything important has changed
-    const hasChanges = 
+    const hasChanges =
       searchParams.query !== newParams.query ||
       searchParams.contentType !== newParams.contentType ||
       searchParams.role !== newParams.role ||
       searchParams.maxBudget !== newParams.maxBudget ||
-      JSON.stringify(searchParams.subjects) !== JSON.stringify(newParams.subjects) ||
+      JSON.stringify(searchParams.subjects) !==
+        JSON.stringify(newParams.subjects) ||
       JSON.stringify(searchParams.styles) !== JSON.stringify(newParams.styles);
-      
+
     if (hasChanges) {
       setSearchParams(newParams);
       performSearch();
     }
-  }, [query, role, contentType, subjects, selectedStyles, maxBudget, page, limit]);
+  }, [
+    query,
+    role,
+    contentType,
+    subjects,
+    selectedStyles,
+    maxBudget,
+    page,
+    limit,
+  ]);
 
   // Reset refinements when role changes
   useEffect(() => {
@@ -125,7 +135,12 @@ export function SearchResultsClient({
       });
 
       // Validate the response structure
-      if (data && data.success !== false && data.data && Array.isArray(data.data.results)) {
+      if (
+        data &&
+        data.success !== false &&
+        data.data &&
+        Array.isArray(data.data.results)
+      ) {
         setResults(data);
       } else if (data && data.success === false) {
         // Handle error response
@@ -238,64 +253,55 @@ export function SearchResultsClient({
   return (
     <div className="space-y-8">
       {/* Header with search details */}
-      <div className="flex items-center space-x-2">
+      <div className="flex items-center justify-between space-x-2 mb-6">
         {/* TODO: going back from result to search should keep the same refinements as well dont remove it since they can go back and refine and
         keep searching */}
         <Button variant="ghost" onClick={handleBackToSearch}>
           <ArrowLeft className="h-4 w-4 mr-2" /> Back to Search
         </Button>
+        <Button variant="outline" size="sm" className="rounded-full px-4 py-6">
+          <Filter className="h-4 w-4 mr-2" />
+          Filter
+        </Button>
       </div>
 
       {/* Search summary */}
-      <div className="border-b pb-6 space-y-6">
-        <div className="grid grid-cols-4 gap-8">
-          <div>
-            <h3 className="text-sm font-medium text-muted-foreground">Role</h3>
-            <p className="text-xl font-bold">{role}</p>
-          </div>
+      <div className="flex flex-row items-center gap-6 pb-10">
+        <div className="bg-zinc-100 dark:bg-zinc-900 text-black dark:text-white rounded-[16px] w-full h-full">
+          <div className="flex w-full">
+            <div className="p-4 border-r border-zinc-200 dark:border-zinc-800">
+              <h3 className="text-sm font-medium text-zinc-400">Role</h3>
+              <div className="flex h-full items-center gap-2">
+                <p className="text-lg font-semibold">{role}</p>
+              </div>
+            </div>
 
-          <div>
-            <h3 className="text-sm font-medium text-muted-foreground">
-              Budget
-            </h3>
-            <div className="flex items-center mt-1">
-              {maxBudget ? (
-                <div className="flex items-center space-x-1 text-base">
-                  <span>$ Up to {maxBudget}</span>
-                  <span className="text-base text-muted-foreground ml-1">
-                    /hr
-                  </span>
-                </div>
-              ) : (
-                <p className="text-muted-foreground">No budget specified</p>
-              )}
+            <div className="p-4 border-r border-zinc-200 dark:border-zinc-800">
+              <h3 className="text-sm font-medium text-zinc-400">Description</h3>
+              <div className="flex h-full items-center gap-2">
+                <p className="text-md">{query}</p>
+              </div>
+            </div>
+
+            <div className="p-4">
+              <h3 className="text-sm font-medium text-zinc-400">Style</h3>
+              <div className="flex flex-wrap gap-2 mt-2">
+                {selectedStyles.map((style) => (
+                  <Button
+                    key={style}
+                    variant="outline"
+                    size="sm"
+                    className="bg-white text-black hover:bg-zinc-200 border-none rounded-full"
+                  >
+                    {style}
+                  </Button>
+                ))}
+                {selectedStyles.length === 0 && (
+                  <p className="text-zinc-400">No styles selected</p>
+                )}
+              </div>
             </div>
           </div>
-          <div className="col-span-2">
-            <h3 className="text-sm font-medium text-muted-foreground">Style</h3>
-            <div className="flex flex-wrap gap-2 mt-1">
-              {selectedStyles.map((style) => (
-                <Button
-                  key={style}
-                  variant="default"
-                  className="bg-black text-white"
-                  onClick={() => handleStyleToggle(style)}
-                >
-                  {style}
-                </Button>
-              ))}
-              {selectedStyles.length === 0 && (
-                <p className="text-muted-foreground">No styles selected</p>
-              )}
-            </div>
-          </div>
-        </div>
-
-        <div className="">
-          <h3 className="text-sm font-medium text-muted-foreground">
-            Description
-          </h3>
-          <p className="text-lg">{query}</p>
         </div>
       </div>
 

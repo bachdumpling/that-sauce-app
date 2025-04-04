@@ -7,26 +7,13 @@ import { createClient } from "@/utils/supabase/client";
  */
 export async function getMediaDetails(mediaId: string) {
   try {
-    const url = buildApiUrl(API_ENDPOINTS.media.getMedia(mediaId));
-
-    const response = await fetch(url, {
-      method: "GET",
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      return {
-        success: false,
-        error:
-          errorData.error ||
-          `Failed to get media details: ${response.statusText}`,
-      };
-    }
-
-    const data = await response.json();
+    const url = API_ENDPOINTS.media.getMedia(mediaId);
+    
+    const response = await apiRequest.get(url);
+    
     return {
       success: true,
-      data: data.data,
+      data: response.data.data,
     };
   } catch (error: any) {
     console.error("Error getting media details:", error);
@@ -42,46 +29,13 @@ export async function getMediaDetails(mediaId: string) {
  */
 export async function updateMediaMetadata(mediaId: string, metadata: any) {
   try {
-    const url = buildApiUrl(API_ENDPOINTS.media.updateMediaMetadata(mediaId));
-
-    // Get authentication token from Supabase
-    const supabase = createClient();
-    const { data: sessionData } = await supabase.auth.getSession();
-    const session = sessionData?.session;
-
-    if (!session) {
-      return {
-        success: false,
-        error: "You must be logged in to update media metadata",
-      };
-    }
-
-    // Attach the authorization header with the session token
-    const headers = {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${session.access_token}`,
-    };
-
-    const response = await fetch(url, {
-      method: "PUT",
-      headers,
-      body: JSON.stringify(metadata),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      return {
-        success: false,
-        error:
-          errorData.error ||
-          `Failed to update media metadata: ${response.statusText}`,
-      };
-    }
-
-    const data = await response.json();
+    const url = API_ENDPOINTS.media.updateMediaMetadata(mediaId);
+    
+    const response = await apiRequest.put(url, metadata);
+    
     return {
       success: true,
-      data: data.data,
+      data: response.data.data,
     };
   } catch (error: any) {
     console.error("Error updating media metadata:", error);
@@ -98,54 +52,24 @@ export async function updateMediaMetadata(mediaId: string, metadata: any) {
  */
 export async function deleteMedia(mediaId: string) {
   try {
-    const url = buildApiUrl(API_ENDPOINTS.media.deleteMedia(mediaId));
-
-    // Get authentication token from Supabase
-    const supabase = createClient();
-    const { data: sessionData } = await supabase.auth.getSession();
-    const session = sessionData?.session;
-
-    if (!session) {
-      return {
-        success: false,
-        error: "You must be logged in to delete media",
-      };
-    }
-
-    // Attach the authorization header with the session token
-    const headers = {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${session.access_token}`,
-    };
-
-    const response = await fetch(url, {
-      method: "DELETE",
-      headers,
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-
-      if (response.status === 401) {
-        return {
-          success: false,
-          error: "Unauthorized. Please log in again to perform this action.",
-        };
-      }
-
-      return {
-        success: false,
-        error:
-          errorData.error || `Failed to delete media: ${response.statusText}`,
-      };
-    }
-
+    const url = API_ENDPOINTS.media.deleteMedia(mediaId);
+    
+    await apiRequest.delete(url);
+    
     return {
       success: true,
       message: "Media deleted successfully",
     };
   } catch (error: any) {
     console.error("Error deleting media:", error);
+    
+    if (error.status === 401) {
+      return {
+        success: false,
+        error: "Unauthorized. Please log in again to perform this action.",
+      };
+    }
+    
     return {
       success: false,
       error: error.message || "Failed to delete media",
@@ -167,7 +91,7 @@ export async function uploadMedia(
   }
 ) {
   try {
-    const url = buildApiUrl(API_ENDPOINTS.media.uploadMedia);
+    const url = API_ENDPOINTS.media.uploadMedia;
 
     const formData = new FormData();
     formData.append("project_id", projectId);
@@ -189,52 +113,28 @@ export async function uploadMedia(
       formData.append("order", metadata.order.toString());
     }
 
-    // Get authentication token from Supabase
-    const supabase = createClient();
-    const { data: sessionData } = await supabase.auth.getSession();
-    const session = sessionData?.session;
-
-    if (!session) {
-      return {
-        success: false,
-        error: "You must be logged in to upload media",
-      };
-    }
-
-    // Only set the Authorization header, let the browser set the Content-Type for FormData
-    const headers = {
-      Authorization: `Bearer ${session.access_token}`,
-    };
-
-    const response = await fetch(url, {
-      method: "POST",
-      headers,
-      body: formData,
-    });
-
-    if (!response.ok) {
-      if (response.status === 413) {
-        return {
-          success: false,
-          error: "File is too large. Maximum size is 50MB",
-        };
+    // We need to use the apiRequest.post but with specific headers for FormData
+    const response = await apiRequest.post(url, formData, {
+      headers: {
+        // Don't set Content-Type header, let browser set it with boundary for FormData
+        "Content-Type": undefined
       }
-
-      const errorData = await response.json().catch(() => ({}));
-      return {
-        success: false,
-        error:
-          errorData.error || `Failed to upload media: ${response.statusText}`,
-      };
-    }
-
-    const data = await response.json();
+    });
+    
     return {
       success: true,
-      data: data.data,
+      data: response.data.data,
     };
   } catch (error: any) {
     console.error("Error uploading media:", error);
+    
+    if (error.status === 413) {
+      return {
+        success: false,
+        error: "File is too large. Maximum size is 50MB",
+      };
+    }
+    
     return {
       success: false,
       error: error.message || "Failed to upload media. Please try again.",
@@ -247,7 +147,7 @@ export async function uploadMedia(
  */
 export async function batchUploadMedia(projectId: string, files: File[]) {
   try {
-    const url = buildApiUrl(API_ENDPOINTS.media.batchUploadMedia);
+    const url = API_ENDPOINTS.media.batchUploadMedia;
 
     const formData = new FormData();
     formData.append("project_id", projectId);
@@ -257,52 +157,28 @@ export async function batchUploadMedia(projectId: string, files: File[]) {
       formData.append("files", file);
     });
 
-    // Get authentication token from Supabase
-    const supabase = createClient();
-    const { data: sessionData } = await supabase.auth.getSession();
-    const session = sessionData?.session;
-
-    if (!session) {
-      return {
-        success: false,
-        error: "You must be logged in to upload media",
-      };
-    }
-
-    // Only set the Authorization header, let the browser set the Content-Type for FormData
-    const headers = {
-      Authorization: `Bearer ${session.access_token}`,
-    };
-
-    const response = await fetch(url, {
-      method: "POST",
-      headers,
-      body: formData,
-    });
-
-    if (!response.ok) {
-      if (response.status === 413) {
-        return {
-          success: false,
-          error: "Files are too large. Maximum total size is 50MB",
-        };
+    // Use apiRequest with FormData
+    const response = await apiRequest.post(url, formData, {
+      headers: {
+        // Don't set Content-Type header, let browser set it with boundary for FormData
+        "Content-Type": undefined
       }
-
-      const errorData = await response.json().catch(() => ({}));
-      return {
-        success: false,
-        error:
-          errorData.error || `Failed to upload media: ${response.statusText}`,
-      };
-    }
-
-    const data = await response.json();
+    });
+    
     return {
       success: true,
-      data: data.data,
+      data: response.data.data,
     };
   } catch (error: any) {
     console.error("Error batch uploading media:", error);
+    
+    if (error.status === 413) {
+      return {
+        success: false,
+        error: "Files are too large. Maximum total size is 50MB",
+      };
+    }
+    
     return {
       success: false,
       error: error.message || "Failed to upload media. Please try again.",
@@ -311,7 +187,7 @@ export async function batchUploadMedia(projectId: string, files: File[]) {
 }
 
 /**
- * Upload a video link (YouTube or Vimeo) to a project
+ * Upload a video via URL (YouTube, Vimeo, etc.)
  */
 export async function uploadVideoLink(
   projectId: string,
@@ -322,59 +198,25 @@ export async function uploadVideoLink(
   }
 ) {
   try {
-    const url = buildApiUrl(API_ENDPOINTS.media.uploadVideoLink);
-
-    // Get authentication token from Supabase
-    const supabase = createClient();
-    const { data: sessionData } = await supabase.auth.getSession();
-    const session = sessionData?.session;
-
-    if (!session) {
-      return {
-        success: false,
-        error: "You must be logged in to upload a video link",
-      };
-    }
-
-    // Attach the authorization header with the session token
-    const headers = {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${session.access_token}`,
-    };
-
-    const payload = {
+    const url = API_ENDPOINTS.media.uploadVideoLink;
+    
+    const data = {
       project_id: projectId,
       video_url: videoUrl,
-      title: metadata?.title,
-      description: metadata?.description,
+      ...metadata
     };
-
-    const response = await fetch(url, {
-      method: "POST",
-      headers,
-      body: JSON.stringify(payload),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      return {
-        success: false,
-        error:
-          errorData.error ||
-          `Failed to upload video link: ${response.statusText}`,
-      };
-    }
-
-    const data = await response.json();
+    
+    const response = await apiRequest.post(url, data);
+    
     return {
       success: true,
-      data: data.data,
+      data: response.data.data,
     };
   } catch (error: any) {
-    console.error("Error uploading video link:", error);
+    console.error("Error adding video link:", error);
     return {
       success: false,
-      error: error.message || "Failed to upload video link. Please try again.",
+      error: error.message || "Failed to add video link. Please try again.",
     };
   }
 }
@@ -389,37 +231,30 @@ export async function uploadProjectMedia(
   formData: FormData
 ) {
   try {
-    const url = buildApiUrl(API_ENDPOINTS.projectMedia(projectId));
+    const url = API_ENDPOINTS.projectMedia(projectId);
 
-    const response = await fetch(url, {
-      method: "POST",
-      body: formData,
-      // Do not set Content-Type header when uploading files with FormData
+    // Use apiRequest with FormData
+    const response = await apiRequest.post(url, formData, {
+      headers: {
+        // Don't set Content-Type header, let browser set it with boundary for FormData
+        "Content-Type": undefined
+      }
     });
 
-    if (!response.ok) {
-      if (response.status === 413) {
-        return {
-          success: false,
-          error: "Files are too large. Maximum total size is 20MB",
-        };
-      }
-
-      const errorData = await response.json().catch(() => ({}));
-      return {
-        success: false,
-        error:
-          errorData.error || `Failed to upload media: ${response.statusText}`,
-      };
-    }
-
-    const data = await response.json();
     return {
       success: true,
-      data: data.data || { images: [], videos: [] },
+      data: response.data.data || { images: [], videos: [] },
     };
   } catch (error: any) {
     console.error("Error uploading project media:", error);
+    
+    if (error.status === 413) {
+      return {
+        success: false,
+        error: "Files are too large. Maximum total size is 20MB",
+      };
+    }
+    
     return {
       success: false,
       error: error.message || "Failed to upload media. Please try again.",
@@ -428,66 +263,20 @@ export async function uploadProjectMedia(
 }
 
 /**
- * Delete a project image - Legacy method
+ * Delete a project image (legacy method)
  */
 export async function deleteProjectImage(projectId: string, imageId: string) {
   try {
-    const url = buildApiUrl(
-      API_ENDPOINTS.deleteProjectImage(projectId, imageId)
-    );
-    console.log(`Deleting image with ID ${imageId} from project ${projectId}`);
-    console.log(`Delete URL: ${url}`);
-
-    // Get authentication token from Supabase
-    const supabase = createClient();
-    const { data: sessionData } = await supabase.auth.getSession();
-    const session = sessionData?.session;
-
-    if (!session) {
-      console.error("No active session found for image deletion");
-      return {
-        success: false,
-        error: "You must be logged in to delete an image",
-      };
-    }
-
-    // Attach the authorization header with the session token
-    const headers = {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${session.access_token}`,
-    };
-
-    const response = await fetch(url, {
-      method: "DELETE",
-      headers,
-    });
-
-    console.log(`Delete image response status: ${response.status}`);
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      console.error(`Error response data:`, errorData);
-
-      if (response.status === 401) {
-        return {
-          success: false,
-          error: "Unauthorized. Please log in again to perform this action.",
-        };
-      }
-
-      return {
-        success: false,
-        error:
-          errorData.error || `Failed to delete image: ${response.statusText}`,
-      };
-    }
-
+    const url = API_ENDPOINTS.deleteProjectImage(projectId, imageId);
+    
+    await apiRequest.delete(url);
+    
     return {
       success: true,
       message: "Image deleted successfully",
     };
   } catch (error: any) {
-    console.error("Error deleting image:", error);
+    console.error("Error deleting project image:", error);
     return {
       success: false,
       error: error.message || "Failed to delete image",
@@ -496,66 +285,20 @@ export async function deleteProjectImage(projectId: string, imageId: string) {
 }
 
 /**
- * Delete a project video - Legacy method
+ * Delete a project video (legacy method)
  */
 export async function deleteProjectVideo(projectId: string, videoId: string) {
   try {
-    const url = buildApiUrl(
-      API_ENDPOINTS.deleteProjectVideo(projectId, videoId)
-    );
-    console.log(`Deleting video with ID ${videoId} from project ${projectId}`);
-    console.log(`Delete URL: ${url}`);
-
-    // Get authentication token from Supabase
-    const supabase = createClient();
-    const { data: sessionData } = await supabase.auth.getSession();
-    const session = sessionData?.session;
-
-    if (!session) {
-      console.error("No active session found for video deletion");
-      return {
-        success: false,
-        error: "You must be logged in to delete a video",
-      };
-    }
-
-    // Attach the authorization header with the session token
-    const headers = {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${session.access_token}`,
-    };
-
-    const response = await fetch(url, {
-      method: "DELETE",
-      headers,
-    });
-
-    console.log(`Delete video response status: ${response.status}`);
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      console.error(`Error response data:`, errorData);
-
-      if (response.status === 401) {
-        return {
-          success: false,
-          error: "Unauthorized. Please log in again to perform this action.",
-        };
-      }
-
-      return {
-        success: false,
-        error:
-          errorData.error || `Failed to delete video: ${response.statusText}`,
-      };
-    }
-
+    const url = API_ENDPOINTS.deleteProjectVideo(projectId, videoId);
+    
+    await apiRequest.delete(url);
+    
     return {
       success: true,
       message: "Video deleted successfully",
     };
   } catch (error: any) {
-    console.error("Error deleting video:", error);
+    console.error("Error deleting project video:", error);
     return {
       success: false,
       error: error.message || "Failed to delete video",

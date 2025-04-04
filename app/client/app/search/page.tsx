@@ -46,8 +46,7 @@ export default async function SearchPage({
   const initialRole = params.role || "";
 
   return (
-    <div className="container max-w-6xl mx-auto py-8 px-4">
-      <div className="space-y-8">
+    <div className="container">
         <Suspense
           fallback={
             <div className="h-[500px] w-full">
@@ -63,7 +62,6 @@ export default async function SearchPage({
             talentRoles={TALENT_ROLES}
           />
         </Suspense>
-      </div>
     </div>
   );
 }

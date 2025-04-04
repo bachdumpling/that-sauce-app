@@ -6,44 +6,26 @@ import { Creator } from "@/components/shared/types";
  * Fetch creator details by username
  */
 export async function getCreatorByUsername(username: string) {
-  const url = buildApiUrl(API_ENDPOINTS.getCreatorByUsername(username));
+  const url = API_ENDPOINTS.getCreatorByUsername(username);
 
   try {
-    const response = await fetch(url, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-      },
-    });
-
-    if (!response.ok) {
-      // Handle different error status codes
-      if (response.status === 404) {
-        console.log("Creator not found:", username);
-        return {
-          success: false,
-          error: "Creator not found",
-        };
-      } else if (response.status === 500) {
-        console.error("Server error when fetching creator:", username);
-        const errorData = await response.json().catch(() => ({}));
-        console.error("Error details:", errorData);
-        return {
-          success: false,
-          error: errorData.error || "An unexpected server error occurred",
-        };
-      }
-
-      // For other error types
-      const errorText = await response.text().catch(() => response.statusText);
-      console.error(`Failed to fetch creator (${response.status}):`, errorText);
-      throw new Error(`Failed to fetch creator: ${response.statusText}`);
-    }
-
-    return response.json();
-  } catch (error) {
+    const response = await apiRequest.get(url);
+    return response.data;
+  } catch (error: any) {
     console.error("Error in getCreatorByUsername:", error);
-    throw error;
+    
+    // Handle specific error codes
+    if (error.status === 404) {
+      return {
+        success: false,
+        error: "Creator not found",
+      };
+    }
+    
+    return {
+      success: false,
+      error: error.message || "Failed to fetch creator",
+    };
   }
 }
 
@@ -55,41 +37,22 @@ export async function getProjectByTitle(
   projectTitle: string
 ) {
   try {
-    const url = buildApiUrl(
-      API_ENDPOINTS.getProjectByTitle(username, projectTitle)
-    );
-
+    const url = API_ENDPOINTS.getProjectByTitle(username, projectTitle);
     console.log(`Fetching project: ${url}`);
 
-    const response = await fetch(url, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-      },
-    });
-
-    if (!response.ok) {
-      if (response.status === 404) {
-        console.error(`Project not found: ${username}/${projectTitle}`);
-        return {
-          success: false,
-          error: "Project not found",
-        };
-      }
-      const errorText = await response.text();
-      console.error(
-        `Failed to fetch project: ${response.status} ${response.statusText}`,
-        errorText
-      );
-      throw new Error(
-        `Failed to fetch project: ${response.statusText} (${response.status})`
-      );
-    }
-
-    const data = await response.json();
-    return data;
+    const response = await apiRequest.get(url);
+    return response.data;
   } catch (error: any) {
     console.error(`Error in getProjectByTitle: ${error.message}`, error);
+    
+    // Handle specific error codes
+    if (error.status === 404) {
+      return {
+        success: false,
+        error: "Project not found",
+      };
+    }
+    
     return {
       success: false,
       error: error.message || "Failed to fetch project",
@@ -102,26 +65,10 @@ export async function getProjectByTitle(
  */
 export async function deleteProjectImage(projectId: string, imageId: string) {
   try {
-    const url = buildApiUrl(
-      API_ENDPOINTS.deleteProjectImage(projectId, imageId)
-    );
-
-    const response = await fetch(url, {
-      method: "DELETE",
-      headers: {
-        "Content-Type": "application/json",
-      },
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      return {
-        success: false,
-        error:
-          errorData.error || `Failed to delete image: ${response.statusText}`,
-      };
-    }
-
+    const url = API_ENDPOINTS.deleteProjectImage(projectId, imageId);
+    
+    await apiRequest.delete(url);
+    
     return {
       success: true,
       message: "Image deleted successfully",
@@ -178,30 +125,21 @@ export async function updateCreatorProfile(
  */
 export async function checkUsernameAvailability(username: string) {
   try {
-    const url = buildApiUrl(
-      `/creators/username-check?username=${encodeURIComponent(username)}`
-    );
-
-    const response = await fetch(url, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-      },
-    });
-
-    const data = await response.json();
-
+    const url = `/creators/username-check?username=${encodeURIComponent(username)}`;
+    
+    const response = await apiRequest.get(url);
+    
     return {
-      success: response.ok,
-      available: data.available || false,
-      message: data.message,
+      success: true,
+      available: response.data.available || false,
+      message: response.data.message,
     };
   } catch (error: any) {
     console.error("Error checking username availability:", error);
     return {
       success: false,
       available: false,
-      message: error.message || "Failed to check username availability",
+      error: error.message || "Failed to check username availability",
     };
   }
 }

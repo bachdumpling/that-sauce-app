@@ -1,0 +1,25 @@
+/* Make the bar appear at the bottom of the page */
+#nprogress .bar {
+  position: fixed;
+  z-index: 9999;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 3px;
+  background: #000; /* Default color */
+}
+
+/* Dark mode support */
+.dark #nprogress .bar {
+  background: #fff; /* White in dark mode */
+}
+
+/* Remove the spinner */
+#nprogress .spinner {
+  display: none;
+}
+
+/* Remove the peg that causes the bar to bounce rightward */
+#nprogress .peg {
+  display: none;
+} 

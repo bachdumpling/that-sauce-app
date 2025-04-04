@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
-export default function HeaderAuthClient() {
+export default function NavClient() {
   const [user, setUser] = useState(null);
   const [creatorUsername, setCreatorUsername] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -93,7 +93,7 @@ export default function HeaderAuthClient() {
           variant={"outline"}
           className="w-full justify-center py-4"
         >
-          <Link href={`/creator/${creatorUsername}`}>My Portfolio</Link>
+          <Link href={`/${creatorUsername}`}>My Portfolio</Link>
         </Button>
       )}
       <Button

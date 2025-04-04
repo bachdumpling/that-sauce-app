@@ -51,7 +51,7 @@ export default async function SearchResultsPage({
   }
 
   return (
-    <div className="container max-w-6xl mx-auto py-8 px-4">
+    <div className="container">
       <Suspense
         fallback={
           <div className="h-[800px] w-full">

@@ -31,21 +31,10 @@ export class ProjectService {
   /**
    * Get a project by ID with all media
    */
-  async getProject(projectId: string, userId: string): Promise<ProjectWithMedia> {
-    const creator = await this.creatorRepo.getByProfileId(userId);
-    if (!creator) {
-      throw new Error("Creator profile not found");
-    }
-
+  async getProject(projectId: string): Promise<ProjectWithMedia> {
     const project = await this.projectRepo.getById(projectId);
     if (!project) {
       throw new Error("Project not found");
-    }
-
-    // Check if the project belongs to the creator
-    const projectBelongsToCreator = await this.projectRepo.belongsToCreator(projectId, creator.id);
-    if (!projectBelongsToCreator) {
-      throw new Error("You don't have permission to access this project");
     }
 
     return project;

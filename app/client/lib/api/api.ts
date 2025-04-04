@@ -18,6 +18,8 @@ export const API_ENDPOINTS = {
 
   // Project endpoints
   projects: "/projects",
+  getProject: (projectId: string) => `/projects/${projectId}`,
+  getProjectMedia: (projectId: string) => `/projects/${projectId}/media`,
 
   // Media endpoints
   media: {

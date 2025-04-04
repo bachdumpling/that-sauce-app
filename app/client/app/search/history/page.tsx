@@ -9,7 +9,7 @@ export const metadata: Metadata = {
 
 export default function SearchHistoryPage() {
   return (
-    <div className="container mx-auto py-8">
+    <div className="container">
       <h1 className="text-3xl font-bold mb-6">Search Insights</h1>
 
       <div className="flex flex-col gap-6">

@@ -240,7 +240,7 @@ ${company}`;
           {/* Creator Contact column */}
           <div className="flex flex-col items-start gap-4">
             {/* Avatar and name and username */}
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-4">
               <div className="relative w-16 h-16 bg-gray-200 rounded-full overflow-hidden">
                 {/* Placeholder avatar */}
                 <div className="h-full w-full bg-gray-300 flex items-center justify-center">
@@ -251,51 +251,56 @@ ${company}`;
                   </span>
                 </div>
               </div>
-              <div>
-                <h2 className="text-xl font-bold">
-                  {creator.profile && creator.profile.username
-                    ? creator.profile.username
-                    : "Creator"}
-                </h2>
-                <span className="text-sm text-gray-500">
-                  @
-                  {creator.profile && creator.profile.username
-                    ? creator.profile.username.toLowerCase()
-                    : "creator"}
-                </span>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-4">
-              {creator.profile && creator.profile.location && (
-                <div className="flex items-center gap-1 text-sm text-gray-500">
-                  <MapPin className="h-4 w-4" />
-                  <span>{creator.profile.location}</span>
+              <div className="flex flex-col gap-1">
+                <div className="flex flex-row items-center gap-4">
+                  <h2 className="text-xl font-bold">
+                    {creator.profile && creator.profile.username
+                      ? creator.profile.username
+                      : "Creator"}
+                  </h2>
+                  <span className="text-base text-gray-500">
+                    @
+                    {creator.profile && creator.profile.username
+                      ? creator.profile.username.toLowerCase()
+                      : "creator"}
+                  </span>
                 </div>
-              )}
-              <span className="px-4 py-1 border rounded-md text-sm">
-                {role}
-              </span>
-              <div className="flex gap-4">
-                {/* Social icons - only show platforms from our supported list */}
-                {creator.profile &&
-                  creator.profile.social_links &&
-                  Object.entries(creator.profile.social_links)
-                    .filter(([platform]) =>
-                      validSocialPlatforms.includes(platform.toLowerCase())
-                    )
-                    .map(([platform, url], index) => (
-                      <a
-                        key={platform}
-                        href={url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="w-8 h-8 rounded-full flex items-center justify-center border hover:bg-gray-100"
-                      >
-                        <span className="sr-only">{platform}</span>
-                        <SocialIcon platform={platform} className="h-4 w-4" />
-                      </a>
-                    ))}
+
+                <div className="flex items-center gap-4">
+                  <span className="px-4 py-1 border rounded-full text-sm bg-zinc-200 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200">
+                    {role}
+                  </span>
+                  {creator.profile && creator.profile.location && (
+                    <div className="flex items-center gap-1 text-sm text-gray-500">
+                      <MapPin className="h-4 w-4" />
+                      <span>{creator.profile.location}</span>
+                    </div>
+                  )}
+                  <div className="flex gap-4">
+                    {/* Social icons - only show platforms from our supported list */}
+                    {creator.profile &&
+                      creator.profile.social_links &&
+                      Object.entries(creator.profile.social_links)
+                        .filter(([platform]) =>
+                          validSocialPlatforms.includes(platform.toLowerCase())
+                        )
+                        .map(([platform, url], index) => (
+                          <a
+                            key={platform}
+                            href={url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="w-8 h-8 rounded-full flex items-center justify-center border hover:bg-gray-100"
+                          >
+                            <span className="sr-only">{platform}</span>
+                            <SocialIcon
+                              platform={platform}
+                              className="h-4 w-4"
+                            />
+                          </a>
+                        ))}
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -305,13 +310,13 @@ ${company}`;
             <Link
               href={
                 creator.profile && creator.profile.username
-                  ? `/creator/${creator.profile.username}`
+                  ? `/${creator.profile.username}`
                   : "#"
               }
             >
               <Button
                 variant="outline"
-                className="border-black hover:bg-black hover:text-white rounded-full px-8 py-6"
+                className=" rounded-full px-8 py-6"
                 disabled={!creator.profile || !creator.profile.username}
               >
                 View Profile
@@ -330,75 +335,66 @@ ${company}`;
 
         {/* Creator projects column */}
         <div className="col-span-2">
-          <div className="flex flex-row items-end gap-10 h-72 overflow-x-auto">
+          <div className="grid grid-cols-5 gap-4 h-[160px]">
             {creator.content && creator.content.length > 0 ? (
-              // creator.content.map(
-              creator.content.map(
-                (content, index) =>
-                  index < 10 && (
-                    <div
-                      key={content.id}
-                      className={`flex-none flex items-end ${content.type === "video" ? "h-full aspect-video" : ""}`}
-                      style={{ height: "100%" }}
-                    >
-                      {content.type === "video" ? (
-                        <div className="w-full bg-black overflow-hidden">
-                          {content.youtube_id ? (
-                            <div className="aspect-video">
-                              <YouTubeEmbed
-                                youtubeId={content.youtube_id}
-                                title={content.title || "YouTube video"}
-                              />
-                            </div>
-                          ) : content.vimeo_id ? (
-                            <div className="aspect-video">
-                              <VimeoEmbed
-                                vimeoId={content.vimeo_id}
-                                title={content.title || "Vimeo video"}
-                              />
-                            </div>
-                          ) : content.url ? (
-                            <video
-                              controls
-                              src={content.url}
-                              className="w-full"
-                            >
-                              <source src={content.url} type="video/mp4" />
-                              Your browser does not support the video tag.
-                            </video>
-                          ) : (
-                            <div className="w-full h-36 flex items-center justify-center bg-gray-800 text-white">
-                              <span className="text-gray-400">
-                                Video not available
-                              </span>
-                            </div>
-                          )}
+              creator.content.slice(0, 5).map((content, index) => (
+                <div key={content.id} className="flex items-end h-full">
+                  {content.type === "video" ? (
+                    <div className="w-full bg-black overflow-hidden max-h-[200px]">
+                      {content.youtube_id ? (
+                        <div className="aspect-video w-full">
+                          <YouTubeEmbed
+                            youtubeId={content.youtube_id}
+                            title={content.title || "YouTube video"}
+                          />
+                        </div>
+                      ) : content.vimeo_id ? (
+                        <div className="aspect-video w-full">
+                          <VimeoEmbed
+                            vimeoId={content.vimeo_id}
+                            title={content.title || "Vimeo video"}
+                          />
                         </div>
                       ) : content.url ? (
-                        <Image
-                          src={content.url}
-                          alt={
-                            content.title || content.project_title || "Content"
-                          }
-                          width={0}
-                          height={0}
-                          sizes="100vw"
-                          className="cursor-pointer relative max-h-full w-auto object-cover object-bottom"
-                          onClick={() => handleImageClick(content.url)}
-                          style={{
-                            display: "block",
-                          }}
-                        />
+                        <video controls src={content.url} className="w-full">
+                          <source src={content.url} type="video/mp4" />
+                          Your browser does not support the video tag.
+                        </video>
                       ) : (
-                        <div className="h-36 w-40 flex items-center justify-center bg-gray-100 rounded-md">
-                          <span className="text-gray-400">No image</span>
+                        <div className="w-full h-36 flex items-center justify-center bg-gray-800 text-white">
+                          <span className="text-gray-400">
+                            Video not available
+                          </span>
                         </div>
                       )}
                     </div>
-                  )
-              )
+                  ) : content.url ? (
+                    <div className="relative w-full h-full flex items-end overflow-hidden max-h-[200px]">
+                      <Image
+                        src={content.url}
+                        alt={
+                          content.title || content.project_title || "Content"
+                        }
+                        width={0}
+                        height={0}
+                        sizes="100vw"
+                        className="cursor-pointer w-full object-cover object-bottom"
+                        onClick={() => handleImageClick(content.url)}
+                        style={{
+                          display: "block",
+                          maxHeight: "100%",
+                        }}
+                      />
+                    </div>
+                  ) : (
+                    <div className="h-36 w-full flex items-center justify-center bg-gray-100 rounded-md">
+                      <span className="text-gray-400">No image</span>
+                    </div>
+                  )}
+                </div>
+              ))
             ) : (
-              <div className="h-full w-full flex items-center justify-center">
+              <div className="h-full w-full col-span-6 flex items-center justify-center">
                 <span className="text-gray-400">No content available</span>
               </div>
             )}

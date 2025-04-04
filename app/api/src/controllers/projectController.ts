@@ -18,15 +18,15 @@ export const projectController = {
    * Get all projects for the current user
    */
   getUserProjects: async (
-    req: AuthenticatedRequest,
+    req: Request,
     res: Response,
     next: NextFunction
   ) => {
     try {
-      const userId = req.user?.id;
+      const userId = req.query.userId as string;
 
       if (!userId) {
-        return res.status(401).json({ error: "Unauthorized" });
+        return res.status(400).json({ error: "User ID is required" });
       }
 
       const projects = await projectService.getUserProjects(userId);
@@ -40,19 +40,14 @@ export const projectController = {
    * Get a specific project
    */
   getProject: async (
-    req: AuthenticatedRequest,
+    req: Request,
     res: Response,
     next: NextFunction
   ) => {
     try {
       const { id } = req.params;
-      const userId = req.user?.id;
-
-      if (!userId) {
-        return res.status(401).json({ error: "Unauthorized" });
-      }
-
-      const project = await projectService.getProject(id, userId);
+      
+      const project = await projectService.getProject(id);
       return res.status(200).json({ project });
     } catch (error) {
       return next(error);
@@ -182,7 +177,7 @@ export const projectController = {
    * Get all media (images and videos) associated with a project.
    */
   getProjectMedia: async (
-    req: AuthenticatedRequest,
+    req: Request,
     res: Response,
     next: NextFunction
   ) => {

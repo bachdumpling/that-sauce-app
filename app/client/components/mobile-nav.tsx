@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/sheet";
 import Link from "next/link";
 import Image from "next/image";
-import HeaderAuthClient from "@/components/header-auth-client";
+import NavClient from "@/components/nav-client";
 import { ThemeSwitcher } from "@/components/theme-switcher";
 import { usePathname } from "next/navigation";
 
@@ -54,7 +54,7 @@ export function MobileNav() {
 
         <div className="flex flex-col gap-8">
           <div className="flex flex-col gap-4 bg-accent/20 p-4 rounded-lg">
-            <HeaderAuthClient />
+            <NavClient />
             <div className="flex items-center justify-between mt-1">
               <span className="text-sm font-medium">Theme</span>
               <ThemeSwitcher />

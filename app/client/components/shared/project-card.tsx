@@ -220,7 +220,7 @@ export function ProjectCard({
           toast.success("Project deleted successfully");
           // Redirect to creator profile page or refresh
           if (project.creator_username) {
-            router.push(`/creator/${project.creator_username}`);
+            router.push(`/${project.creator_username}`);
           } else {
             window.location.reload();
           }
@@ -255,7 +255,7 @@ export function ProjectCard({
             <div>
               {project.creator_username ? (
                 <Link
-                  href={`/creator/${project.creator_username}/${getProjectSlug(project.title)}`}
+                  href={`/${project.creator_username}/${getProjectSlug(project.title)}`}
                   className="group"
                 >
                   <h3 className="text-xl font-semibold group-hover:text-primary transition-colors">

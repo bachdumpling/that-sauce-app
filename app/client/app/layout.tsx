@@ -4,10 +4,13 @@ import { ThemeProvider } from "next-themes";
 import Link from "next/link";
 import Image from "next/image";
 import "./globals.css";
+import "@/styles/nprogress-custom.css";
 import { Analytics } from "@vercel/analytics/react";
 import localFont from "next/font/local";
 import { MobileNav } from "@/components/mobile-nav";
-
+import { ProgressBar } from "@/components/ProgressBar";
+import { ProgressBarProvider } from "@/providers/ProgressBarProvider";
+import Nav from "@/components/nav";
 const defaultUrl = process.env.NEXT_PUBLIC_CLIENT_URL
   ? `https://${process.env.NEXT_PUBLIC_CLIENT_URL}`
   : "https://localhost:3000";
@@ -16,6 +19,17 @@ export const metadata = {
   metadataBase: new URL(defaultUrl),
   title: "that sauce",
   description: "creative talent search engine",
+  openGraph: {
+    title: "that sauce",
+    description: "creative talent search engine",
+    images: "/opengraph-image.png",
+  },
+  twitter: {
+    title: "that sauce",
+    description: "creative talent search engine",
+    card: "summary_large_image",
+    images: "/twitter-image.png",
+  },
 };
 
 // Define Helvetica Neue as a local font
@@ -84,33 +98,22 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
+          {/* <ProgressBarProvider> */}
           <main className="min-h-screen flex flex-col items-center">
-            <div className="flex-1 w-full flex flex-col gap-20 items-center">
-              <nav className="w-full flex justify-center border-b border-b-foreground/10 h-20">
-                <div className="w-full max-w-6xl flex justify-between items-center p-2 px-4 text-sm">
-                  <div className="flex gap-4 items-center font-semibold">
-                    <Link href={"/"}>
-                      <Image
-                        src="/logo.png"
-                        alt="that sauce"
-                        width={50}
-                        height={50}
-                        priority
-                      />
-                    </Link>
-                  </div>
+            <div className="flex-1 w-full flex flex-col gap-10 items-center">
+              <nav className="w-full flex justify-center h-20 px-4 py-2">
+                <div className="hidden md:flex w-full">
                   {/* Desktop navigation */}
-                  <div className="hidden md:flex gap-4 items-center">
-                    <HeaderAuth />
-                    <ThemeSwitcher />
-                  </div>
+                  <Nav />
+
                   {/* Mobile navigation */}
                   <div className="md:hidden">
                     <MobileNav />
                   </div>
                 </div>
               </nav>
-              <main className="flex-1 container max-w-6xl w-full mx-auto">
+
+              <main className="flex-1 container w-full mx-auto">
                 {children}
               </main>
 
@@ -126,6 +129,7 @@ export default function RootLayout({
             </div>
           </main>
           <Analytics />
+          {/* </ProgressBarProvider> */}
         </ThemeProvider>
       </body>
     </html>

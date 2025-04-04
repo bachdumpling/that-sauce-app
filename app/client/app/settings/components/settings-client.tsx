@@ -141,7 +141,7 @@ export function SettingsClient({ user, profile, creator }: SettingsClientProps) 
             </CardContent>
             <CardFooter>
               <Button asChild>
-                <Link href={`/creator/${creator.username}`}>
+                <Link href={`/${creator.username}`}>
                   Go to Creator Profile
                 </Link>
               </Button>

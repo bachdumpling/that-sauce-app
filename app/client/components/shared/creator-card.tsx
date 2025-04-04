@@ -201,7 +201,7 @@ export function CreatorCard({
           <div className="space-y-3">
             <div className="flex items-center gap-2">
               <Link
-                href={`/creator/${profile.username}`}
+                href={`/${profile.username}`}
                 className="text-xl font-semibold hover:text-primary transition-colors"
               >
                 {profile.username}

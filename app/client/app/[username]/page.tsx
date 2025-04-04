@@ -2,7 +2,7 @@ import { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { getCreatorByUsername } from "@/lib/api/creators";
-import { CreatorProfileWrapper } from "./components/creator-profile-wrapper";
+import { CreatorClient } from "./components/creator-client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { createClient } from "@/utils/supabase/server";
 import Link from "next/link";
@@ -47,11 +47,12 @@ export async function generateMetadata({
 // Error UI component
 function CreatorError({ error, username }: { error: any; username: string }) {
   return (
-    <div className="container max-w-6xl py-16 flex flex-col items-center justify-center text-center">
+    <div className="py-16 flex flex-col items-center justify-center text-center">
       <AlertTriangle className="h-12 w-12 text-yellow-500 mb-4" />
       <h1 className="text-3xl font-bold mb-4">Something went wrong</h1>
       <p className="text-muted-foreground mb-2 max-w-md">
-        We encountered an error while trying to load the creator profile for "{username}".
+        We encountered an error while trying to load the creator profile for "
+        {username}".
       </p>
       <p className="text-sm text-muted-foreground mb-8 max-w-md">
         Error: {error.message || "Unknown error"}
@@ -80,7 +81,7 @@ export default async function CreatorPage({ params }: CreatorPageProps) {
 
   // Check if user has a creator profile with this username
   let isOwner = false;
-  
+
   if (user) {
     // Get the user's creator profile
     const { data: userCreator } = await supabase
@@ -88,7 +89,7 @@ export default async function CreatorPage({ params }: CreatorPageProps) {
       .select("username")
       .eq("profile_id", user.id)
       .single();
-    
+
     // Check if the user's creator profile matches the requested username
     if (userCreator && userCreator.username === username) {
       isOwner = true;
@@ -102,21 +103,19 @@ export default async function CreatorPage({ params }: CreatorPageProps) {
       if (response.error === "Creator not found") {
         notFound();
       }
-      
+
       // For other types of errors, show error UI
-      return <CreatorError error={{ message: response.error }} username={username} />;
+      return (
+        <CreatorError error={{ message: response.error }} username={username} />
+      );
     }
 
     return (
-      <div className="container max-w-6xl py-8">
-        <Suspense fallback={<Skeleton variant="creator" />}>
-          <CreatorProfileWrapper 
-            creator={response.data} 
-            isOwner={isOwner}
-            username={username}
-          />
-        </Suspense>
-      </div>
+      <CreatorClient
+        creator={response.data}
+        isOwner={isOwner}
+        username={username}
+      />
     );
   } catch (error: any) {
     console.error("Error fetching creator:", error);

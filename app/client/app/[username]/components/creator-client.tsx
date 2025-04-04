@@ -6,11 +6,11 @@ import {
   Project,
   Image as ImageType,
 } from "@/components/shared/types";
-import { CreatorProfile } from "@/components/shared/creator-profile";
-import { CreatorEditForm } from "./creator-edit-form";
+import { Overview } from "./overview";
 import { updateCreatorProfile } from "@/lib/api/creators";
 import { toast } from "sonner";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
+import Link from "next/link";
 import {
   createProject,
   updateProject,
@@ -32,7 +32,14 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Upload, Image as ImageIcon } from "lucide-react";
+import {
+  Loader2,
+  Upload,
+  Image as ImageIcon,
+  MapPin,
+  MessageCircle,
+  Plus,
+} from "lucide-react";
 import { DropzoneInput } from "@/components/ui/dropzone-input";
 import {
   AlertDialog,
@@ -44,21 +51,115 @@ import {
   AlertDialogCancel,
   AlertDialogAction,
 } from "@/components/ui/alert-dialog";
+import { Badge } from "@/components/ui/badge";
+import TiltedCard from "@/components/ui/tilted-card";
+import { SocialIcon } from "@/components/ui/social-icon";
+import { SOCIAL_PLATFORMS } from "@/lib/constants/creator-options";
 
-interface CreatorProfileWrapperProps {
+interface CreatorClientProps {
   creator: Creator;
   isOwner: boolean;
   username: string;
 }
 
-export function CreatorProfileWrapper({
+// Tab navigation component
+function TabsNav({
+  username,
+  activeTab,
+  creator,
+}: {
+  username: string;
+  activeTab: string;
+  creator: Creator;
+}) {
+  return (
+    <div className="border-b mb-8 flex justify-between items-center">
+      <div className="flex space-x-8">
+        <Link
+          href={`/${username}`}
+          className={`py-4 px-1 font-medium text-lg ${
+            activeTab === "overview"
+              ? "text-primary"
+              : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          Overview
+        </Link>
+        <Link
+          href={`/${username}/work`}
+          className={`py-4 px-1 font-medium text-lg ${
+            activeTab === "work"
+              ? "text-primary"
+              : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          Work
+        </Link>
+        <Link
+          href={`/${username}/about`}
+          className={`py-4 px-1 font-medium text-lg ${
+            activeTab === "about"
+              ? "text-primary"
+              : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          About
+        </Link>
+      </div>
+
+      <div className="flex justify-end items-center gap-4">
+        {/* Creator location */}
+        {creator.location && (
+          <div className="flex items-center gap-1">
+            <MapPin className="h-4 w-4" />
+            <span>{creator.location}</span>
+          </div>
+        )}
+
+        {creator.social_links &&
+          creator.social_links &&
+          Object.entries(creator.social_links)
+            .filter(([platform]) =>
+              SOCIAL_PLATFORMS.some((p) => p.id === platform)
+            )
+            .map(([platform, url], index) => (
+              <a
+                key={platform}
+                href={url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-10 h-10 rounded-full flex items-center justify-center border hover:bg-gray-100"
+              >
+                <span className="sr-only">{platform}</span>
+                <SocialIcon platform={platform} className="h-4 w-4" />
+              </a>
+            ))}
+      </div>
+    </div>
+  );
+}
+
+export function CreatorClient({
   creator,
   isOwner,
   username,
-}: CreatorProfileWrapperProps) {
+}: CreatorClientProps) {
   const router = useRouter();
+  const pathname = usePathname();
   const [isEditing, setIsEditing] = useState(false);
   const [currentCreator, setCurrentCreator] = useState<Creator>(creator);
+
+  // Determine active tab based on current path
+  const getActiveTab = () => {
+    if (pathname.endsWith(`/${username}`)) return "overview";
+    if (pathname.includes(`/${username}/work`)) return "work";
+    if (pathname.includes(`/${username}/about`)) return "about";
+    return "overview";
+  };
+
+  // Check if we're on a project detail page - matches pattern /username/work/project-id
+  const isProjectDetailPage =
+    pathname.match(new RegExp(`/${username}/work/[^/]+$`)) !== null;
 
   // Project management state
   const [isAddingProject, setIsAddingProject] = useState(false);
@@ -118,7 +219,7 @@ export function CreatorProfileWrapper({
             "Profile updated successfully. Redirecting to your new profile URL..."
           );
           setTimeout(() => {
-            router.push(`/creator/${updatedData.username}`);
+            router.push(`/${updatedData.username}`);
           }, 1500);
         } else {
           toast.success("Profile updated successfully");
@@ -416,33 +517,201 @@ export function CreatorProfileWrapper({
     }
   };
 
-  // If editing profile, show the edit form
-  if (isEditing && isOwner) {
-    return (
-      <div className="space-y-8">
-        <h1 className="text-3xl font-bold">Edit Your Profile</h1>
-        <CreatorEditForm
-          creator={currentCreator}
-          onSave={handleSaveProfile}
-          onCancel={handleCancelEdit}
-        />
-      </div>
-    );
-  }
-
   return (
     <>
-      <CreatorProfile
+      {/* Creator Header - shown on all pages except project detail */}
+      {!isProjectDetailPage && (
+        <div className="grid grid-cols-1 md:grid-cols-2 p-10 gap-10">
+          <div className="flex flex-col items-start gap-4 py-4 pr-10 space-y-4">
+            <div className="flex flex-row justify-start items-center gap-4">
+              <div className="relative w-20 h-20 bg-gray-200 rounded-full overflow-hidden">
+                {/* Placeholder avatar */}
+                <div className="h-full w-full bg-gray-300 flex items-center justify-center">
+                  <span className="text-gray-600 font-bold text-3xl">
+                    {creator.username
+                      ? creator.username.charAt(0).toUpperCase()
+                      : "C"}
+                  </span>
+                </div>
+              </div>
+              {/* Creator name and username */}
+              <div>
+                <div className="flex flex-row justify-between">
+                  <h2 className="text-xl md:text-4xl font-medium">
+                    {creator.first_name && creator.last_name
+                      ? `${creator.first_name} ${creator.last_name}`
+                      : creator.username
+                        ? creator.username
+                        : "Creator"}
+                  </h2>
+                </div>
+                <span className="text-base text-gray-500">
+                  @
+                  {creator.username
+                    ? creator.username.toLowerCase()
+                    : "creator"}
+                </span>
+              </div>
+            </div>
+
+            <div className="flex flex-row gap-4 justify-start items-center">
+              {/* Creator primary role */}
+              {creator.primary_role && creator.primary_role.length > 0 && (
+                <div className="flex flex-wrap gap-4">
+                  {creator.primary_role.map((role) => (
+                    <Badge
+                      key={role}
+                      variant="secondary"
+                      className="text-base px-4 py-2"
+                    >
+                      {typeof role === "string"
+                        ? role.replace(/-/g, " ")
+                        : role}
+                    </Badge>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {creator.bio && (
+              <p className="max-w-2xl text-muted-foreground">{creator.bio}</p>
+            )}
+            <div className="flex flex-row gap-4">
+              <Button variant="default" className="p-6 rounded-full">
+                <MessageCircle className="h-4 w-4 mr-2 mb-1" />
+                Get in touch
+              </Button>
+              <Button variant="outline" className="p-6 rounded-full">
+                <Plus className="h-4 w-4 mr-2 mb-1" />
+                Add to projects
+              </Button>
+            </div>
+          </div>
+
+          <div className="items-center gap-3 grid place-items-center">
+            {/* Lanyard */}
+            <TiltedCard
+              // imageSrc="/lanyard.jpg"
+              imageSrc={currentCreator.projects?.[0]?.images?.[0]?.url}
+              altText="Lanyard"
+              captionText="Lanyard"
+              containerHeight="350px"
+              containerWidth="350px"
+              imageHeight="350px"
+              imageWidth="350px"
+              rotateAmplitude={12}
+              scaleOnHover={1.2}
+              showMobileWarning={false}
+              showTooltip={false}
+              displayOverlayContent={false}
+              overlayContent={
+                <div className="gap-2 w-full h-full">
+                  <p className="text-white text-4xl font-bold">
+                    {creator.first_name} {creator.last_name}
+                  </p>
+                  <p className="text-white text-xl font-bold">
+                    {creator.primary_role && creator.primary_role[0]}
+                  </p>
+                </div>
+              }
+            />
+          </div>
+        </div>
+      )}
+
+      <TabsNav
         creator={currentCreator}
-        viewMode={isOwner ? "owner" : "public"}
-        onEditProfile={isOwner ? handleEditProfile : undefined}
-        onEditProject={isOwner ? handleEditProject : undefined}
-        onDeleteProject={isOwner ? handleDeleteProject : undefined}
-        onAddProject={isOwner ? handleAddProject : undefined}
-        onAddMedia={isOwner ? handleAddMedia : undefined}
-        onDeleteImage={isOwner ? handleDeleteImage : undefined}
-        onDeleteVideo={isOwner ? handleDeleteVideo : undefined}
+        username={username}
+        activeTab={getActiveTab()}
       />
+
+      {/* Main content area based on active tab */}
+      {getActiveTab() === "overview" && (
+        <Overview creator={currentCreator} isOwner={isOwner} />
+      )}
+
+      {getActiveTab() === "work" && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {currentCreator.projects && currentCreator.projects.length > 0 ? (
+            currentCreator.projects.map((project) => (
+              <Link
+                href={`/${username}/work/${project.id}`}
+                key={project.id}
+                className="group hover:opacity-90 transition-opacity"
+              >
+                <div className="bg-card overflow-hidden rounded-lg shadow">
+                  {project.images && project.images.length > 0 ? (
+                    <img
+                      src={project.images[0].url}
+                      alt={project.title}
+                      className="w-full h-48 object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-48 bg-muted flex items-center justify-center">
+                      <ImageIcon className="h-12 w-12 text-muted-foreground" />
+                    </div>
+                  )}
+                  <div className="p-4">
+                    <h3 className="font-medium text-lg">{project.title}</h3>
+                    {project.description && (
+                      <p className="text-muted-foreground text-sm line-clamp-2 mt-1">
+                        {project.description}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </Link>
+            ))
+          ) : (
+            <div className="col-span-3 py-12 text-center">
+              <h3 className="text-lg font-medium text-muted-foreground">
+                No projects yet
+              </h3>
+              {isOwner && (
+                <Button onClick={handleAddProject} className="mt-4">
+                  Add Your First Project
+                </Button>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {getActiveTab() === "about" && (
+        <div className="prose dark:prose-invert max-w-none">
+          <h2>About {currentCreator.name || currentCreator.username}</h2>
+          {currentCreator.bio ? (
+            <p>{currentCreator.bio}</p>
+          ) : (
+            <p className="text-muted-foreground">No bio available.</p>
+          )}
+
+          {currentCreator.location && (
+            <div className="mt-6">
+              <h3>Location</h3>
+              <p>{currentCreator.location}</p>
+            </div>
+          )}
+
+          {currentCreator.website && (
+            <div className="mt-6">
+              <h3>Website</h3>
+              <a
+                href={
+                  currentCreator.website.startsWith("http")
+                    ? currentCreator.website
+                    : `https://${currentCreator.website}`
+                }
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary hover:underline"
+              >
+                {currentCreator.website}
+              </a>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Add/Edit Project Dialog */}
       <Dialog

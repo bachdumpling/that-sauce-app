@@ -25,7 +25,7 @@ export default async function ProfilePage() {
 
   // If user has a creator profile, redirect to their creator page
   if (creator && creator.username) {
-    redirect(`/creator/${creator.username}`);
+    redirect(`/${creator.username}`);
   } else {
     // If user doesn't have a creator profile, redirect to settings
     redirect("/settings");

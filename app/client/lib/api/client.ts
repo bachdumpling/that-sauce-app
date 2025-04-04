@@ -54,18 +54,37 @@ apiClient.interceptors.response.use(
     // If the error is 401 (Unauthorized) and the request hasn't been retried yet
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
+      console.log("Received 401 response, attempting to refresh token...");
 
       try {
         const supabase = await createClient();
+        console.log("Checking current session...");
+        
+        // Get current session first to check if we have one
+        const { data: { session: currentSession } } = await supabase.auth.getSession();
+        
+        if (!currentSession) {
+          console.log("No active session found, cannot refresh");
+          return Promise.reject({
+            status: 401,
+            message: "No active session found. Please log in.",
+          });
+        }
+        
         // Try to refresh the session
+        console.log("Attempting to refresh session...");
         const {
           data: { session },
           error: refreshError,
         } = await supabase.auth.refreshSession();
 
-        if (refreshError) throw refreshError;
+        if (refreshError) {
+          console.error("Token refresh failed:", refreshError);
+          throw refreshError;
+        }
 
         if (session) {
+          console.log("Session refreshed successfully");
           // Update the header and retry the request
           if (originalRequest.headers) {
             originalRequest.headers.Authorization = `Bearer ${session.access_token}`;
@@ -75,18 +94,33 @@ apiClient.interceptors.response.use(
             };
           }
           return apiClient(originalRequest);
+        } else {
+          console.log("No session returned after refresh");
         }
       } catch (refreshError) {
         console.error("Failed to refresh authentication:", refreshError);
 
-        // Redirect to login if refresh fails
-        if (typeof window !== "undefined") {
-          window.location.href = "/auth/login";
-        }
+        // Instead of auto-redirecting, just return a clear error
+        return Promise.reject({
+          status: 401,
+          message: "Authentication failed. Please log in again.",
+        });
       }
     }
 
-    return Promise.reject(error);
+    // For all other errors, create a consistent error response
+    const errorResponse = {
+      data: null,
+      status: error.response?.status || 500,
+      message: error.response?.data?.message || 
+               error.message || 
+               "An unexpected error occurred",
+    };
+
+    // Log error for debugging
+    console.error("API Error:", errorResponse);
+
+    return Promise.reject(errorResponse);
   }
 );
 
@@ -161,14 +195,32 @@ export const apiRequest = {
 
 // Helper function to handle API errors
 const handleApiError = (error: AxiosError): never => {
+  // Check if this is already our formatted error
+  if (error.message && typeof error.status === 'number') {
+    console.error("API Error (pre-formatted):", error);
+    throw error;
+  }
+  
   const errorResponse = {
     data: null,
     status: error.response?.status || 500,
     message:
       error.response?.data?.message ||
+      error.response?.data?.error ||
       error.message ||
       "An unexpected error occurred",
   };
+
+  // Add specific handling for common errors
+  if (errorResponse.status === 401) {
+    errorResponse.message = "Authentication required. Please log in.";
+  } else if (errorResponse.status === 403) {
+    errorResponse.message = "You don't have permission to perform this action.";
+  } else if (errorResponse.status === 404) {
+    errorResponse.message = "The requested resource was not found.";
+  } else if (errorResponse.status === 429) {
+    errorResponse.message = "Too many requests. Please try again later.";
+  }
 
   // Log error for debugging
   console.error("API Error:", errorResponse);

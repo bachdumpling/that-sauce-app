@@ -23,6 +23,17 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  webpack: (config) => {
+    // GLB file handling
+    config.module.rules.push({
+      test: /\.glb$/,
+      use: ["url-loader"],
+    });
+    
+    return config;
+  },
+  // Updated configuration for external packages
+  serverExternalPackages: ['@vercel/og'],
   eslint: {
     ignoreDuringBuilds: true,
   },

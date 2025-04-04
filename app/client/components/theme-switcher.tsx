@@ -1,17 +1,8 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Laptop, Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
-
+import { SunIcon, MoonIcon, ComputerIcon } from "lucide-react";
 const ThemeSwitcher = () => {
   const [mounted, setMounted] = useState(false);
   const { theme, setTheme } = useTheme();
@@ -25,53 +16,47 @@ const ThemeSwitcher = () => {
     return null;
   }
 
-  const ICON_SIZE = 16;
-
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size={"sm"}>
-          {theme === "light" ? (
-            <Sun
-              key="light"
-              size={ICON_SIZE}
-              className={"text-muted-foreground"}
-            />
-          ) : theme === "dark" ? (
-            <Moon
-              key="dark"
-              size={ICON_SIZE}
-              className={"text-muted-foreground"}
-            />
-          ) : (
-            <Laptop
-              key="system"
-              size={ICON_SIZE}
-              className={"text-muted-foreground"}
-            />
-          )}
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent className="w-content" align="start">
-        <DropdownMenuRadioGroup
-          value={theme}
-          onValueChange={(e) => setTheme(e)}
-        >
-          <DropdownMenuRadioItem className="flex gap-2" value="light">
-            <Sun size={ICON_SIZE} className="text-muted-foreground" />{" "}
-            <span>Light</span>
-          </DropdownMenuRadioItem>
-          <DropdownMenuRadioItem className="flex gap-2" value="dark">
-            <Moon size={ICON_SIZE} className="text-muted-foreground" />{" "}
-            <span>Dark</span>
-          </DropdownMenuRadioItem>
-          <DropdownMenuRadioItem className="flex gap-2" value="system">
-            <Laptop size={ICON_SIZE} className="text-muted-foreground" />{" "}
-            <span>System</span>
-          </DropdownMenuRadioItem>
-        </DropdownMenuRadioGroup>
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <div className="bg-muted rounded-full p-1 flex items-center w-fit">
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          setTheme("light");
+        }}
+        className={`p-2 rounded-full ${
+          theme === "light" ? "bg-white text-black" : "text-muted-foreground"
+        }`}
+        aria-label="Light theme"
+      >
+        <SunIcon className="w-4 h-4" />
+      </button>
+
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          setTheme("dark");
+        }}
+        className={`p-2 rounded-full ${
+          theme === "dark" ? "bg-white text-black" : "text-muted-foreground"
+        }`}
+        aria-label="Dark theme"
+      >
+        <MoonIcon className="w-4 h-4" />
+      </button>
+
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          setTheme("system");
+        }}
+        className={`p-2 rounded-full ${
+          theme === "system" ? "bg-white text-black" : "text-muted-foreground"
+        }`}
+        aria-label="System theme"
+      >
+        <ComputerIcon className="w-4 h-4" />
+      </button>
+    </div>
   );
 };
 
