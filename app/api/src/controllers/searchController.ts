@@ -373,8 +373,6 @@ export class SearchController {
     try {
       const { query } = req.query;
 
-      console.log(req.query);
-
       if (!query) {
         return sendError(
           res,

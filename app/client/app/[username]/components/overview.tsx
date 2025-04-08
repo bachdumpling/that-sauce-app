@@ -34,10 +34,9 @@ import {
 
 interface OverviewProps {
   creator: Creator;
-  isOwner: boolean;
 }
 
-export function Overview({ creator, isOwner }: OverviewProps) {
+export function Overview({ creator }: OverviewProps) {
   return (
     <div className="w-full space-y-8">
       {/* Projects Masonry Grid */}

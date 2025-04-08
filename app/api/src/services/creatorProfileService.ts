@@ -12,10 +12,15 @@ export class CreatorProfileService {
 
   /**
    * Get creator by username
+   * @param username The username to look up
+   * @param userId Optional user ID to check ownership
    */
-  async getCreatorByUsername(username: string): Promise<CreatorProfile | null> {
+  async getCreatorByUsername(
+    username: string, 
+    userId?: string
+  ): Promise<CreatorProfile | null> {
     try {
-      return await this.creatorProfileRepo.getByUsername(username);
+      return await this.creatorProfileRepo.getByUsername(username, userId);
     } catch (error) {
       logger.error(`Error in getCreatorByUsername service: ${error}`);
       throw error;

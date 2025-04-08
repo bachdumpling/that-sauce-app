@@ -26,9 +26,9 @@ export async function getUserProjects(userId: string, page = 1, limit = 10) {
   try {
     const url = `${API_ENDPOINTS.projects}?userId=${userId}&page=${page}&limit=${limit}`;
 
-    // Use a regular fetch instead of authenticated apiRequest for public routes
-    const response = await fetch(buildApiUrl(url));
-    const data = await response.json();
+    // Use apiRequest.get instead of raw fetch for authentication
+    const response = await apiRequest.get(url);
+    const data = response.data;
 
     return {
       success: true,
@@ -50,9 +50,9 @@ export async function getProject(projectId: string) {
   try {
     const url = API_ENDPOINTS.getProject(projectId);
 
-    // Use a regular fetch instead of authenticated apiRequest for public routes
-    const response = await fetch(buildApiUrl(url));
-    const data = await response.json();
+    // Use apiRequest.get instead of raw fetch for authentication
+    const response = await apiRequest.get(url);
+    const data = response.data;
 
     return {
       success: true,
@@ -74,9 +74,9 @@ export async function getProjectMedia(projectId: string) {
   try {
     const url = API_ENDPOINTS.getProjectMedia(projectId);
 
-    // Use a regular fetch instead of authenticated apiRequest for public routes
-    const response = await fetch(buildApiUrl(url));
-    const data = await response.json();
+    // Use apiRequest.get instead of raw fetch for authentication
+    const response = await apiRequest.get(url);
+    const data = response.data;
 
     return {
       success: true,

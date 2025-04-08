@@ -11,6 +11,8 @@ export interface CreatorProfile {
   last_name?: string;
   created_at?: string;
   updated_at?: string;
+  profile_id?: string;
+  isOwner?: boolean;
   profile?: {
     first_name?: string;
     last_name?: string;

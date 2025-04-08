@@ -1,14 +1,19 @@
 "use client";
 
 import { useState } from "react";
-import { Creator, Project, Image as ImageType, Video } from "@/components/shared/types";
+import {
+  Creator,
+  Project,
+  Image as ImageType,
+  Video,
+} from "@/components/shared/types";
 import { Button } from "@/components/ui/button";
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
-  DialogTitle, 
-  DialogDescription 
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { Edit, Trash2, Play } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -20,12 +25,16 @@ import { Textarea } from "@/components/ui/textarea";
 interface ProjectDetailProps {
   project: Project;
   creator: Creator;
-  isOwner: boolean;
 }
 
-export function ProjectDetail({ project, creator, isOwner }: ProjectDetailProps) {
+export function ProjectDetail({
+  project,
+  creator,
+}: ProjectDetailProps) {
   const router = useRouter();
-  const [selectedMedia, setSelectedMedia] = useState<(ImageType | Video) & { type: 'image' | 'video' } | null>(null);
+  const [selectedMedia, setSelectedMedia] = useState<
+    ((ImageType | Video) & { type: "image" | "video" }) | null
+  >(null);
   const [isEditing, setIsEditing] = useState(false);
   const [isDeletingProject, setIsDeletingProject] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -34,11 +43,19 @@ export function ProjectDetail({ project, creator, isOwner }: ProjectDetailProps)
 
   // Get all media (images and videos) from the project
   const allMedia = [
-    ...(project.images || []).map(img => ({ ...img, type: 'image' as const })),
-    ...(project.videos || []).map(vid => ({ ...vid, type: 'video' as const }))
+    ...(project.images || []).map((img) => ({
+      ...img,
+      type: "image" as const,
+    })),
+    ...(project.videos || []).map((vid) => ({
+      ...vid,
+      type: "video" as const,
+    })),
   ];
 
-  const handleOpenMedia = (media: (ImageType | Video) & { type: 'image' | 'video' }) => {
+  const handleOpenMedia = (
+    media: (ImageType | Video) & { type: "image" | "video" }
+  ) => {
     setSelectedMedia(media);
   };
 
@@ -115,14 +132,18 @@ export function ProjectDetail({ project, creator, isOwner }: ProjectDetailProps)
             By {creator.name || creator.username}
           </p>
         </div>
-        
-        {isOwner && (
+
+        {creator.isOwner && (
           <div className="flex gap-2">
             <Button variant="outline" size="sm" onClick={handleEditProject}>
               <Edit className="h-4 w-4 mr-2" />
               Edit
             </Button>
-            <Button variant="destructive" size="sm" onClick={handleDeleteProject}>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={handleDeleteProject}
+            >
               <Trash2 className="h-4 w-4 mr-2" />
               Delete
             </Button>
@@ -134,17 +155,19 @@ export function ProjectDetail({ project, creator, isOwner }: ProjectDetailProps)
       {allMedia.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 auto-rows-max">
           {allMedia.map((media, index) => (
-            <div 
+            <div
               key={`${media.type}-${media.id}`}
               className={`rounded-md overflow-hidden cursor-pointer hover:opacity-90 transition-opacity ${
                 // For the first item, make it span 2 columns on larger screens if there are at least 3 items
-                index === 0 && allMedia.length >= 3 ? 'md:col-span-2 md:row-span-2' : ''
+                index === 0 && allMedia.length >= 3
+                  ? "md:col-span-2 md:row-span-2"
+                  : ""
               }`}
               onClick={() => handleOpenMedia(media)}
             >
-              {media.type === 'image' ? (
-                <img 
-                  src={media.url} 
+              {media.type === "image" ? (
+                <img
+                  src={media.url}
                   alt={`${project.title} - Image ${index + 1}`}
                   className="w-full h-full object-cover"
                 />
@@ -154,7 +177,7 @@ export function ProjectDetail({ project, creator, isOwner }: ProjectDetailProps)
                     <Play className="h-16 w-16 text-white opacity-80" />
                   </div>
                   {media.thumbnail_url ? (
-                    <img 
+                    <img
                       src={media.thumbnail_url}
                       alt={`${project.title} - Video ${index + 1}`}
                       className="w-full h-full object-cover opacity-80"
@@ -169,13 +192,18 @@ export function ProjectDetail({ project, creator, isOwner }: ProjectDetailProps)
         </div>
       ) : (
         <div className="text-center py-16 border border-dashed rounded-md">
-          <p className="text-muted-foreground">No media available for this project.</p>
+          <p className="text-muted-foreground">
+            No media available for this project.
+          </p>
         </div>
       )}
 
       {/* Media Viewer Dialog */}
       {selectedMedia && (
-        <Dialog open={!!selectedMedia} onOpenChange={(open) => !open && setSelectedMedia(null)}>
+        <Dialog
+          open={!!selectedMedia}
+          onOpenChange={(open) => !open && setSelectedMedia(null)}
+        >
           <DialogContent className="max-w-5xl">
             <DialogHeader>
               <DialogTitle>{project.title}</DialogTitle>
@@ -184,15 +212,15 @@ export function ProjectDetail({ project, creator, isOwner }: ProjectDetailProps)
               )}
             </DialogHeader>
             <div className="p-2 flex justify-center items-center">
-              {selectedMedia.type === 'image' ? (
-                <img 
-                  src={selectedMedia.url} 
+              {selectedMedia.type === "image" ? (
+                <img
+                  src={selectedMedia.url}
                   alt={project.title}
                   className="max-h-[80vh] max-w-full object-contain"
                 />
               ) : (
-                <video 
-                  src={selectedMedia.url} 
+                <video
+                  src={selectedMedia.url}
                   controls
                   className="max-h-[80vh] max-w-full"
                   autoPlay
@@ -204,7 +232,10 @@ export function ProjectDetail({ project, creator, isOwner }: ProjectDetailProps)
       )}
 
       {/* Edit Project Dialog */}
-      <Dialog open={isEditing} onOpenChange={(open) => !open && setIsEditing(false)}>
+      <Dialog
+        open={isEditing}
+        onOpenChange={(open) => !open && setIsEditing(false)}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Edit Project</DialogTitle>
@@ -225,7 +256,10 @@ export function ProjectDetail({ project, creator, isOwner }: ProjectDetailProps)
               />
             </div>
             <div>
-              <label htmlFor="description" className="text-sm font-medium mb-2 block">
+              <label
+                htmlFor="description"
+                className="text-sm font-medium mb-2 block"
+              >
                 Description
               </label>
               <Textarea
@@ -249,20 +283,27 @@ export function ProjectDetail({ project, creator, isOwner }: ProjectDetailProps)
       </Dialog>
 
       {/* Delete Project Dialog */}
-      <Dialog open={isDeletingProject} onOpenChange={(open) => !open && setIsDeletingProject(false)}>
+      <Dialog
+        open={isDeletingProject}
+        onOpenChange={(open) => !open && setIsDeletingProject(false)}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Delete Project</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete this project? This action cannot be undone, and all associated media will be permanently deleted.
+              Are you sure you want to delete this project? This action cannot
+              be undone, and all associated media will be permanently deleted.
             </DialogDescription>
           </DialogHeader>
           <div className="flex justify-end gap-2 mt-4">
-            <Button variant="outline" onClick={() => setIsDeletingProject(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setIsDeletingProject(false)}
+            >
               Cancel
             </Button>
-            <Button 
-              variant="destructive" 
+            <Button
+              variant="destructive"
               onClick={handleConfirmDeleteProject}
               disabled={isSubmitting}
             >
@@ -273,4 +314,4 @@ export function ProjectDetail({ project, creator, isOwner }: ProjectDetailProps)
       </Dialog>
     </div>
   );
-} 
+}

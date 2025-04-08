@@ -1,6 +1,6 @@
 import axios, { AxiosError, AxiosRequestConfig, AxiosResponse } from "axios";
 import { API_BASE_URL } from "@/lib/api/api";
-import { createClient } from "@/utils/supabase/client";
+import { createClient } from "@/utils/supabase/server";
 
 // Define response type for better type safety
 export interface ApiResponse<T = any> {
@@ -24,13 +24,25 @@ apiClient.interceptors.request.use(
     try {
       // Get the current session
       const supabase = await createClient();
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
 
-      // If there's a session, add the access token to the request
-      if (session) {
-        config.headers.Authorization = `Bearer ${session.access_token}`;
+      // Use getUser instead of getSession for improved security
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      // console.log("user in api client", user);
+
+      // If there's a user, get the session to access the token
+      if (user) {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+
+        // console.log("session in api client", session);
+
+        if (session) {
+          config.headers.Authorization = `Bearer ${session.access_token}`;
+        }
       }
     } catch (error) {
       console.error("Error adding auth token to request:", error);
@@ -58,19 +70,21 @@ apiClient.interceptors.response.use(
 
       try {
         const supabase = await createClient();
-        console.log("Checking current session...");
-        
-        // Get current session first to check if we have one
-        const { data: { session: currentSession } } = await supabase.auth.getSession();
-        
-        if (!currentSession) {
-          console.log("No active session found, cannot refresh");
+        console.log("Checking current user...");
+
+        // Use getUser instead of getSession for improved security
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+
+        if (!user) {
+          console.log("No active user found, cannot refresh");
           return Promise.reject({
             status: 401,
             message: "No active session found. Please log in.",
           });
         }
-        
+
         // Try to refresh the session
         console.log("Attempting to refresh session...");
         const {
@@ -112,9 +126,10 @@ apiClient.interceptors.response.use(
     const errorResponse = {
       data: null,
       status: error.response?.status || 500,
-      message: error.response?.data?.message || 
-               error.message || 
-               "An unexpected error occurred",
+      message:
+        error.response?.data?.message ||
+        error.message ||
+        "An unexpected error occurred",
     };
 
     // Log error for debugging
@@ -196,11 +211,11 @@ export const apiRequest = {
 // Helper function to handle API errors
 const handleApiError = (error: AxiosError): never => {
   // Check if this is already our formatted error
-  if (error.message && typeof error.status === 'number') {
+  if (error.message && typeof error.status === "number") {
     console.error("API Error (pre-formatted):", error);
     throw error;
   }
-  
+
   const errorResponse = {
     data: null,
     status: error.response?.status || 500,

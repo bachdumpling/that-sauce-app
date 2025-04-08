@@ -13,7 +13,7 @@ export async function getCreatorByUsername(username: string) {
     return response.data;
   } catch (error: any) {
     console.error("Error in getCreatorByUsername:", error);
-    
+
     // Handle specific error codes
     if (error.status === 404) {
       return {
@@ -21,7 +21,7 @@ export async function getCreatorByUsername(username: string) {
         error: "Creator not found",
       };
     }
-    
+
     return {
       success: false,
       error: error.message || "Failed to fetch creator",
@@ -44,7 +44,7 @@ export async function getProjectByTitle(
     return response.data;
   } catch (error: any) {
     console.error(`Error in getProjectByTitle: ${error.message}`, error);
-    
+
     // Handle specific error codes
     if (error.status === 404) {
       return {
@@ -52,7 +52,7 @@ export async function getProjectByTitle(
         error: "Project not found",
       };
     }
-    
+
     return {
       success: false,
       error: error.message || "Failed to fetch project",
@@ -66,9 +66,9 @@ export async function getProjectByTitle(
 export async function deleteProjectImage(projectId: string, imageId: string) {
   try {
     const url = API_ENDPOINTS.deleteProjectImage(projectId, imageId);
-    
+
     await apiRequest.delete(url);
-    
+
     return {
       success: true,
       message: "Image deleted successfully",
@@ -126,9 +126,9 @@ export async function updateCreatorProfile(
 export async function checkUsernameAvailability(username: string) {
   try {
     const url = `/creators/username-check?username=${encodeURIComponent(username)}`;
-    
+
     const response = await apiRequest.get(url);
-    
+
     return {
       success: true,
       available: response.data.available || false,

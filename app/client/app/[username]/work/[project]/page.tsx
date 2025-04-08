@@ -71,23 +71,6 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // Check if user has a creator profile with this username
-  let isOwner = false;
-
-  if (user) {
-    // Get the user's creator profile
-    const { data: userCreator } = await supabase
-      .from("creators")
-      .select("username")
-      .eq("profile_id", user.id)
-      .single();
-
-    // Check if the user's creator profile matches the requested username
-    if (userCreator && userCreator.username === username) {
-      isOwner = true;
-    }
-  }
-
   try {
     console.log("Fetching creator data for username:", username);
     const creatorResponse = await getCreatorByUsername(username);
@@ -121,6 +104,21 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
     const creator = creatorResponse.data;
     const project = projectResponse.data;
 
+    // Check if user has a creator profile with this username
+    if (user) {
+      // Get the user's creator profile
+      const { data: userCreator } = await supabase
+        .from("creators")
+        .select("username")
+        .eq("profile_id", user.id)
+        .single();
+
+      // Check if the user's creator profile matches the requested username
+      if (userCreator && userCreator.username === username) {
+        creator.isOwner = true;
+      }
+    }
+
     console.log("Successfully fetched creator and project data");
     console.log("Creator:", creator.username);
     console.log("Project:", project.title);
@@ -139,7 +137,6 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
           <ProjectDetail
             project={project}
             creator={creator}
-            isOwner={isOwner}
           />
         </Suspense>
       </div>

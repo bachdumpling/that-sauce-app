@@ -1,4 +1,5 @@
 import { SearchClientWrapper } from "./components/search-client-wrapper";
+import { createClient } from "@/utils/supabase/client";
 
 const EXAMPLE_QUERIES = [
   "high fashion photographers with female models in fashion, in studio",
@@ -42,6 +43,17 @@ export default async function SearchPage({
   const initialContentType =
     params.content_type === "videos" ? "videos" : "all";
   const initialRole = params.role || "";
+
+  try {
+    const supabase = createClient();
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
+    console.log("session in search page", session);
+  } catch (error) {
+    console.error("Error checking if user is owner:", error);
+  }
 
   return (
     <div className="container">

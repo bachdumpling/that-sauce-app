@@ -19,6 +19,8 @@ export interface Creator {
   user_id?: string;
   created_at?: string;
   updated_at?: string;
+  profile_id?: string;
+  isOwner?: boolean;
 }
 
 export interface Project {

@@ -110,6 +110,7 @@ router.post(
 // Get creator by username
 router.get(
   "/:username",
+  extractUser,
   cacheMiddleware(300, (req) => `creator_username_${req.params.username}`),
   getCreatorByUsername
 );

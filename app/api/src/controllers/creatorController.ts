@@ -75,7 +75,7 @@ export class CreatorController {
       Object.entries(filters).forEach(([key, value]) => {
         if (key && value !== undefined) {
           // Special handling for primary_role which is an array field
-          if (key === 'primary_role') {
+          if (key === "primary_role") {
             // Case-insensitive search within the array
             query = query.or(`primary_role.ilike.%${value}%`);
           } else {
@@ -128,7 +128,7 @@ export class CreatorController {
             "Graphic Designer",
             "UI Designer",
             "UX Designer",
-            "Creative Director", 
+            "Creative Director",
             "Product Designer",
             "Web Designer",
             "Art Director",
@@ -137,7 +137,7 @@ export class CreatorController {
             "3D Artist",
             "Photographer",
             "Developer",
-            "Artist"
+            "Artist",
           ],
           // Add other available filters as needed
         }),
@@ -178,8 +178,11 @@ export class CreatorController {
       logger.debug(`Fetching creator with username: ${username}`);
 
       try {
-        const creator =
-          await this.creatorProfileService.getCreatorByUsername(username);
+        // Pass the user's ID from the authenticated request if available
+        const creator = await this.creatorProfileService.getCreatorByUsername(
+          username,
+          req.user?.id
+        );
 
         if (!creator) {
           logger.info(`Creator not found for username: ${username}`);
@@ -444,7 +447,7 @@ export class CreatorController {
       Object.entries(filters).forEach(([key, value]) => {
         if (key && value !== undefined) {
           // Special handling for primary_role which is an array field
-          if (key === 'primary_role') {
+          if (key === "primary_role") {
             // Case-insensitive search within the array
             query = query.or(`primary_role.ilike.%${value}%`);
           } else {

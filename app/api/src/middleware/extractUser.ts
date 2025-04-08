@@ -34,7 +34,7 @@ export const extractUser = async (
     }
 
     const token = authHeader.split(" ")[1];
-    console.log("token", token);
+    // console.log("token", token);
 
     // Verify the token with Supabase
     const {
@@ -47,6 +47,8 @@ export const extractUser = async (
       logger.warn("Invalid auth token provided", { error });
       return next();
     }
+
+    // console.log("user in extractUser", user);
 
     // Add the user to the request
     req.user = {

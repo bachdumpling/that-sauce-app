@@ -1,5 +1,5 @@
 import { apiRequest } from "./client";
-import { API_ENDPOINTS, buildApiUrl } from "./api";
+import { API_ENDPOINTS } from "./api";
 
 export interface ProfileUpdateData {
   first_name?: string;
@@ -12,14 +12,12 @@ export interface ProfileUpdateData {
  */
 export async function updateProfile(data: ProfileUpdateData) {
   try {
-    const url = buildApiUrl('/profile');
-    
     const response = await apiRequest.put<{
       success: boolean;
       message?: string;
       data?: any;
       error?: string;
-    }>(url, data);
+    }>('/profile', data);
 
     if (response.data && response.data.success) {
       return {
