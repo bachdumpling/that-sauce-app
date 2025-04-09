@@ -2,7 +2,7 @@ import { cookies } from "next/headers";
 import { createClient } from "@/utils/supabase/server";
 import { redirect } from "next/navigation";
 import { API_BASE_URL } from "@/lib/api/shared/endpoints";
-import { ApiResponse } from "@/lib/api/shared/types";
+import { ApiResponse } from "@/client/types";
 
 // Helper function to get server-side authentication token
 async function getServerAuthToken() {

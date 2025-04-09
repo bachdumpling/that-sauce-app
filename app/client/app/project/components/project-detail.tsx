@@ -27,10 +27,7 @@ interface ProjectDetailProps {
   creator: Creator;
 }
 
-export function ProjectDetail({
-  project,
-  creator,
-}: ProjectDetailProps) {
+export function ProjectDetail({ project, creator }: ProjectDetailProps) {
   const router = useRouter();
   const [selectedMedia, setSelectedMedia] = useState<
     ((ImageType | Video) & { type: "image" | "video" }) | null

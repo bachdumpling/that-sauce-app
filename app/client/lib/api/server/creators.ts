@@ -1,6 +1,6 @@
 import { serverApiRequest } from "./apiServer";
+import { ApiResponse, Creator, Project } from "@/client/types";
 import { API_ENDPOINTS } from "@/lib/api/shared/endpoints";
-import { ApiResponse, Creator, Project } from "@/lib/api/shared/types";
 import { cookies } from "next/headers";
 import { createClient } from "@/utils/supabase/server";
 
@@ -17,6 +17,18 @@ export async function getCreatorByUsernameServer(
 }
 
 /**
+ * Get creator by ID from the server-side
+ * Uses server-side authentication and data fetching
+ */
+export async function getCreatorByIdServer(
+  creatorId: string
+): Promise<ApiResponse<Creator>> {
+  // Assuming there's an endpoint to get creator by ID
+  // If not, we can use direct DB access as a fallback
+  return serverApiRequest.get<Creator>(API_ENDPOINTS.getCreator(creatorId));
+}
+
+/**
  * Get creator's projects from the server-side
  * Uses server-side authentication and data fetching
  */
@@ -24,8 +36,8 @@ export async function getCreatorProjectsServer(
   username: string,
   page = 1,
   limit = 10
-): Promise<ApiResponse<{ projects: Project[]; total: number }>> {
-  return serverApiRequest.get<{ projects: Project[]; total: number }>(
+): Promise<ApiResponse<{ projects: LegacyProject[]; total: number }>> {
+  return serverApiRequest.get<{ projects: LegacyProject[]; total: number }>(
     API_ENDPOINTS.getCreatorByUsername(username) + "/projects",
     { page, limit }
   );
@@ -86,8 +98,8 @@ export async function updateCreatorProfileServer(
 export async function getProjectByTitleServer(
   username: string,
   projectTitle: string
-): Promise<ApiResponse<Project>> {
-  return serverApiRequest.get<Project>(
+): Promise<ApiResponse<LegacyProject>> {
+  return serverApiRequest.get<LegacyProject>(
     API_ENDPOINTS.getProjectByTitle(username, projectTitle)
   );
 }

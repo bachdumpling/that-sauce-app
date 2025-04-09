@@ -7,13 +7,13 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { AlertTriangle } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Creator } from "@/lib/api/shared/types";
+import { LegacyCreator } from "@/client/types";
 
 interface CreatorPageProps {
   params: {
     username: string;
   };
-  creator?: Creator;
+  creator?: LegacyCreator;
 }
 
 export async function generateMetadata({

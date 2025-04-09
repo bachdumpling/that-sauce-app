@@ -1,7 +1,7 @@
 import axios, { AxiosError, AxiosRequestConfig, AxiosResponse } from "axios";
 import { createClient } from "@/utils/supabase/client";
 import { API_BASE_URL } from "@/lib/api/shared/endpoints";
-import { ApiResponse } from "@/lib/api/shared/types";
+import { ApiResponse } from "@/client/types";
 
 // Create axios instance with default config
 export const apiClient = axios.create({

@@ -4,7 +4,7 @@ import { serverApi } from "@/lib/api";
 import { AlertTriangle } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Creator } from "@/lib/api/shared/types";
+import { Creator } from "@/client/types";
 
 interface CreatorAboutPageProps {
   params: {
@@ -32,7 +32,8 @@ export async function generateMetadata({
 
     return {
       title: `About ${creator.username} | that sauce`,
-      description: creator.bio || `Learn more about ${creator.username} on that sauce`,
+      description:
+        creator.bio || `Learn more about ${creator.username} on that sauce`,
     };
   } catch (error) {
     return {
@@ -42,13 +43,20 @@ export async function generateMetadata({
 }
 
 // Error UI component
-function CreatorAboutError({ error, username }: { error: any; username: string }) {
+function CreatorAboutError({
+  error,
+  username,
+}: {
+  error: any;
+  username: string;
+}) {
   return (
     <div className="py-16 flex flex-col items-center justify-center text-center">
       <AlertTriangle className="h-12 w-12 text-yellow-500 mb-4" />
       <h1 className="text-3xl font-bold mb-4">Something went wrong</h1>
       <p className="text-muted-foreground mb-2 max-w-md">
-        We encountered an error while trying to load the about page for "{username}".
+        We encountered an error while trying to load the about page for "
+        {username}".
       </p>
       <p className="text-sm text-muted-foreground mb-8 max-w-md">
         Error: {error.message || "Unknown error"}
@@ -77,11 +85,16 @@ export default async function CreatorAboutPage({
   if (!creator) {
     try {
       const response = await serverApi.getCreatorByUsernameServer(username);
-      
+
       if (!response.success) {
-        return <CreatorAboutError error={{ message: response.error }} username={username} />;
+        return (
+          <CreatorAboutError
+            error={{ message: response.error }}
+            username={username}
+          />
+        );
       }
-      
+
       creator = response.data;
     } catch (error: any) {
       return <CreatorAboutError error={error} username={username} />;
@@ -91,7 +104,7 @@ export default async function CreatorAboutPage({
   return (
     <div className="py-8">
       <h2 className="text-2xl font-bold mb-6">About {creator.username}</h2>
-      
+
       {/* Bio section */}
       <div className="mb-8">
         <h3 className="text-lg font-medium mb-3">Bio</h3>
@@ -99,15 +112,15 @@ export default async function CreatorAboutPage({
           {creator.bio || "No bio available yet."}
         </p>
       </div>
-      
+
       {/* Skills section */}
       <div className="mb-8">
         <h3 className="text-lg font-medium mb-3">Skills</h3>
         {creator.primary_role && creator.primary_role.length > 0 ? (
           <div className="flex flex-wrap gap-2">
             {creator.primary_role.map((role) => (
-              <span 
-                key={role} 
+              <span
+                key={role}
                 className="px-3 py-1 rounded-full bg-muted text-sm"
               >
                 {typeof role === "string" ? role.replace(/-/g, " ") : role}
@@ -118,7 +131,7 @@ export default async function CreatorAboutPage({
           <p className="text-muted-foreground">No skills listed yet.</p>
         )}
       </div>
-      
+
       {/* Contact section */}
       <div>
         <h3 className="text-lg font-medium mb-3">Contact</h3>
@@ -126,7 +139,7 @@ export default async function CreatorAboutPage({
           {creator.email || "No contact information available."}
         </p>
       </div>
-      
+
       {creator.isOwner && (
         <div className="mt-10 pt-6 border-t">
           <Button>Edit About Page</Button>

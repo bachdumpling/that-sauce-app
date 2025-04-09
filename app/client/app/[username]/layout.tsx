@@ -5,7 +5,7 @@ import { createClient } from "@/utils/supabase/server";
 import { CreatorHeader } from "./components/creator-header";
 import { TabsNav } from "./components/tabs-nav";
 import React from "react";
-import { Creator } from "@/lib/api/shared/types";
+import { Creator } from "@/client/types";
 import { cn } from "@/lib/utils";
 import { notFound } from "next/navigation";
 

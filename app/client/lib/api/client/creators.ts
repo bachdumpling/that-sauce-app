@@ -1,56 +1,55 @@
-import { apiRequest } from "./apiClient";
+import { clientApiRequest } from "./apiClient";
+import { ApiResponse, Creator, Project } from "@/client/types";
 import { API_ENDPOINTS, buildApiUrl } from "@/lib/api/shared/endpoints";
-import { ApiResponse, Creator, Project } from "@/lib/api/shared/types";
 
 /**
- * Get creator by username from the client-side
+ * Get creator by username
  */
-export async function getCreatorByUsernameClient(
+export async function getCreatorByUsername(
   username: string
 ): Promise<ApiResponse<Creator>> {
-  return apiRequest.get<Creator>(API_ENDPOINTS.getCreatorByUsername(username));
+  return clientApiRequest.get<Creator>(
+    API_ENDPOINTS.getCreatorByUsername(username)
+  );
 }
 
 /**
- * Get creator's projects from the client-side
+ * Get creator's projects
  */
-export async function getCreatorProjectsClient(
+export async function getCreatorProjects(
   username: string,
   page = 1,
   limit = 10
 ): Promise<ApiResponse<{ projects: Project[]; total: number }>> {
   const url = buildApiUrl(
     API_ENDPOINTS.getCreatorByUsername(username) + "/projects",
-    {
-      page,
-      limit,
-    }
+    { page, limit }
   );
 
-  return apiRequest.get<{ projects: Project[]; total: number }>(url);
+  return clientApiRequest.get<{ projects: Project[]; total: number }>(url);
 }
 
 /**
- * Update creator profile from the client-side
+ * Update creator profile
  */
-export async function updateCreatorProfileClient(
+export async function updateCreatorProfile(
   username: string,
   profileData: Partial<Creator>
 ): Promise<ApiResponse<Creator>> {
-  return apiRequest.put<Creator>(
+  return clientApiRequest.put<Creator>(
     API_ENDPOINTS.updateCreatorProfile(username),
     profileData
   );
 }
 
 /**
- * Get project by title from a specific creator
+ * Get project by title
  */
-export async function getProjectByTitleClient(
+export async function getProjectByTitle(
   username: string,
   projectTitle: string
 ): Promise<ApiResponse<Project>> {
-  return apiRequest.get<Project>(
+  return clientApiRequest.get<Project>(
     API_ENDPOINTS.getProjectByTitle(username, projectTitle)
   );
 }

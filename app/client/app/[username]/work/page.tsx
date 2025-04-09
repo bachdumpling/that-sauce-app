@@ -1,11 +1,11 @@
 import { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { serverApi } from "@/lib/api";
-import { ImageIcon, Plus } from "lucide-react";
+import { ImageIcon, Plus, AlertTriangle } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Creator } from "@/lib/api/shared/types";
-  
+import { Creator } from "@/client/types";
+
 interface CreatorWorkPageProps {
   params: {
     username: string;
@@ -76,21 +76,23 @@ export default async function CreatorWorkPage({
           <div className="group hover:opacity-90 transition-opacity">
             <div className="overflow-hidden">
               <div className="w-full h-72 object-cover rounded-[16px] border border-gray-200 grid place-items-center">
-                <Button
-                  variant="outline"
-                  className="flex flex-col items-center justify-center rounded-full p-2"
-                >
-                  <Plus className="h-6 w-6 text-muted-foreground" />
-                </Button>
+                <Link href="/project/new">
+                  <Button
+                    variant="outline"
+                    className="flex flex-col items-center justify-center rounded-full p-2"
+                  >
+                    <Plus className="h-6 w-6 text-muted-foreground" />
+                  </Button>
+                </Link>
               </div>
             </div>
           </div>
         )}
-        
+
         {creator.projects && creator.projects.length > 0 ? (
           creator.projects.map((project) => (
             <Link
-              href={`/${username}/work/${project.id}`}
+              href={`/project/${project.id}`}
               key={project.id}
               className="group hover:opacity-90 transition-opacity"
             >
@@ -133,13 +135,20 @@ export default async function CreatorWorkPage({
 }
 
 // Error UI component
-function CreatorWorkError({ error, username }: { error: any; username: string }) {
+function CreatorWorkError({
+  error,
+  username,
+}: {
+  error: any;
+  username: string;
+}) {
   return (
     <div className="py-16 flex flex-col items-center justify-center text-center">
       <AlertTriangle className="h-12 w-12 text-yellow-500 mb-4" />
       <h1 className="text-3xl font-bold mb-4">Something went wrong</h1>
       <p className="text-muted-foreground mb-2 max-w-md">
-        We encountered an error while trying to load the work page for "{username}".
+        We encountered an error while trying to load the work page for "
+        {username}".
       </p>
       <p className="text-sm text-muted-foreground mb-8 max-w-md">
         Error: {error.message || "Unknown error"}
