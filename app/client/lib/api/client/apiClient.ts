@@ -1,13 +1,7 @@
 import axios, { AxiosError, AxiosRequestConfig, AxiosResponse } from "axios";
-import { API_BASE_URL } from "@/lib/api/api";
 import { createClient } from "@/utils/supabase/client";
-
-// Define response type for better type safety
-export interface ApiResponse<T = any> {
-  data: T;
-  status: number;
-  message?: string;
-}
+import { API_BASE_URL } from "@/lib/api/shared/endpoints";
+import { ApiResponse } from "@/lib/api/shared/types";
 
 // Create axios instance with default config
 export const apiClient = axios.create({
@@ -30,15 +24,11 @@ apiClient.interceptors.request.use(
         data: { user },
       } = await supabase.auth.getUser();
 
-      // console.log("user in api client", user);
-
       // If there's a user, get the session to access the token
       if (user) {
         const {
           data: { session },
         } = await supabase.auth.getSession();
-
-        // console.log("session in api client", session);
 
         if (session) {
           config.headers.Authorization = `Bearer ${session.access_token}`;
@@ -80,8 +70,9 @@ apiClient.interceptors.response.use(
         if (!user) {
           console.log("No active user found, cannot refresh");
           return Promise.reject({
-            status: 401,
-            message: "No active session found. Please log in.",
+            success: false,
+            data: null,
+            error: "No active session found. Please log in.",
           });
         }
 
@@ -116,17 +107,19 @@ apiClient.interceptors.response.use(
 
         // Instead of auto-redirecting, just return a clear error
         return Promise.reject({
-          status: 401,
-          message: "Authentication failed. Please log in again.",
+          success: false,
+          data: null,
+          error: "Authentication failed. Please log in again.",
         });
       }
     }
 
     // For all other errors, create a consistent error response
     const errorResponse = {
+      success: false,
       data: null,
-      status: error.response?.status || 500,
-      message:
+      error:
+        error.response?.data?.error?.message ||
         error.response?.data?.message ||
         error.message ||
         "An unexpected error occurred",
@@ -146,10 +139,29 @@ export const apiRequest = {
     config?: AxiosRequestConfig
   ): Promise<ApiResponse<T>> => {
     try {
-      const response: AxiosResponse<T> = await apiClient.get(url, config);
+      const response: AxiosResponse = await apiClient.get(url, config);
+
+      // Handle nested response formats
+      if (response.data && typeof response.data === "object") {
+        if ("success" in response.data) {
+          // Already in the correct format
+          return {
+            success: response.data.success,
+            data: response.data.success ? response.data.data : null,
+            error:
+              !response.data.success && response.data.error
+                ? response.data.error.message
+                : undefined,
+            meta: response.data.meta,
+          };
+        }
+      }
+
+      // Fallback for unexpected response format
       return {
+        success: true,
         data: response.data,
-        status: response.status,
+        meta: response.data.meta,
       };
     } catch (error) {
       return handleApiError(error as AxiosError);
@@ -162,14 +174,29 @@ export const apiRequest = {
     config?: AxiosRequestConfig
   ): Promise<ApiResponse<T>> => {
     try {
-      const response: AxiosResponse<T> = await apiClient.post(
-        url,
-        data,
-        config
-      );
+      const response: AxiosResponse = await apiClient.post(url, data, config);
+
+      // Handle nested response formats
+      if (response.data && typeof response.data === "object") {
+        if ("success" in response.data) {
+          // Already in the correct format
+          return {
+            success: response.data.success,
+            data: response.data.success ? response.data.data : null,
+            error:
+              !response.data.success && response.data.error
+                ? response.data.error.message
+                : undefined,
+            meta: response.data.meta,
+          };
+        }
+      }
+
+      // Fallback for unexpected response format
       return {
+        success: true,
         data: response.data,
-        status: response.status,
+        meta: response.data.meta,
       };
     } catch (error) {
       return handleApiError(error as AxiosError);
@@ -182,10 +209,29 @@ export const apiRequest = {
     config?: AxiosRequestConfig
   ): Promise<ApiResponse<T>> => {
     try {
-      const response: AxiosResponse<T> = await apiClient.put(url, data, config);
+      const response: AxiosResponse = await apiClient.put(url, data, config);
+
+      // Handle nested response formats
+      if (response.data && typeof response.data === "object") {
+        if ("success" in response.data) {
+          // Already in the correct format
+          return {
+            success: response.data.success,
+            data: response.data.success ? response.data.data : null,
+            error:
+              !response.data.success && response.data.error
+                ? response.data.error.message
+                : undefined,
+            meta: response.data.meta,
+          };
+        }
+      }
+
+      // Fallback for unexpected response format
       return {
+        success: true,
         data: response.data,
-        status: response.status,
+        meta: response.data.meta,
       };
     } catch (error) {
       return handleApiError(error as AxiosError);
@@ -197,10 +243,29 @@ export const apiRequest = {
     config?: AxiosRequestConfig
   ): Promise<ApiResponse<T>> => {
     try {
-      const response: AxiosResponse<T> = await apiClient.delete(url, config);
+      const response: AxiosResponse = await apiClient.delete(url, config);
+
+      // Handle nested response formats
+      if (response.data && typeof response.data === "object") {
+        if ("success" in response.data) {
+          // Already in the correct format
+          return {
+            success: response.data.success,
+            data: response.data.success ? response.data.data : null,
+            error:
+              !response.data.success && response.data.error
+                ? response.data.error.message
+                : undefined,
+            meta: response.data.meta,
+          };
+        }
+      }
+
+      // Fallback for unexpected response format
       return {
+        success: true,
         data: response.data,
-        status: response.status,
+        meta: response.data.meta,
       };
     } catch (error) {
       return handleApiError(error as AxiosError);
@@ -209,36 +274,41 @@ export const apiRequest = {
 };
 
 // Helper function to handle API errors
-const handleApiError = (error: AxiosError): never => {
+const handleApiError = (error: AxiosError): ApiResponse<any> => {
   // Check if this is already our formatted error
-  if (error.message && typeof error.status === "number") {
+  if (
+    error.message &&
+    "success" in error &&
+    "data" in error &&
+    "error" in error
+  ) {
     console.error("API Error (pre-formatted):", error);
-    throw error;
+    return error as unknown as ApiResponse<any>;
   }
 
-  const errorResponse = {
+  const errorResponse: ApiResponse<any> = {
+    success: false,
     data: null,
-    status: error.response?.status || 500,
-    message:
+    error:
+      error.response?.data?.error?.message ||
       error.response?.data?.message ||
-      error.response?.data?.error ||
       error.message ||
       "An unexpected error occurred",
   };
 
   // Add specific handling for common errors
-  if (errorResponse.status === 401) {
-    errorResponse.message = "Authentication required. Please log in.";
-  } else if (errorResponse.status === 403) {
-    errorResponse.message = "You don't have permission to perform this action.";
-  } else if (errorResponse.status === 404) {
-    errorResponse.message = "The requested resource was not found.";
-  } else if (errorResponse.status === 429) {
-    errorResponse.message = "Too many requests. Please try again later.";
+  if (error.response?.status === 401) {
+    errorResponse.error = "Authentication required. Please log in.";
+  } else if (error.response?.status === 403) {
+    errorResponse.error = "You don't have permission to perform this action.";
+  } else if (error.response?.status === 404) {
+    errorResponse.error = "The requested resource was not found.";
+  } else if (error.response?.status === 429) {
+    errorResponse.error = "Too many requests. Please try again later.";
   }
 
   // Log error for debugging
   console.error("API Error:", errorResponse);
 
-  throw errorResponse;
+  return errorResponse;
 };

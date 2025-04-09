@@ -1,11 +1,11 @@
 import { ReactNode } from "react";
 import { Toaster } from "@/components/ui/sonner";
-import { getCreatorByUsername } from "@/lib/api/creators";
+import { serverApi } from "@/lib/api/index";
 import { createClient } from "@/utils/supabase/server";
 import { CreatorHeader } from "./components/creator-header";
 import { TabsNav } from "./components/tabs-nav";
 import React from "react";
-import { Creator } from "@/components/shared/types";
+import { Creator } from "@/lib/api/shared/types";
 import { cn } from "@/lib/utils";
 import { notFound } from "next/navigation";
 
@@ -26,27 +26,29 @@ export default async function CreatorLayout({
   const { username } = resolvedParams;
 
   // Get creator data server-side
-  const response = await getCreatorByUsername(username);
+  const response = await serverApi.getCreatorByUsernameServer(username);
 
   // Handle creator not found - use Next.js notFound() to show the not-found.tsx component
   if (!response.success) {
+    console.error("Creator not found:", response.error);
     notFound();
   }
 
   const creator = response.data;
 
+  // If creator is still null or undefined, show not found
+  if (!creator) {
+    console.error("Creator data is null or undefined");
+    notFound();
+  }
+
   return (
     <>
       <div className="container w-full max-w-7xl mx-auto">
-        <CreatorHeader
-          creator={creator}
-          username={username}
-        />
+        <CreatorHeader creator={creator} username={username} />
         <TabsNav creator={creator} username={username} />
 
-        <CreatorPageContent creator={creator}>
-          {children}
-        </CreatorPageContent>
+        <CreatorPageContent creator={creator}>{children}</CreatorPageContent>
       </div>
       <Toaster />
     </>

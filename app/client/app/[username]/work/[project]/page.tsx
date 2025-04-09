@@ -2,10 +2,9 @@ import { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { Suspense } from "react";
 import Link from "next/link";
-import { getCreatorByUsername } from "@/lib/api/creators";
-import { getProject } from "@/lib/api/projects";
+import { serverApi } from "@/lib/api";
 import { Skeleton } from "@/components/ui/skeleton";
-import { createClient } from "@/utils/supabase/server";
+import { createClient } from "@/utils/supabase/client";
 import { ProjectDetail } from "./components/project-detail";
 import { ChevronLeft } from "lucide-react";
 
@@ -25,16 +24,17 @@ export async function generateMetadata({
   console.log("Generating metadata for:", { username, projectId });
 
   try {
-    const creatorResponse = await getCreatorByUsername(username);
-    if (!creatorResponse.success) {
+    const creatorResponse =
+      await serverApi.getCreatorByUsernameServer(username);
+    if (!creatorResponse.success || !creatorResponse.data) {
       console.log("Creator not found when generating metadata");
       return {
         title: "Project Not Found",
       };
     }
 
-    const projectResponse = await getProject(projectId);
-    if (!projectResponse.success) {
+    const projectResponse = await serverApi.getProjectByIdServer(projectId);
+    if (!projectResponse.success || !projectResponse.data) {
       console.log("Project not found when generating metadata");
       return {
         title: "Project Not Found",
@@ -66,24 +66,25 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
 
   const supabase = await createClient();
 
-  // Get the current user if logged in
+  // Get the current user if logged in - use getUser for security
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
   try {
     console.log("Fetching creator data for username:", username);
-    const creatorResponse = await getCreatorByUsername(username);
-    if (!creatorResponse.success) {
+    const creatorResponse =
+      await serverApi.getCreatorByUsernameServer(username);
+    if (!creatorResponse.success || !creatorResponse.data) {
       console.error("Creator not found:", creatorResponse.error);
       notFound();
     }
 
     console.log("Fetching project data for ID:", projectId);
-    const projectResponse = await getProject(projectId);
+    const projectResponse = await serverApi.getProjectByIdServer(projectId);
 
     // Handle authentication errors
-    if (!projectResponse.success) {
+    if (!projectResponse.success || !projectResponse.data) {
       console.error("Project not found:", projectResponse.error);
 
       // If it's an authentication error, redirect to login
@@ -134,10 +135,7 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
         </Link>
 
         <Suspense fallback={<Skeleton className="h-96 w-full" />}>
-          <ProjectDetail
-            project={project}
-            creator={creator}
-          />
+          <ProjectDetail project={project} creator={creator} />
         </Suspense>
       </div>
     );

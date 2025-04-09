@@ -1,10 +1,10 @@
 import { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { getCreatorByUsername } from "@/lib/api/creators";
+import { serverApi } from "@/lib/api";
 import { AlertTriangle } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Creator } from "@/components/shared/types";
+import { Creator } from "@/lib/api/shared/types";
 
 interface CreatorAboutPageProps {
   params: {
@@ -20,7 +20,7 @@ export async function generateMetadata({
   const { username } = resolvedParams;
 
   try {
-    const response = await getCreatorByUsername(username);
+    const response = await serverApi.getCreatorByUsernameServer(username);
 
     if (!response.success) {
       return {
@@ -76,7 +76,7 @@ export default async function CreatorAboutPage({
   // If creator isn't provided via props, fetch it directly
   if (!creator) {
     try {
-      const response = await getCreatorByUsername(username);
+      const response = await serverApi.getCreatorByUsernameServer(username);
       
       if (!response.success) {
         return <CreatorAboutError error={{ message: response.error }} username={username} />;

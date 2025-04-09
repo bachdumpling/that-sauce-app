@@ -1,7 +1,6 @@
 import { API_ENDPOINTS, buildApiUrl } from "./api";
 import { Project } from "@/components/shared/types";
 import { apiRequest } from "./client";
-import { createClient } from "@/utils/supabase/client";
 
 export interface ProjectMedia {
   id: string;
@@ -186,8 +185,8 @@ export async function addProjectMedia(
     const response = await apiRequest.post(url, formData, {
       headers: {
         // Don't set Content-Type header, let browser set it with boundary for FormData
-        "Content-Type": undefined
-      }
+        "Content-Type": undefined,
+      },
     });
 
     return {
@@ -196,14 +195,14 @@ export async function addProjectMedia(
     };
   } catch (error: any) {
     console.error("Error adding project media:", error);
-    
+
     if (error.status === 413) {
       return {
         success: false,
         error: "File is too large. Maximum size is 50MB",
       };
     }
-    
+
     return {
       success: false,
       error: error.message || "Failed to add media. Please try again.",

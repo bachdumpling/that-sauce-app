@@ -1,10 +1,10 @@
 import { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { getCreatorByUsername } from "@/lib/api/creators";
+import { serverApi } from "@/lib/api";
 import { ImageIcon, Plus } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Creator } from "@/components/shared/types";
+import { Creator } from "@/lib/api/shared/types";
   
 interface CreatorWorkPageProps {
   params: {
@@ -20,7 +20,7 @@ export async function generateMetadata({
   const { username } = resolvedParams;
 
   try {
-    const response = await getCreatorByUsername(username);
+    const response = await serverApi.getCreatorByUsernameServer(username);
 
     if (!response.success) {
       return {
@@ -52,7 +52,7 @@ export default async function CreatorWorkPage({
   // If creator isn't provided via props, fetch it directly
   if (!creator) {
     try {
-      const response = await getCreatorByUsername(username);
+      const response = await serverApi.getCreatorByUsernameServer(username);
 
       if (!response.success) {
         return (
@@ -127,6 +127,30 @@ export default async function CreatorWorkPage({
             )}
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+// Error UI component
+function CreatorWorkError({ error, username }: { error: any; username: string }) {
+  return (
+    <div className="py-16 flex flex-col items-center justify-center text-center">
+      <AlertTriangle className="h-12 w-12 text-yellow-500 mb-4" />
+      <h1 className="text-3xl font-bold mb-4">Something went wrong</h1>
+      <p className="text-muted-foreground mb-2 max-w-md">
+        We encountered an error while trying to load the work page for "{username}".
+      </p>
+      <p className="text-sm text-muted-foreground mb-8 max-w-md">
+        Error: {error.message || "Unknown error"}
+      </p>
+      <div className="flex gap-4">
+        <Button asChild>
+          <Link href="/">Go Home</Link>
+        </Button>
+        <Button variant="outline" asChild>
+          <Link href={`/client/app/${username}`}>View Profile</Link>
+        </Button>
       </div>
     </div>
   );
