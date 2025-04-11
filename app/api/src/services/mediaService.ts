@@ -236,8 +236,6 @@ export class MediaService {
     const { userId, projectId, creatorId, metadata = {} } = options;
 
     try {
-      logger.debug("Uploading media from URL", { url, projectId, creatorId });
-
       // Determine media type from URL or metadata
       let mediaType: "image" | "video" = "image";
       const fileExtension = path.extname(url).toLowerCase();

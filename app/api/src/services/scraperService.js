@@ -10,7 +10,6 @@ class BaseScraper {
     this.browser = null;
     this.page = null;
   }
-
   /**
    * Initialize the browser and page
    */
@@ -52,7 +51,7 @@ class BaseScraper {
       if (navigationError.name === "TimeoutError") {
         logger.debug("Retrying navigation with more lenient condition");
         await this.page.goto(this.url, {
-          waitUntil: "networkidle2",
+          waitUntil: "domcontentloaded",
           timeout: 30000,
         });
       } else {
@@ -60,10 +59,14 @@ class BaseScraper {
       }
     }
 
-    // Wait for some time to ensure dynamic content loads
-    await this.page.evaluate(
-      () => new Promise((resolve) => setTimeout(resolve, 3000))
-    );
+    // Wait for a specific selector to ensure dynamic content has loaded
+    try {
+      await this.page.waitForSelector(".some-dynamic-content-selector", {
+        timeout: 5000,
+      });
+    } catch (error) {
+      logger.warn("Dynamic content selector not found within timeout.");
+    }
   }
 
   /**
@@ -412,13 +415,40 @@ class BehanceScraper extends BaseScraper {
           }
         });
 
-        // Look for direct video elements
+        // Look for direct video elements with better attribute handling
         const videoElements = Array.from(document.querySelectorAll("video"));
         videoElements.forEach((video) => {
+          // Try to get src attribute first
           const src = video.getAttribute("src");
           if (src) {
             videos.push({ url: src });
           }
+
+          // Check for data attributes that might contain video sources
+          const dataAttrs = [
+            "data-src",
+            "data-video-src",
+            "data-video-url",
+            "data-url",
+            "data-mp4",
+          ];
+
+          for (const attr of dataAttrs) {
+            const dataSrc = video.getAttribute(attr);
+            if (dataSrc && dataSrc.trim() !== "") {
+              videos.push({ url: dataSrc });
+              break; // Use the first valid data attribute we find
+            }
+          }
+
+          // Check for source elements within the video tag
+          const sources = video.querySelectorAll("source");
+          sources.forEach((source) => {
+            const sourceUrl = source.getAttribute("src");
+            if (sourceUrl) {
+              videos.push({ url: sourceUrl });
+            }
+          });
         });
 
         // Look for video links
@@ -623,6 +653,46 @@ class DribbbleScraper extends BaseScraper {
           }
         });
 
+        // Look for images with class="block-media"
+        const blockMediaElements = document.querySelectorAll(".block-media");
+        blockMediaElements.forEach((element) => {
+          // Check if it's an image
+          const img = element.querySelector("img");
+          if (img) {
+            const srcset = img.getAttribute("srcset");
+            const src = img.getAttribute("src");
+            const dataSrc = img.getAttribute("data-src");
+
+            let bestUrl = src;
+
+            // Try to get the highest resolution from srcset
+            if (srcset) {
+              const srcSetParts = srcset.split(",");
+              if (srcSetParts.length > 0) {
+                const lastSrcSet = srcSetParts[srcSetParts.length - 1]
+                  .trim()
+                  .split(" ")[0];
+                if (lastSrcSet) bestUrl = lastSrcSet;
+              }
+            }
+
+            // Use data-src if available
+            if (dataSrc && dataSrc.includes("http")) {
+              bestUrl = dataSrc;
+            }
+
+            if (bestUrl && bestUrl.startsWith("http")) {
+              images.push({
+                url: bestUrl,
+                alt: img.alt || undefined,
+                width: img.naturalWidth || img.width || undefined,
+                height: img.naturalHeight || img.height || undefined,
+                source: "block-media",
+              });
+            }
+          }
+        });
+
         // Also look for image data in any script tags
         const scripts = Array.from(
           document.querySelectorAll("script[type='application/ld+json']")
@@ -660,6 +730,207 @@ class DribbbleScraper extends BaseScraper {
   }
 
   /**
+   * Extract video platform and ID from URL - same as Behance's method
+   */
+  extractVideoInfo(url) {
+    if (!url) return { platform: null, videoId: null };
+
+    // Normalize URL
+    url = url.trim();
+
+    // Check for Vimeo
+    const vimeoPatterns = [
+      /vimeo\.com\/(\d+)/, // Standard URL
+      /vimeo\.com\/channels\/[^\/]+\/(\d+)/, // Channel URL
+      /vimeo\.com\/groups\/[^\/]+\/videos\/(\d+)/, // Group URL
+      /player\.vimeo\.com\/video\/(\d+)/, // Embedded player URL
+    ];
+
+    for (const pattern of vimeoPatterns) {
+      const match = url.match(pattern);
+      if (match) {
+        return { platform: "vimeo", videoId: match[1] };
+      }
+    }
+
+    // Check for YouTube
+    const youtubePatterns = [
+      /youtube\.com\/watch\?v=([^&]+)/, // Standard URL
+      /youtu\.be\/([^?]+)/, // Short URL
+      /youtube\.com\/embed\/([^?\/]+)/, // Embedded player URL
+      /youtube\.com\/v\/([^?\/]+)/, // Old API URL
+    ];
+
+    for (const pattern of youtubePatterns) {
+      const match = url.match(pattern);
+      if (match) {
+        return { platform: "youtube", videoId: match[1] };
+      }
+    }
+
+    // Not recognized or invalid
+    return { platform: null, videoId: null };
+  }
+
+  /**
+   * Extract videos from Dribbble
+   */
+  async extractDribbbleVideos() {
+    try {
+      return await this.page.evaluate(() => {
+        const videos = [];
+
+        // Look for videos with class="block-media"
+        const blockMediaElements = document.querySelectorAll(".block-media");
+        blockMediaElements.forEach((element) => {
+          // Check if it contains a video element
+          const videoElement = element.querySelector("video");
+          if (videoElement) {
+            const src = videoElement.getAttribute("src");
+            if (src) {
+              videos.push({ url: src, source: "block-media-video" });
+            }
+
+            // Check for data attributes that might contain video sources
+            const dataAttrs = [
+              "data-src",
+              "data-video-src",
+              "data-video-url",
+              "data-url",
+              "data-mp4",
+            ];
+
+            for (const attr of dataAttrs) {
+              const dataSrc = videoElement.getAttribute(attr);
+              if (dataSrc && dataSrc.trim() !== "") {
+                videos.push({
+                  url: dataSrc,
+                  source: `block-media-video-${attr}`,
+                });
+                break; // Use the first valid data attribute we find
+              }
+            }
+
+            // Check for source elements inside video
+            const sources = videoElement.querySelectorAll("source");
+            sources.forEach((source) => {
+              const srcUrl = source.getAttribute("src");
+              if (srcUrl) {
+                videos.push({ url: srcUrl, source: "block-media-source" });
+              }
+            });
+          }
+
+          // Check if it contains an iframe for embedded videos
+          const iframe = element.querySelector("iframe");
+          if (iframe) {
+            const src = iframe.getAttribute("src");
+            if (
+              src &&
+              (src.includes("vimeo.com") ||
+                src.includes("youtube.com") ||
+                src.includes("youtu.be"))
+            ) {
+              videos.push({ url: src, source: "block-media-iframe" });
+            }
+          }
+
+          // Check for links to video platforms
+          const videoLinks = element.querySelectorAll(
+            'a[href*="vimeo.com"], a[href*="youtube.com"], a[href*="youtu.be"]'
+          );
+          videoLinks.forEach((link) => {
+            const href = link.getAttribute("href");
+            if (href) {
+              videos.push({ url: href, source: "block-media-link" });
+            }
+          });
+        });
+
+        // Also look for general video content
+        // Look for iframes (potential embedded videos)
+        const iframes = Array.from(document.querySelectorAll("iframe"));
+        iframes.forEach((iframe) => {
+          const src = iframe.getAttribute("src");
+          if (
+            src &&
+            (src.includes("vimeo.com") ||
+              src.includes("youtube.com") ||
+              src.includes("youtu.be"))
+          ) {
+            videos.push({ url: src, source: "iframe" });
+          }
+        });
+
+        // Look for direct video elements across the entire page
+        const videoElements = Array.from(document.querySelectorAll("video"));
+        videoElements.forEach((video) => {
+          // Check for standard src attribute
+          const src = video.getAttribute("src");
+          if (src) {
+            videos.push({ url: src, source: "video" });
+          }
+
+          // Check for common data attributes that might contain video sources
+          const dataAttrs = [
+            "data-src",
+            "data-video-src",
+            "data-video-url",
+            "data-url",
+            "data-mp4",
+            "data-v-77c128cd", // Specific attribute from the example
+          ];
+
+          for (const attr of dataAttrs) {
+            const dataSrc = video.getAttribute(attr);
+            if (dataSrc && dataSrc.trim() !== "" && dataSrc.includes("http")) {
+              videos.push({ url: dataSrc, source: `video-${attr}` });
+            }
+          }
+
+          // Also extract the src attribute if the video has specific data attributes
+          if (
+            video.hasAttribute("data-v-77c128cd") &&
+            video.getAttribute("src")
+          ) {
+            videos.push({
+              url: video.getAttribute("src"),
+              source: "video-with-data-v-attr",
+            });
+          }
+
+          // Check for source elements
+          const sources = video.querySelectorAll("source");
+          sources.forEach((source) => {
+            const srcUrl = source.getAttribute("src");
+            if (srcUrl) {
+              videos.push({ url: srcUrl, source: "source" });
+            }
+          });
+        });
+
+        // Look for video links
+        const videoLinks = Array.from(
+          document.querySelectorAll(
+            'a[href*="vimeo.com"], a[href*="youtube.com"], a[href*="youtu.be"]'
+          )
+        );
+        videoLinks.forEach((link) => {
+          const href = link.getAttribute("href");
+          if (href) {
+            videos.push({ url: href, source: "link" });
+          }
+        });
+
+        return videos;
+      });
+    } catch (error) {
+      logger.warn(`Error extracting Dribbble videos: ${error.message}`);
+      return [];
+    }
+  }
+
+  /**
    * Implement the scrape method for Dribbble
    */
   async scrape() {
@@ -678,31 +949,74 @@ class DribbbleScraper extends BaseScraper {
       const regularImages = await this.extractImages();
       const dribbbleImages = await this.extractDribbbleImages();
 
-      // Combine and deduplicate
+      // Extract videos from Dribbble
+      const dribbbleVideoElements = await this.extractDribbbleVideos();
+
+      // Process video elements to extract platform and ID
+      const dribbbleVideos = [];
+      for (const videoElement of dribbbleVideoElements) {
+        const { platform, videoId } = this.extractVideoInfo(videoElement.url);
+        if (platform && videoId) {
+          dribbbleVideos.push({
+            url: videoElement.url,
+            platform,
+            videoId,
+            source: videoElement.source,
+          });
+        }
+      }
+
+      // Remove duplicate videos based on platform and videoId
+      const uniqueVideos = [];
+      const videoKeys = new Set();
+      dribbbleVideos.forEach((video) => {
+        const key = `${video.platform}_${video.videoId}`;
+        if (!videoKeys.has(key)) {
+          videoKeys.add(key);
+          uniqueVideos.push(video);
+        }
+      });
+
+      logger.info(`Found ${uniqueVideos.length} unique videos`);
+
+      // Combine and deduplicate images
       const allImages = [...regularImages, ...dribbbleImages];
-      const uniqueUrls = new Set();
+      const uniqueImageUrls = new Set();
       const filteredImages = allImages.filter((image) => {
         if (!image.url || !image.url.startsWith("http")) return false;
-        if (uniqueUrls.has(image.url)) return false;
-        uniqueUrls.add(image.url);
+        if (uniqueImageUrls.has(image.url)) return false;
+        uniqueImageUrls.add(image.url);
         return true;
       });
 
-      // Format data for project media upload
-      const formattedMedia = filteredImages.map((image, index) => ({
+      // Format images for project media upload
+      const formattedImages = filteredImages.map((image, index) => ({
         url: image.url,
         alt_text: image.alt || "",
         type: "image",
         order: index,
       }));
 
-      logger.info(`Scraped ${formattedMedia.length} images from ${this.url}`);
+      // Format videos for project media upload
+      const formattedVideos = uniqueVideos.map((video, index) => ({
+        url: video.url,
+        type: "video",
+        [`${video.platform}_id`]: video.videoId,
+        order: formattedImages.length + index,
+      }));
+
+      // Combine all media items
+      const allMedia = [...formattedImages, ...formattedVideos];
+
+      logger.info(
+        `Scraped ${formattedImages.length} images and ${formattedVideos.length} videos from ${this.url}`
+      );
 
       // Return data directly without wrapping it
       return {
         source_url: this.url,
-        media: formattedMedia,
-        total: formattedMedia.length,
+        media: allMedia,
+        total: allMedia.length,
       };
     } finally {
       await this.close();
