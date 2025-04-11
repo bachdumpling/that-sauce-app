@@ -16,7 +16,7 @@ function extractYouTubeId(url: string): string | null {
   // Handle various YouTube URL formats
   const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
   const match = url.match(regExp);
-  return (match && match[2].length === 11) ? match[2] : null;
+  return match && match[2].length === 11 ? match[2] : null;
 }
 
 /**
@@ -24,7 +24,8 @@ function extractYouTubeId(url: string): string | null {
  */
 function extractVimeoId(url: string): string | null {
   // Handle various Vimeo URL formats
-  const regExp = /(?:vimeo\.com\/(?:channels\/(?:\w+\/)?|groups\/(?:[^\/]*)\/videos\/|album\/(?:\d+)\/video\/|video\/|)(\d+)(?:$|\/|\?))/;
+  const regExp =
+    /(?:vimeo\.com\/(?:channels\/(?:\w+\/)?|groups\/(?:[^\/]*)\/videos\/|album\/(?:\d+)\/video\/|video\/|)(\d+)(?:$|\/|\?))/;
   const match = url.match(regExp);
   return match ? match[1] : null;
 }
@@ -237,7 +238,7 @@ export const uploadMedia = async (req: AuthenticatedRequest, res: Response) => {
       description,
       order: order ? parseInt(order) : undefined,
       // Add empty categories array for videos
-      categories: []
+      categories: [],
     };
 
     // Log detailed file info for debugging
@@ -357,83 +358,87 @@ export const batchUploadMedia = async (
       );
     }
 
-    // Check if files were uploaded
-    if (!req.files || Object.keys(req.files).length === 0) {
-      return sendError(res, ErrorCode.BAD_REQUEST, "No files uploaded");
-    }
-
-    logger.debug("Files received for batch upload", {
-      fileKeys: Object.keys(req.files),
-      hasFilesField: !!req.files.files,
-      totalFields: Object.keys(req.files).length,
-      fieldSizes: Object.entries(req.files).reduce(
-        (acc, [key, value]) => {
-          if (Array.isArray(value)) {
-            acc[key] = `${value.length} files`;
-          } else {
-            acc[key] = "1 file";
-          }
-          return acc;
-        },
-        {} as Record<string, string>
-      ),
-    });
-
-    // Get files array, check various possible fields
+    // Initialize media array
     let files: UploadedFile[] = [];
 
-    // First, check for expected field name 'files'
-    if (req.files.files) {
-      if (Array.isArray(req.files.files)) {
-        files = req.files.files;
-      } else {
-        files = [req.files.files as UploadedFile];
-      }
-    }
+    // Check if files were uploaded
+    if (req.files && Object.keys(req.files).length > 0) {
+      logger.debug("Files received for batch upload", {
+        fileKeys: Object.keys(req.files),
+        hasFilesField: !!req.files.files,
+        totalFields: Object.keys(req.files).length,
+        fieldSizes: Object.entries(req.files).reduce(
+          (acc, [key, value]) => {
+            if (Array.isArray(value)) {
+              acc[key] = `${value.length} files`;
+            } else {
+              acc[key] = "1 file";
+            }
+            return acc;
+          },
+          {} as Record<string, string>
+        ),
+      });
 
-    // If files not found in 'files' field, check any other field
-    if (files.length === 0) {
-      for (const key of Object.keys(req.files)) {
-        const fileField = req.files[key];
-        if (Array.isArray(fileField)) {
-          files = fileField;
-          logger.warn(`Using ${key} as files array with ${files.length} files`);
-          break;
-        } else if (fileField) {
-          files = [fileField as UploadedFile];
-          logger.warn(`Using ${key} as single file`);
-          break;
+      // Get files array, check various possible fields
+      // First, check for expected field name 'files'
+      if (req.files.files) {
+        if (Array.isArray(req.files.files)) {
+          files = req.files.files;
+        } else {
+          files = [req.files.files as UploadedFile];
         }
       }
+
+      // If files not found in 'files' field, check any other field
+      if (files.length === 0) {
+        for (const key of Object.keys(req.files)) {
+          const fileField = req.files[key];
+          if (Array.isArray(fileField)) {
+            files = fileField;
+            logger.warn(
+              `Using ${key} as files array with ${files.length} files`
+            );
+            break;
+          } else if (fileField) {
+            files = [fileField as UploadedFile];
+            logger.warn(`Using ${key} as single file`);
+            break;
+          }
+        }
+      }
+
+      logger.debug(`Found ${files.length} files to upload`);
+
+      // Log detailed info about the first few files for debugging
+      if (files.length > 0) {
+        const fileSamples = files.slice(0, 3).map((file) => ({
+          name: file.name,
+          size: file.size,
+          mimetype: file.mimetype,
+          hasData: !!file.data,
+          hasTempPath: !!file.tempFilePath,
+          tempFileExists: file.tempFilePath
+            ? require("fs").existsSync(file.tempFilePath)
+            : false,
+          tempFileSize:
+            file.tempFilePath && require("fs").existsSync(file.tempFilePath)
+              ? require("fs").statSync(file.tempFilePath).size
+              : "N/A",
+        }));
+
+        logger.debug("File samples for first 3 files:", { fileSamples });
+      }
     }
 
+    // If no files, return error
     if (files.length === 0) {
       return sendError(
         res,
         ErrorCode.BAD_REQUEST,
-        "No valid files found in the request"
+        "No files found in the request"
       );
     }
-
-    logger.debug(`Found ${files.length} files to upload`);
-
-    // Log detailed info about the first few files for debugging
-    const fileSamples = files.slice(0, 3).map((file) => ({
-      name: file.name,
-      size: file.size,
-      mimetype: file.mimetype,
-      hasData: !!file.data,
-      hasTempPath: !!file.tempFilePath,
-      tempFileExists: file.tempFilePath
-        ? require("fs").existsSync(file.tempFilePath)
-        : false,
-      tempFileSize:
-        file.tempFilePath && require("fs").existsSync(file.tempFilePath)
-          ? require("fs").statSync(file.tempFilePath).size
-          : "N/A",
-    }));
-
-    logger.debug("File samples for first 3 files:", { fileSamples });
 
     try {
       const { results, errors } = await mediaService.batchUploadMedia(files, {
@@ -442,8 +447,8 @@ export const batchUploadMedia = async (
         creatorId: creator.id,
         metadata: {
           // Include default empty categories array for videos
-          categories: []
-        }
+          categories: [],
+        },
       });
 
       // Create a response that includes both successes and errors
@@ -453,9 +458,10 @@ export const batchUploadMedia = async (
           media: results,
           total: results.length,
           errors: errors.length > 0 ? errors : undefined,
-          message: errors.length > 0 
-            ? `Uploaded ${results.length} files with ${errors.length} failures` 
-            : `Successfully uploaded ${results.length} files`,
+          message:
+            errors.length > 0
+              ? `Uploaded ${results.length} media items with ${errors.length} failures`
+              : `Successfully uploaded ${results.length} media items`,
         },
         undefined,
         errors.length > 0 ? 207 : 201 // Use 207 Multi-Status for partial success
@@ -489,7 +495,10 @@ export const batchUploadMedia = async (
   }
 };
 
-export const uploadVideoLink = async (req: AuthenticatedRequest, res: Response) => {
+export const uploadVideoLink = async (
+  req: AuthenticatedRequest,
+  res: Response
+) => {
   try {
     const { project_id, video_url, title, description } = req.body;
     const user = req.user;
@@ -539,21 +548,25 @@ export const uploadVideoLink = async (req: AuthenticatedRequest, res: Response) 
     // Extract video IDs from the URL
     let youtubeId = null;
     let vimeoId = null;
-    
-    if (video_url.includes('youtube.com') || video_url.includes('youtu.be')) {
+
+    if (video_url.includes("youtube.com") || video_url.includes("youtu.be")) {
       youtubeId = extractYouTubeId(video_url);
       if (!youtubeId) {
         return sendError(res, ErrorCode.BAD_REQUEST, "Invalid YouTube URL");
       }
       logger.debug(`Extracted YouTube ID: ${youtubeId} from ${video_url}`);
-    } else if (video_url.includes('vimeo.com')) {
+    } else if (video_url.includes("vimeo.com")) {
       vimeoId = extractVimeoId(video_url);
       if (!vimeoId) {
         return sendError(res, ErrorCode.BAD_REQUEST, "Invalid Vimeo URL");
       }
       logger.debug(`Extracted Vimeo ID: ${vimeoId} from ${video_url}`);
     } else {
-      return sendError(res, ErrorCode.BAD_REQUEST, "URL must be from YouTube or Vimeo");
+      return sendError(
+        res,
+        ErrorCode.BAD_REQUEST,
+        "URL must be from YouTube or Vimeo"
+      );
     }
 
     // Create a video record directly (no file upload needed)
@@ -561,11 +574,11 @@ export const uploadVideoLink = async (req: AuthenticatedRequest, res: Response) 
       project_id: project_id,
       creator_id: creator.id,
       url: video_url,
-      title: title || 'Video from ' + (youtubeId ? 'YouTube' : 'Vimeo'),
-      description: description || '',
+      title: title || "Video from " + (youtubeId ? "YouTube" : "Vimeo"),
+      description: description || "",
       categories: [],
       youtube_id: youtubeId,
-      vimeo_id: vimeoId
+      vimeo_id: vimeoId,
     };
 
     logger.debug("Creating video record from link", videoRecord);
@@ -582,9 +595,9 @@ export const uploadVideoLink = async (req: AuthenticatedRequest, res: Response) 
         details: videoError.details,
         message: videoError.message,
         hint: videoError.hint,
-        code: videoError.code
+        code: videoError.code,
       });
-      
+
       return sendError(
         res,
         ErrorCode.SERVER_ERROR,
@@ -603,16 +616,16 @@ export const uploadVideoLink = async (req: AuthenticatedRequest, res: Response) 
         title: videoData.title,
         description: videoData.description,
         youtube_id: videoData.youtube_id,
-        vimeo_id: videoData.vimeo_id
+        vimeo_id: videoData.vimeo_id,
       },
-      created_at: videoData.created_at
+      created_at: videoData.created_at,
     };
 
     return sendSuccess(
       res,
       {
         media: response,
-        message: "Video link added successfully"
+        message: "Video link added successfully",
       },
       undefined,
       201
@@ -623,6 +636,142 @@ export const uploadVideoLink = async (req: AuthenticatedRequest, res: Response) 
       res,
       ErrorCode.SERVER_ERROR,
       error instanceof Error ? error.message : "Error adding video link"
+    );
+  }
+};
+
+export const importUrlMedia = async (
+  req: AuthenticatedRequest,
+  res: Response
+) => {
+  try {
+    const { project_id, urls } = req.body;
+    const user = req.user;
+
+    logger.debug("URL import request received", {
+      projectId: project_id,
+      urlCount: Array.isArray(urls) ? urls.length : "not an array",
+      body: req.body,
+    });
+
+    if (!user || !user.id) {
+      return sendError(res, ErrorCode.UNAUTHORIZED, "Authentication required");
+    }
+
+    if (!project_id) {
+      return sendError(res, ErrorCode.BAD_REQUEST, "Project ID is required");
+    }
+
+    // Validate URLs
+    if (!urls || !Array.isArray(urls) || urls.length === 0) {
+      return sendError(
+        res,
+        ErrorCode.BAD_REQUEST,
+        "URLs array is required and must not be empty"
+      );
+    }
+
+    // Check if project exists and get creator information
+    const { data: project, error: projectError } = await supabase
+      .from("projects")
+      .select("id, creator_id")
+      .eq("id", project_id)
+      .single();
+
+    if (projectError || !project) {
+      return sendError(res, ErrorCode.NOT_FOUND, "Project not found");
+    }
+
+    // Verify user is the project creator
+    const { data: creator, error: creatorError } = await supabase
+      .from("creators")
+      .select("id, profile_id")
+      .eq("id", project.creator_id)
+      .single();
+
+    if (creatorError || !creator) {
+      return sendError(res, ErrorCode.NOT_FOUND, "Creator not found");
+    }
+
+    if (creator.profile_id !== user.id) {
+      return sendError(
+        res,
+        ErrorCode.FORBIDDEN,
+        "You don't have permission to upload media to this project"
+      );
+    }
+
+    // Transform URLs to the format expected by mediaService.batchImportUrlMedia
+    const urlItems = urls
+      .map((url) => {
+        // Check if url is a string or an object with url property
+        if (typeof url === "string") {
+          return { url };
+        } else if (typeof url === "object" && url !== null && "url" in url) {
+          return url;
+        }
+        return null;
+      })
+      .filter(Boolean) as { url: string; metadata?: Record<string, any> }[];
+
+    logger.debug(`Processing ${urlItems.length} URL items for import`, {
+      firstItem: urlItems.length > 0 ? urlItems[0] : null,
+    });
+
+    try {
+      const { results, errors } = await mediaService.batchImportUrlMedia(
+        urlItems,
+        {
+          userId: user.id,
+          projectId: project_id,
+          creatorId: creator.id,
+          metadata: {
+            // Include default empty categories array for videos
+            categories: [],
+          },
+        }
+      );
+
+      // Create a response that includes both successes and errors
+      return sendSuccess(
+        res,
+        {
+          media: results,
+          total: results.length,
+          errors: errors.length > 0 ? errors : undefined,
+          message:
+            errors.length > 0
+              ? `Imported ${results.length} media items with ${errors.length} failures`
+              : `Successfully imported ${results.length} media items`,
+        },
+        undefined,
+        errors.length > 0 ? 207 : 201 // Use 207 Multi-Status for partial success
+      );
+    } catch (uploadError) {
+      logger.error("Media service URL import error", {
+        error: uploadError,
+        message:
+          uploadError instanceof Error ? uploadError.message : "Unknown error",
+      });
+
+      return sendError(
+        res,
+        ErrorCode.SERVER_ERROR,
+        uploadError instanceof Error
+          ? uploadError.message
+          : "Error importing media from URLs"
+      );
+    }
+  } catch (error) {
+    logger.error("Error in URL import controller", {
+      error,
+      message: error instanceof Error ? error.message : "Unknown error",
+    });
+
+    return sendError(
+      res,
+      ErrorCode.SERVER_ERROR,
+      error instanceof Error ? error.message : "Error importing media from URLs"
     );
   }
 };

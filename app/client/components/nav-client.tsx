@@ -29,7 +29,6 @@ export default function NavClient() {
             .select("username")
             .eq("profile_id", data.user.id)
             .single();
-          console.log("creator", creator);
           if (creator) {
             setCreatorUsername(creator.username);
           }

@@ -74,6 +74,9 @@ export interface UploadOptions {
     description?: string;
     order?: number;
     categories?: string[];
+    type?: "image" | "video";
+    youtube_id?: string;
+    vimeo_id?: string;
   };
 }
 

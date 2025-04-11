@@ -66,11 +66,9 @@ apiClient.interceptors.response.use(
     // If the error is 401 (Unauthorized) and the request hasn't been retried yet
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
-      console.log("Received 401 response, attempting to refresh token...");
 
       try {
         const supabase = await createClient();
-        console.log("Checking current user...");
 
         // Use getUser instead of getSession for improved security
         const {
@@ -78,7 +76,6 @@ apiClient.interceptors.response.use(
         } = await supabase.auth.getUser();
 
         if (!user) {
-          console.log("No active user found, cannot refresh");
           return Promise.reject({
             status: 401,
             message: "No active session found. Please log in.",
@@ -86,7 +83,6 @@ apiClient.interceptors.response.use(
         }
 
         // Try to refresh the session
-        console.log("Attempting to refresh session...");
         const {
           data: { session },
           error: refreshError,
@@ -98,7 +94,6 @@ apiClient.interceptors.response.use(
         }
 
         if (session) {
-          console.log("Session refreshed successfully");
           // Update the header and retry the request
           if (originalRequest.headers) {
             originalRequest.headers.Authorization = `Bearer ${session.access_token}`;
@@ -108,8 +103,6 @@ apiClient.interceptors.response.use(
             };
           }
           return apiClient(originalRequest);
-        } else {
-          console.log("No session returned after refresh");
         }
       } catch (refreshError) {
         console.error("Failed to refresh authentication:", refreshError);

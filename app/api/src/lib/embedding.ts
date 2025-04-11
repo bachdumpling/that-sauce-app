@@ -55,7 +55,7 @@ const searchPrompts = {
   "b&w street photograpy" → "black white street photography urban"
   
   Original query: `,
-  
+
   media: `Process this search query to enhance its relevance for searching media content (images and videos).
   Rules:
   1. KEEP ALL ORIGINAL QUERY TERMS intact
@@ -65,7 +65,7 @@ const searchPrompts = {
   5. Keep grammar natural, don't over-formalize
   6. Return the processed query with original terms plus any additions (max 3)
   
-  Original query: `
+  Original query: `,
 };
 
 type SearchType = keyof typeof searchPrompts;
@@ -106,20 +106,10 @@ async function processSearchQuery(
       }
     });
 
-    console.log("Original query:", query);
-    console.log("Search type:", type);
-    console.log("Processed query:", processedQuery);
-    console.log(
-      "Terms - Original:",
-      originalTerms.length,
-      "Processed:",
-      processedQuery.split(/\s+/).length
-    );
-
     return processedQuery;
   } catch (error) {
-    console.error("Error processing query:", error);
-    return query; // Fall back to original query if processing fails
+    // Fall back to original query if processing fails
+    return query;
   }
 }
 
@@ -157,7 +147,6 @@ export async function generateEmbedding(
       processed_text: processedText,
     };
   } catch (error) {
-    console.error("Error generating embedding:", error);
     return null;
   }
 }

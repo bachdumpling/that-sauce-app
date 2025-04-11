@@ -1,0 +1,152 @@
+I'll examine the codebase to find the logic used to extract videos (both YouTube and Vimeo) from Behance.
+
+Based on the code provided, the video extraction functionality is primarily implemented in the `portfolio_updater.py` file. Here's the specific logic used to extract videos from Behance:
+
+## Video Extraction Logic
+
+The main components involved in extracting videos are:
+
+1. The `extract_video_info` method - which identifies and extracts video platform and ID information from URLs
+2. The `find_videos_in_project` method - which finds video embeds or links in a Behance project page
+
+### Video ID Extraction
+
+In the `extract_video_info` method, the code uses regular expressions to identify and extract video IDs from various URL formats:
+
+```python
+def extract_video_info(self, url):
+    """Extract video platform and ID from URL"""
+    if not url:
+        return None, None
+
+    # Normalize URL
+    url = url.strip()
+
+    # Check for Vimeo
+    vimeo_patterns = [
+        r"vimeo\.com/(\d+)",  # Standard URL
+        r"vimeo\.com/channels/[^/]+/(\d+)",  # Channel URL
+        r"vimeo\.com/groups/[^/]+/videos/(\d+)",  # Group URL
+        r"player\.vimeo\.com/video/(\d+)",  # Embedded player URL
+    ]
+
+    for pattern in vimeo_patterns:
+        match = re.search(pattern, url)
+        if match:
+            return "vimeo", match.group(1)
+
+    # Check for YouTube
+    youtube_patterns = [
+        r"youtube\.com/watch\?v=([^&]+)",  # Standard URL
+        r"youtu\.be/([^?]+)",  # Short URL
+        r"youtube\.com/embed/([^?/]+)",  # Embedded player URL
+        r"youtube\.com/v/([^?/]+)",  # Old API URL
+    ]
+
+    for pattern in youtube_patterns:
+        match = re.search(pattern, url)
+        if match:
+            return "youtube", match.group(1)
+
+    # Not recognized or invalid
+    return None, None
+```
+
+### Finding Videos in Projects
+
+The `find_videos_in_project` method uses Selenium to look for embedded videos or video links in Behance projects:
+
+```python
+def find_videos_in_project(self, project_url):
+    """Find videos embedded in a project"""
+    driver = self.setup_driver()
+
+    try:
+        self.logger.info(f"Searching for videos in: {project_url}")
+        driver.get(project_url)
+        time.sleep(5)  # Wait for page to load
+
+        # Look for all iframes (potential embedded videos)
+        iframes = driver.find_elements(By.TAG_NAME, "iframe")
+        video_elements = driver.find_elements(By.TAG_NAME, "video")
+        video_links = driver.find_elements(
+            By.CSS_SELECTOR,
+            "a[href*='vimeo.com'], a[href*='youtube.com'], a[href*='youtu.be']",
+        )
+
+        videos = []
+
+        # Process iframes
+        for iframe in iframes:
+            src = iframe.get_attribute("src")
+            if src and (
+                "vimeo.com" in src or "youtube.com" in src or "youtu.be" in src
+            ):
+                platform, video_id = self.extract_video_info(src)
+                if platform and video_id:
+                    videos.append(
+                        {"url": src, "platform": platform, "video_id": video_id}
+                    )
+
+        # Process direct video elements
+        for video in video_elements:
+            src = video.get_attribute("src")
+            if src:
+                platform, video_id = self.extract_video_info(src)
+                if platform and video_id:
+                    videos.append(
+                        {"url": src, "platform": platform, "video_id": video_id}
+                    )
+
+        # Process video links
+        for link in video_links:
+            href = link.get_attribute("href")
+            if href:
+                platform, video_id = self.extract_video_info(href)
+                if platform and video_id:
+                    videos.append(
+                        {"url": href, "platform": platform, "video_id": video_id}
+                    )
+
+        # Remove duplicates based on video_id
+        unique_videos = {}
+        for video in videos:
+            key = f"{video['platform']}_{video['video_id']}"
+            if key not in unique_videos:
+                unique_videos[key] = video
+
+        self.logger.info(f"Found {len(unique_videos)} unique videos")
+        return list(unique_videos.values())
+    
+    except Exception as e:
+        self.logger.error(f"Error finding videos in project: {str(e)}")
+        return []
+    finally:
+        driver.quit()
+```
+
+## Summary of the Extraction Logic
+
+The video extraction process follows these steps:
+
+1. **Search for video elements** in the Behance project page:
+   - `iframe` elements (commonly used for embedding videos)
+   - Direct `video` elements
+   - Links (`a` tags) with URLs containing "vimeo.com", "youtube.com", or "youtu.be"
+
+2. **Extract video platform and ID** using regular expressions:
+   - For Vimeo: Handles standard URLs, channel URLs, group URLs, and embedded player URLs
+   - For YouTube: Handles standard URLs, short URLs, embedded player URLs, and old API URLs
+
+3. **Remove duplicates** based on a combination of platform and video ID
+
+4. **Store video data** with the format:
+   ```
+   {
+     "url": original_url,
+     "platform": "vimeo" or "youtube",
+     "video_id": extracted_id
+   }
+   ```
+
+This approach is comprehensive and handles various ways videos might be embedded in Behance projects, covering both direct embeds and linked videos from YouTube and Vimeo.

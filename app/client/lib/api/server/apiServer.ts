@@ -18,7 +18,7 @@ async function getServerAuthToken() {
     return null;
   }
 
-  // Only after verifying user, get the session for the token
+  // After verifying the user is authenticated, we can safely get the session token
   const {
     data: { session },
   } = await supabase.auth.getSession();

@@ -199,8 +199,6 @@ export const updateCreator = async (
       error?: string;
     }>(API_ENDPOINTS.admin.updateCreator(username), data);
 
-    console.log("API response:", response);
-
     if (response.data.success) {
       return {
         success: true,

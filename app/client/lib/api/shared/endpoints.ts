@@ -28,7 +28,14 @@ export const API_ENDPOINTS = {
     deleteMedia: (id: string) => `/media/${id}`,
     uploadMedia: `/media/upload`,
     batchUploadMedia: `/media/batch-upload`,
+    importUrlMedia: `/media/import-url-media`,
     uploadVideoLink: `/media/upload-video-link`,
+  },
+
+  // Scraper endpoints
+  scraper: {
+    extractMedia: `/scraper/extract`,
+    importMedia: `/media/import-url-media`,
   },
 
   // Legacy media endpoints (for backward compatibility)
@@ -87,4 +94,4 @@ export const buildApiUrl = (
   }
 
   return url.toString();
-}; 
+};

@@ -5,6 +5,7 @@ import path from "path";
 import fs from "fs";
 import logger from "../config/logger";
 import { MediaResponse, UploadOptions } from "../models/Media";
+import axios from "axios";
 
 export class MediaService {
   /**
@@ -195,15 +196,12 @@ export class MediaService {
         if (videoError) {
           logger.error("Video record creation error", {
             error: videoError,
-            details: videoError.details,
-            message: videoError.message,
-            hint: videoError.hint,
-            code: videoError.code,
-            full_error: JSON.stringify(videoError, null, 2),
+            details: (videoError as any).details,
+            message: (videoError as any).message,
+            hint: (videoError as any).hint,
+            code: (videoError as any).code,
           });
-          throw new Error(
-            `Video record creation failed: ${videoError.message}${videoError.hint ? ` (${videoError.hint})` : ""}${videoError.details ? ` - ${videoError.details}` : ""}`
-          );
+          throw videoError;
         }
 
         mediaData = videoData;
@@ -229,6 +227,145 @@ export class MediaService {
   }
 
   /**
+   * Upload media from a URL (without storing in our storage)
+   */
+  async uploadMediaFromUrl(
+    url: string,
+    options: UploadOptions
+  ): Promise<MediaResponse> {
+    const { userId, projectId, creatorId, metadata = {} } = options;
+
+    try {
+      logger.debug("Uploading media from URL", { url, projectId, creatorId });
+
+      // Determine media type from URL or metadata
+      let mediaType: "image" | "video" = "image";
+      const fileExtension = path.extname(url).toLowerCase();
+      const videoExtensions = [
+        ".mp4",
+        ".avi",
+        ".mov",
+        ".wmv",
+        ".flv",
+        ".webm",
+        ".mkv",
+        ".m4v",
+      ];
+
+      // If metadata specifies the type, use that
+      if (metadata.type) {
+        mediaType = metadata.type;
+      }
+      // Otherwise try to determine from URL
+      else if (videoExtensions.includes(fileExtension)) {
+        mediaType = "video";
+      }
+
+      let mediaData;
+
+      // Store in appropriate table based on media type
+      if (mediaType === "image") {
+        // Create image record directly with the external URL
+        const { data: imageData, error: imageError } = await supabase
+          .from("images")
+          .insert([
+            {
+              project_id: projectId,
+              creator_id: creatorId,
+              url: url, // Use the original URL
+              alt_text: metadata.alt_text || path.basename(url),
+              resolutions: {},
+              order: metadata.order || 0,
+            },
+          ])
+          .select()
+          .single();
+
+        if (imageError) {
+          logger.error("Image record creation error", {
+            error: imageError,
+            details: (imageError as any).details,
+            message: (imageError as any).message,
+            hint: (imageError as any).hint,
+            code: (imageError as any).code,
+          });
+          throw imageError;
+        }
+
+        mediaData = imageData;
+      } else {
+        // Create video record with the external URL
+        const videoRecord = {
+          project_id: projectId,
+          creator_id: creatorId,
+          url: url, // Use the original URL
+          title: metadata.title || path.basename(url),
+          description: metadata.description || "",
+          categories: metadata.categories || [],
+          youtube_id: metadata.youtube_id,
+          vimeo_id: metadata.vimeo_id,
+        };
+
+        const { data: videoData, error: videoError } = await supabase
+          .from("videos")
+          .insert([videoRecord])
+          .select()
+          .single();
+
+        if (videoError) {
+          logger.error("Video record creation error", {
+            error: videoError,
+            details: (videoError as any).details,
+            message: (videoError as any).message,
+            hint: (videoError as any).hint,
+            code: (videoError as any).code,
+          });
+          throw videoError;
+        }
+
+        mediaData = videoData;
+      }
+
+      // Return standardized response
+      return {
+        id: mediaData.id,
+        type: mediaType,
+        url: url,
+        projectId: projectId,
+        creatorId: creatorId,
+        metadata: {
+          ...metadata,
+          ...mediaData,
+        },
+        created_at: mediaData.created_at,
+      };
+    } catch (error) {
+      // Improved error logging with more details
+      if (error instanceof Error) {
+        logger.error("Media URL upload failed", {
+          error: error.message,
+          stack: error.stack,
+          url,
+        });
+      } else if (typeof error === "object" && error !== null) {
+        logger.error("Media URL upload failed", {
+          error,
+          message: (error as any).message || "Unknown error",
+          details: (error as any).details || {},
+          code: (error as any).code || "UNKNOWN",
+          url,
+        });
+      } else {
+        logger.error("Media URL upload failed", {
+          error: String(error),
+          url,
+        });
+      }
+      throw error;
+    }
+  }
+
+  /**
    * Batch upload multiple media files
    */
   async batchUploadMedia(
@@ -239,21 +376,18 @@ export class MediaService {
     const errors: any[] = [];
 
     // Process each file sequentially to avoid overwhelming the database
-    for (const file of files) {
+    for (const item of files) {
       try {
-        const result = await this.uploadMedia(file, options);
+        const result = await this.uploadMedia(item, options);
         results.push(result);
       } catch (error) {
         const errorDetails = {
-          filename: file.name,
-          mimetype: file.mimetype,
-          size: file.size,
+          filename: item.name || "unknown",
           error: error instanceof Error ? error.message : String(error),
           stack: error instanceof Error ? error.stack : undefined,
         };
 
-        logger.error("Failed to upload individual file in batch", errorDetails);
-
+        logger.error("Failed to upload individual item in batch", errorDetails);
         errors.push(errorDetails);
       }
     }
@@ -506,5 +640,88 @@ export class MediaService {
     }
 
     return true;
+  }
+
+  /**
+   * Batch import media from URLs
+   */
+  async batchImportUrlMedia(
+    urlItems: Array<{ url: string; metadata?: Record<string, any> }>,
+    options: UploadOptions
+  ): Promise<{ results: MediaResponse[]; errors: any[] }> {
+    const results: MediaResponse[] = [];
+    const errors: any[] = [];
+
+    // Process each URL sequentially
+    for (const item of urlItems) {
+      try {
+        // Apply item-specific metadata to options
+        const urlOptions = {
+          ...options,
+          metadata: {
+            ...options.metadata,
+            ...(item.metadata || {}),
+          },
+        };
+
+        const result = await this.uploadMediaFromUrl(item.url, urlOptions);
+        results.push(result);
+      } catch (error) {
+        let errorMessage = "An unknown error occurred";
+        let errorStack = "";
+
+        if (error instanceof Error) {
+          errorMessage = error.message;
+          errorStack = error.stack || "";
+        } else if (typeof error === "object" && error !== null) {
+          if (
+            "message" in error &&
+            typeof (error as any).message === "string"
+          ) {
+            errorMessage = (error as any).message;
+          }
+
+          if (
+            "details" in error &&
+            typeof (error as any).details === "string"
+          ) {
+            errorMessage += ` - ${(error as any).details}`;
+          } else if (
+            "details" in error &&
+            typeof (error as any).details === "object"
+          ) {
+            errorMessage += ` - ${JSON.stringify((error as any).details)}`;
+          }
+
+          if ("code" in error && typeof (error as any).code === "string") {
+            errorMessage += ` (code: ${(error as any).code})`;
+          }
+        }
+
+        const errorDetails = {
+          url: item.url || "unknown",
+          error: errorMessage,
+          stack: errorStack,
+        };
+
+        logger.error("Failed to import URL in batch", errorDetails);
+        errors.push(errorDetails);
+      }
+    }
+
+    // If all imports failed, throw an error with details
+    if (results.length === 0 && errors.length > 0) {
+      const errorMessage = `All URL imports failed: ${JSON.stringify(errors)}`;
+      logger.error(errorMessage);
+      throw new Error(errorMessage);
+    }
+
+    // If some imports failed, log the errors
+    if (errors.length > 0) {
+      logger.warn("Some URL imports failed", { errors });
+    }
+
+    // Return both results and errors to allow API to show partial success
+    return { results, errors };
   }
 }

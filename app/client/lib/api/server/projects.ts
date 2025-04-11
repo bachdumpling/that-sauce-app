@@ -31,6 +31,31 @@ function sanitizeProject(project: Project): WithoutEmbedding<Project> {
 }
 
 /**
+ * Create a new project from the server-side
+ * Uses server-side authentication and data fetching
+ */
+export async function createProjectServer(
+  projectData: {
+    title: string;
+    description?: string;
+  }
+): Promise<ApiResponse<WithoutEmbedding<Project>>> {
+  const response = await serverApiRequest.post<Project>(
+    API_ENDPOINTS.projects,
+    projectData
+  );
+
+  if (response.success && response.data) {
+    return {
+      ...response,
+      data: sanitizeProject(response.data),
+    };
+  }
+
+  return response as ApiResponse<WithoutEmbedding<Project>>;
+}
+
+/**
  * Get project by ID from the server-side
  * Uses server-side authentication and data fetching
  */

@@ -1,7 +1,12 @@
 import { supabase } from "../lib/supabase";
-import { Project, ProjectWithMedia, ProjectWithCreator } from "../models/Project";
+import {
+  Project,
+  ProjectWithMedia,
+  ProjectWithCreator,
+} from "../models/Project";
 import { ImageMedia, VideoMedia } from "../models/Media";
 import { invalidateCache } from "../lib/cache";
+import logger from "../config/logger";
 
 export class ProjectRepository {
   /**
@@ -61,7 +66,9 @@ export class ProjectRepository {
    * Create a new project
    */
   async create(
-    data: Pick<Project, "title" | "description" | "creator_id"> & { portfolio_id: string }
+    data: Pick<Project, "title" | "description" | "creator_id"> & {
+      portfolio_id: string;
+    }
   ): Promise<Project> {
     const { data: project, error } = await supabase
       .from("projects")
@@ -70,10 +77,10 @@ export class ProjectRepository {
       .single();
 
     if (error) throw error;
-    
+
     // Invalidate related caches
     invalidateCache("admin_projects_list_");
-    
+
     // Get the creator information to invalidate their caches too
     try {
       const { data: creator } = await supabase
@@ -81,16 +88,16 @@ export class ProjectRepository {
         .select("username")
         .eq("id", data.creator_id)
         .single();
-      
+
       if (creator) {
         invalidateCache(`creator_username_${creator.username}`);
         invalidateCache(`creator_project_`);
       }
     } catch (error) {
       // Log but don't throw to avoid disrupting the main operation
-      console.error("Error invalidating creator caches:", error);
+      logger.error("Error invalidating creator caches:", error);
     }
-    
+
     return project;
   }
 
@@ -109,12 +116,12 @@ export class ProjectRepository {
       .single();
 
     if (error) throw error;
-    
+
     // Invalidate related caches
     invalidateCache(`admin_project_details_${id}`);
     invalidateCache(`project_${id}`);
     invalidateCache("admin_projects_list_");
-    
+
     // Get the creator information to invalidate their caches too
     try {
       const { data: projectWithCreator } = await supabase
@@ -122,16 +129,18 @@ export class ProjectRepository {
         .select("creator_id, creators!inner(username)")
         .eq("id", id)
         .single<ProjectWithCreator>();
-      
+
       if (projectWithCreator?.creators?.username) {
-        invalidateCache(`creator_username_${projectWithCreator.creators.username}`);
+        invalidateCache(
+          `creator_username_${projectWithCreator.creators.username}`
+        );
         invalidateCache(`creator_project_`);
       }
     } catch (error) {
       // Log but don't throw to avoid disrupting the main operation
-      console.error("Error invalidating creator caches:", error);
+      logger.error("Error invalidating creator caches:", error);
     }
-    
+
     return project;
   }
 
@@ -145,19 +154,16 @@ export class ProjectRepository {
       .select("creator_id, creators!inner(username)")
       .eq("id", id)
       .single<ProjectWithCreator>();
-      
-    const { error } = await supabase
-      .from("projects")
-      .delete()
-      .eq("id", id);
+
+    const { error } = await supabase.from("projects").delete().eq("id", id);
 
     if (error) throw error;
-    
+
     // Invalidate related caches
     invalidateCache(`admin_project_details_${id}`);
     invalidateCache(`project_${id}`);
     invalidateCache("admin_projects_list_");
-    
+
     // Invalidate creator caches if we have the info
     if (project?.creators?.username) {
       invalidateCache(`creator_username_${project.creators.username}`);
@@ -168,7 +174,10 @@ export class ProjectRepository {
   /**
    * Check if a project belongs to a creator
    */
-  async belongsToCreator(projectId: string, creatorId: string): Promise<boolean> {
+  async belongsToCreator(
+    projectId: string,
+    creatorId: string
+  ): Promise<boolean> {
     const { data, error } = await supabase
       .from("projects")
       .select("id")
@@ -179,4 +188,48 @@ export class ProjectRepository {
     if (error) return false;
     return !!data;
   }
-} 
+
+  /**
+   * Get images for a project
+   */
+  async getProjectImages(projectId: string) {
+    try {
+      const { data: images, error: imagesError } = await supabase
+        .from("images")
+        .select("*, creator:creator_id(id, username)")
+        .eq("project_id", projectId)
+        .order("order", { ascending: true });
+
+      if (imagesError) {
+        return { success: false, error: imagesError };
+      }
+
+      return { success: true, data: images };
+    } catch (error) {
+      logger.error("Error fetching project images:", error);
+      return { success: false, error: "Failed to fetch project images" };
+    }
+  }
+
+  /**
+   * Get videos for a project
+   */
+  async getProjectVideos(projectId: string) {
+    try {
+      const { data: videos, error: videosError } = await supabase
+        .from("videos")
+        .select("*, creator:creator_id(id, username)")
+        .eq("project_id", projectId)
+        .order("order", { ascending: true });
+
+      if (videosError) {
+        return { success: false, error: videosError };
+      }
+
+      return { success: true, data: videos };
+    } catch (error) {
+      logger.error("Error fetching project videos:", error);
+      return { success: false, error: "Failed to fetch project videos" };
+    }
+  }
+}

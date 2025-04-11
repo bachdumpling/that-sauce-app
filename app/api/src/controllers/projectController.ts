@@ -8,6 +8,7 @@ import { UploadedFile } from "express-fileupload";
 import { CreatorWithProfile, FormattedMedia } from "../models/Media";
 import { ErrorCode } from "../models/ApiResponse";
 import { ImageMedia, VideoMedia } from "../models/Media";
+import logger from "../config/logger";
 
 // Initialize the service
 const projectService = new ProjectService();
@@ -17,11 +18,7 @@ export const projectController = {
   /**
    * Get all projects for the current user
    */
-  getUserProjects: async (
-    req: Request,
-    res: Response,
-    next: NextFunction
-  ) => {
+  getUserProjects: async (req: Request, res: Response, next: NextFunction) => {
     try {
       const userId = req.query.userId as string;
 
@@ -39,14 +36,10 @@ export const projectController = {
   /**
    * Get a specific project
    */
-  getProject: async (
-    req: Request,
-    res: Response,
-    next: NextFunction
-  ) => {
+  getProject: async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { id } = req.params;
-      
+
       const project = await projectService.getProject(id);
       return res.status(200).json({ project });
     } catch (error) {
@@ -176,11 +169,7 @@ export const projectController = {
   /**
    * Get all media (images and videos) associated with a project.
    */
-  getProjectMedia: async (
-    req: Request,
-    res: Response,
-    next: NextFunction
-  ) => {
+  getProjectMedia: async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { id } = req.params;
 
@@ -201,31 +190,21 @@ export const projectController = {
         });
       }
 
-      // Get all images for the project
-      const { data: images, error: imagesError } = await supabase
-        .from("images")
-        .select("*, creator:creator_id(id, username)")
-        .eq("project_id", id)
-        .order("order", { ascending: true });
-
-      if (imagesError) {
-        console.error("Error fetching images:", imagesError);
+      // Fetch images for this project if the project exists
+      const imagesResult = await projectService.getProjectImages(id);
+      if (!imagesResult.success) {
+        logger.error("Error fetching images:", imagesResult.error);
       }
 
-      // Get all videos for the project
-      const { data: videos, error: videosError } = await supabase
-        .from("videos")
-        .select("*, creator:creator_id(id, username)")
-        .eq("project_id", id)
-        .order("order", { ascending: true });
-
-      if (videosError) {
-        console.error("Error fetching videos:", videosError);
+      // Fetch videos for this project
+      const videosResult = await projectService.getProjectVideos(id);
+      if (!videosResult.success) {
+        logger.error("Error fetching videos:", videosResult.error);
       }
 
       // Format the response with proper typing
       const formattedImages: FormattedMedia[] =
-        images?.map((image: any) => ({
+        imagesResult.data?.map((image: any) => ({
           id: image.id,
           type: "image" as const,
           url: image.url,
@@ -243,7 +222,7 @@ export const projectController = {
         })) || [];
 
       const formattedVideos: FormattedMedia[] =
-        videos?.map((video: any) => ({
+        videosResult.data?.map((video: any) => ({
           id: video.id,
           type: "video" as const,
           url: video.url,

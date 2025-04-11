@@ -426,8 +426,6 @@ export class SearchController {
       const geminiResponse =
         await this.callGeminiForPromptEnhancement(promptTemplate);
 
-      console.log(geminiResponse);
-
       // Parse the response
       let parsedResponse;
       try {

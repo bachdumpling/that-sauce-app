@@ -18,7 +18,6 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
   const { id } = await params;
 
   const projectResponse = await serverApi.getProjectByIdServer(id);
-  console.log("Project Response:", projectResponse);
 
   const project = projectResponse.data.project;
 

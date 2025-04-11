@@ -56,11 +56,9 @@ apiClient.interceptors.response.use(
     // If the error is 401 (Unauthorized) and the request hasn't been retried yet
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
-      console.log("Received 401 response, attempting to refresh token...");
 
       try {
         const supabase = await createClient();
-        console.log("Checking current user...");
 
         // Use getUser instead of getSession for improved security
         const {
@@ -68,7 +66,6 @@ apiClient.interceptors.response.use(
         } = await supabase.auth.getUser();
 
         if (!user) {
-          console.log("No active user found, cannot refresh");
           return Promise.reject({
             success: false,
             data: null,
@@ -77,7 +74,6 @@ apiClient.interceptors.response.use(
         }
 
         // Try to refresh the session
-        console.log("Attempting to refresh session...");
         const {
           data: { session },
           error: refreshError,
@@ -89,7 +85,6 @@ apiClient.interceptors.response.use(
         }
 
         if (session) {
-          console.log("Session refreshed successfully");
           // Update the header and retry the request
           if (originalRequest.headers) {
             originalRequest.headers.Authorization = `Bearer ${session.access_token}`;
@@ -99,8 +94,6 @@ apiClient.interceptors.response.use(
             };
           }
           return apiClient(originalRequest);
-        } else {
-          console.log("No session returned after refresh");
         }
       } catch (refreshError) {
         console.error("Failed to refresh authentication:", refreshError);
@@ -199,6 +192,71 @@ export const apiRequest = {
         meta: response.data.meta,
       };
     } catch (error) {
+      return handleApiError(error as AxiosError);
+    }
+  },
+
+  // Add FormData specific post method for file uploads
+  postFormData: async <T>(
+    url: string,
+    formData: FormData,
+    config?: AxiosRequestConfig
+  ): Promise<ApiResponse<T>> => {
+    try {
+      // Log the FormData contents (keys only for privacy)
+      const formDataKeys: string[] = [];
+      formData.forEach((value, key) => {
+        if (value instanceof File) {
+          formDataKeys.push(
+            `${key}: File (${value.name}, ${value.size} bytes, ${value.type})`
+          );
+        } else {
+          formDataKeys.push(
+            `${key}: ${typeof value === "string" ? value : "Non-string value"}`
+          );
+        }
+      });
+
+      // Create custom config for FormData that doesn't set Content-Type
+      // The browser will set it automatically with the correct boundary
+      const formDataConfig = {
+        ...config,
+        headers: {
+          ...(config?.headers || {}),
+          "Content-Type": "multipart/form-data", // Let axios set this properly
+        },
+      };
+
+      const response: AxiosResponse = await apiClient.post(
+        url,
+        formData,
+        formDataConfig
+      );
+
+      // Handle nested response formats
+      if (response.data && typeof response.data === "object") {
+        if ("success" in response.data) {
+          // Already in the correct format
+          return {
+            success: response.data.success,
+            data: response.data.success ? response.data.data : null,
+            error:
+              !response.data.success && response.data.error
+                ? response.data.error.message
+                : undefined,
+            meta: response.data.meta,
+          };
+        }
+      }
+
+      // Fallback for unexpected response format
+      return {
+        success: true,
+        data: response.data,
+        meta: response.data.meta,
+      };
+    } catch (error) {
+      console.error(`Error in postFormData to ${url}:`, error);
       return handleApiError(error as AxiosError);
     }
   },

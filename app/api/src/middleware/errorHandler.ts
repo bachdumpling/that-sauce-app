@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from "express";
+import logger from "../config/logger";
 
 /**
  * Global error handling middleware
@@ -9,7 +10,7 @@ export const errorHandler = (
   res: Response,
   next: NextFunction
 ) => {
-  console.error("Unhandled Error:", err);
+  logger.error("Unhandled Error:", err);
 
   // Handle Supabase errors
   if (err.code) {

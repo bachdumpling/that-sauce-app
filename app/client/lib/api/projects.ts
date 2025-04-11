@@ -279,10 +279,6 @@ export async function deleteProject(
 ) {
   try {
     const url = `${API_ENDPOINTS.projects}/${projectId}?cascade=${cascade}`;
-    console.log(
-      `Attempting to delete project with ID: ${projectId} (cascade: ${cascade})`
-    );
-    console.log(`Delete URL: ${url}`);
 
     await apiRequest.delete(url);
 

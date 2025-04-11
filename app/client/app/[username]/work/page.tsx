@@ -1,10 +1,12 @@
 import { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { serverApi } from "@/lib/api";
-import { ImageIcon, Plus, AlertTriangle } from "lucide-react";
+import { Plus, AlertTriangle } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Creator } from "@/client/types";
+import { ProjectCard } from "./components/project-card";
+import ProjectsContainer from "./components/projects-container";
 
 interface CreatorWorkPageProps {
   params: {
@@ -90,35 +92,10 @@ export default async function CreatorWorkPage({
         )}
 
         {creator.projects && creator.projects.length > 0 ? (
-          creator.projects.map((project) => (
-            <Link
-              href={`/project/${project.id}`}
-              key={project.id}
-              className="group hover:opacity-90 transition-opacity"
-            >
-              <div className="overflow-hidden">
-                {project.images && project.images.length > 0 ? (
-                  <img
-                    src={project.images[0].url}
-                    alt={project.title}
-                    className="w-full h-72 object-cover rounded-[16px] border border-gray-200"
-                  />
-                ) : (
-                  <div className="w-full h-72 bg-muted flex items-center justify-center">
-                    <ImageIcon className="h-12 w-12 text-muted-foreground" />
-                  </div>
-                )}
-                <div className="pt-4">
-                  <h3 className="font-medium text-lg">{project.title}</h3>
-                  {project.description && (
-                    <p className="text-muted-foreground text-sm line-clamp-2 mt-1">
-                      {project.description}
-                    </p>
-                  )}
-                </div>
-              </div>
-            </Link>
-          ))
+          <ProjectsContainer
+            projects={creator.projects}
+            isOwner={creator.isOwner}
+          />
         ) : (
           <div className="col-span-3 py-12 text-center">
             <h3 className="text-lg font-medium text-muted-foreground">

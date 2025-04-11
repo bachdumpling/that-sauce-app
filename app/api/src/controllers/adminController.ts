@@ -1520,10 +1520,6 @@ export class AdminController {
       const { username } = req.params;
       const { status, reason } = req.body;
 
-      console.log("username", username);
-      console.log("status", status);
-      console.log("reason", reason);
-
       if (!username) {
         return res.status(400).json({
           success: false,
@@ -1545,10 +1541,7 @@ export class AdminController {
         .eq("username", username)
         .single();
 
-      console.log("creator", creator);
-
       if (creatorError || !creator) {
-        console.error(`Error finding creator ${username}:`, creatorError);
         logger.error(`Error finding creator ${username}:`, creatorError);
         return res.status(404).json({
           success: false,

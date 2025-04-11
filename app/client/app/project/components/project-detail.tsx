@@ -17,10 +17,11 @@ import {
 } from "@/components/ui/dialog";
 import { Edit, Trash2, Play } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { updateProject, deleteProject } from "@/lib/api/projects";
+import { updateProject, deleteProject } from "@/lib/api/client/projects";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { VimeoEmbed, YouTubeEmbed } from "@/components/ui/vimeo-embed";
 
 interface ProjectDetailProps {
   project: Project;
@@ -150,7 +151,7 @@ export function ProjectDetail({ project, creator }: ProjectDetailProps) {
 
       {/* Masonry Grid for Media */}
       {allMedia.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 auto-rows-max">
+        <div className="columns-1 md:columns-2 lg:columns-3 gap-4 space-y-4">
           {allMedia.map((media, index) => (
             <div
               key={`${media.type}-${media.id}`}
@@ -166,21 +167,33 @@ export function ProjectDetail({ project, creator }: ProjectDetailProps) {
                 <img
                   src={media.url}
                   alt={`${project.title} - Image ${index + 1}`}
-                  className="w-full h-full object-cover"
+                  className="w-full object-contain aspect-auto"
                 />
               ) : (
-                <div className="relative w-full aspect-video bg-black">
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <Play className="h-16 w-16 text-white opacity-80" />
-                  </div>
-                  {media.thumbnail_url ? (
-                    <img
-                      src={media.thumbnail_url}
-                      alt={`${project.title} - Video ${index + 1}`}
-                      className="w-full h-full object-cover opacity-80"
-                    />
+                <div className="w-full bg-black overflow-hidden">
+                  {media.youtube_id ? (
+                    <div className="aspect-video w-full">
+                      <YouTubeEmbed
+                        youtubeId={media.youtube_id}
+                        title={project.title || "YouTube video"}
+                      />
+                    </div>
+                  ) : media.vimeo_id ? (
+                    <div className="aspect-video w-full">
+                      <VimeoEmbed
+                        vimeoId={media.vimeo_id}
+                        title={project.title || "Vimeo video"}
+                      />
+                    </div>
+                  ) : media.url ? (
+                    <video controls src={media.url} className="w-full">
+                      <source src={media.url} type="video/mp4" />
+                      Your browser does not support the video tag.
+                    </video>
                   ) : (
-                    <div className="w-full h-full bg-muted" />
+                    <div className="w-full h-36 flex items-center justify-center bg-gray-800 text-white">
+                      <span className="text-gray-400">Video not available</span>
+                    </div>
                   )}
                 </div>
               )}

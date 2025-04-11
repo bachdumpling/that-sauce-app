@@ -491,8 +491,9 @@ export const validateVideoLinkUpload = (
   }
 
   // Check if URL is from YouTube or Vimeo
-  const isYouTube = video_url.includes('youtube.com') || video_url.includes('youtu.be');
-  const isVimeo = video_url.includes('vimeo.com');
+  const isYouTube =
+    video_url.includes("youtube.com") || video_url.includes("youtu.be");
+  const isVimeo = video_url.includes("vimeo.com");
 
   if (!isYouTube && !isVimeo) {
     return sendError(
@@ -513,6 +514,60 @@ export const validateVideoLinkUpload = (
       ErrorCode.BAD_REQUEST,
       "Description must be a string"
     );
+  }
+
+  next();
+};
+
+/**
+ * Validate URL import request
+ */
+export const validateUrlImportRequest = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  const { project_id, urls } = req.body;
+
+  // Validate project ID
+  if (!project_id || !isUUID(project_id)) {
+    return sendError(
+      res,
+      ErrorCode.BAD_REQUEST,
+      "Valid project ID is required"
+    );
+  }
+
+  // Validate URLs array
+  if (!urls || !Array.isArray(urls) || urls.length === 0) {
+    return sendError(
+      res,
+      ErrorCode.BAD_REQUEST,
+      "URLs array is required and must not be empty"
+    );
+  }
+
+  // Validate each URL item
+  for (const item of urls) {
+    if (typeof item === "string") {
+      // If it's a simple string URL, no additional validation needed
+      continue;
+    } else if (typeof item === "object" && item !== null) {
+      // If it's an object, it must have a url property
+      if (!item.url || typeof item.url !== "string") {
+        return sendError(
+          res,
+          ErrorCode.BAD_REQUEST,
+          "Each URL item must be a string or an object with a url string property"
+        );
+      }
+    } else {
+      return sendError(
+        res,
+        ErrorCode.BAD_REQUEST,
+        "Each URL item must be a string or an object with a url property"
+      );
+    }
   }
 
   next();

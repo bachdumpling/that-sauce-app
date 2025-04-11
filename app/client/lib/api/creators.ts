@@ -38,7 +38,6 @@ export async function getProjectByTitle(
 ) {
   try {
     const url = API_ENDPOINTS.getProjectByTitle(username, projectTitle);
-    console.log(`Fetching project: ${url}`);
 
     const response = await apiRequest.get(url);
     return response.data;

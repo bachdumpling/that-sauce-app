@@ -76,6 +76,15 @@ router.post(
   mediaController.batchUploadMedia
 );
 
+// Import media from URLs
+// POST /api/media/import-url-media
+router.post(
+  "/import-url-media",
+  mediaValidation.validateUrlImportRequest,
+  cacheClearMiddleware([`creator_username_`, `project_`]),
+  mediaController.importUrlMedia
+);
+
 // Upload video link (YouTube or Vimeo)
 // POST /api/media/upload-video-link
 router.post(

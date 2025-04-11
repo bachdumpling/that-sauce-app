@@ -122,7 +122,6 @@ const RejectedCreatorsPage = () => {
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     // Implement search with backend (this would require a new API endpoint)
-    console.log("Searching for:", searchQuery);
     loadRejectedCreators(1); // Reset to first page when searching
   };
 

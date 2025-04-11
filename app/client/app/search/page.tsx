@@ -49,8 +49,6 @@ export default async function SearchPage({
     const {
       data: { session },
     } = await supabase.auth.getSession();
-
-    console.log("session in search page", session);
   } catch (error) {
     console.error("Error checking if user is owner:", error);
   }
