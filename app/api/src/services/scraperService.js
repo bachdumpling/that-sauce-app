@@ -1,4 +1,3 @@
-const puppeteer = require("puppeteer");
 const logger = require("../config/logger").default;
 
 /**
@@ -15,14 +14,45 @@ class BaseScraper {
    */
   async initialize() {
     logger.debug("Launching headless browser");
-    this.browser = await puppeteer.launch({
-      headless: true,
-      args: [
-        "--no-sandbox",
-        "--disable-setuid-sandbox",
-        "--disable-dev-shm-usage",
-      ],
-    });
+
+    const isProduction = process.env.NODE_ENV === "production";
+
+    if (isProduction) {
+      // Import dependencies for production (Vercel)
+      try {
+        const puppeteerCore = require("puppeteer-core");
+        const chromium = require("@sparticuz/chromium");
+
+        this.browser = await puppeteerCore.launch({
+          args: chromium.args,
+          executablePath: await chromium.executablePath(),
+          defaultViewport: chromium.defaultViewport,
+          headless: chromium.headless,
+          ignoreHTTPSErrors: true,
+        });
+      } catch (error) {
+        logger.error(`Error launching browser in production: ${error.message}`);
+        throw error;
+      }
+    } else {
+      // Import for local development
+      try {
+        const puppeteer = require("puppeteer");
+        this.browser = await puppeteer.launch({
+          headless: true,
+          args: [
+            "--no-sandbox",
+            "--disable-setuid-sandbox",
+            "--disable-dev-shm-usage",
+          ],
+        });
+      } catch (error) {
+        logger.error(
+          `Error launching browser in development: ${error.message}`
+        );
+        throw error;
+      }
+    }
 
     this.page = await this.browser.newPage();
 
