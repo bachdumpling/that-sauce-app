@@ -39,8 +39,15 @@ export const projectController = {
   getProject: async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { id } = req.params;
+      const includeOrgs = req.query.includeOrganizations === "true";
 
-      const project = await projectService.getProject(id);
+      let project;
+      if (includeOrgs) {
+        project = await projectService.getProjectWithOrganizations(id);
+      } else {
+        project = await projectService.getProject(id);
+      }
+
       return res.status(200).json({ project });
     } catch (error) {
       return next(error);
@@ -56,7 +63,8 @@ export const projectController = {
     next: NextFunction
   ) => {
     try {
-      const { title, description } = req.body;
+      const { title, description, short_description, roles, client_ids, year } =
+        req.body;
       const userId = req.user?.id;
 
       if (!userId) {
@@ -70,7 +78,11 @@ export const projectController = {
       const project = await projectService.createProject(
         userId,
         title,
-        description
+        description,
+        short_description,
+        roles,
+        client_ids,
+        year
       );
       return res.status(201).json({ project });
     } catch (error) {
@@ -88,7 +100,8 @@ export const projectController = {
   ) => {
     try {
       const { id } = req.params;
-      const { title, description } = req.body;
+      const { title, description, short_description, roles, client_ids, year } =
+        req.body;
       const userId = req.user?.id;
 
       if (!userId) {
@@ -96,7 +109,14 @@ export const projectController = {
       }
 
       // Check if there's anything to update
-      if ((!title || title.trim() === "") && description === undefined) {
+      if (
+        (!title || title.trim() === "") &&
+        description === undefined &&
+        short_description === undefined &&
+        roles === undefined &&
+        client_ids === undefined &&
+        year === undefined
+      ) {
         return res.status(400).json({ error: "No fields to update" });
       }
 
@@ -105,6 +125,11 @@ export const projectController = {
       if (title && title.trim() !== "") updateData.title = title.trim();
       if (description !== undefined)
         updateData.description = description.trim();
+      if (short_description !== undefined)
+        updateData.short_description = short_description.trim();
+      if (roles !== undefined) updateData.roles = roles;
+      if (client_ids !== undefined) updateData.client_ids = client_ids;
+      if (year !== undefined) updateData.year = year;
 
       const project = await projectService.updateProject(
         id,

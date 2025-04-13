@@ -41,13 +41,13 @@ export function ProjectDetail({ project, creator }: ProjectDetailProps) {
 
   // Get all media (images and videos) from the project
   const allMedia = [
-    ...(project.images || []).map((img) => ({
-      ...img,
-      type: "image" as const,
-    })),
     ...(project.videos || []).map((vid) => ({
       ...vid,
       type: "video" as const,
+    })),
+    ...(project.images || []).map((img) => ({
+      ...img,
+      type: "image" as const,
     })),
   ];
 
@@ -151,54 +151,140 @@ export function ProjectDetail({ project, creator }: ProjectDetailProps) {
 
       {/* Masonry Grid for Media */}
       {allMedia.length > 0 ? (
-        <div className="columns-1 md:columns-2 lg:columns-3 gap-4 space-y-4">
-          {allMedia.map((media, index) => (
-            <div
-              key={`${media.type}-${media.id}`}
-              className={`rounded-md overflow-hidden cursor-pointer hover:opacity-90 transition-opacity ${
-                // For the first item, make it span 2 columns on larger screens if there are at least 3 items
-                index === 0 && allMedia.length >= 3
-                  ? "md:col-span-2 md:row-span-2"
-                  : ""
-              }`}
-              onClick={() => handleOpenMedia(media)}
-            >
-              {media.type === "image" ? (
-                <img
-                  src={media.url}
-                  alt={`${project.title} - Image ${index + 1}`}
-                  className="w-full object-contain aspect-auto"
-                />
-              ) : (
-                <div className="w-full bg-black overflow-hidden">
-                  {media.youtube_id ? (
-                    <div className="aspect-video w-full">
-                      <YouTubeEmbed
-                        youtubeId={media.youtube_id}
-                        title={project.title || "YouTube video"}
-                      />
+        <div>
+          {/* Videos section - 2 columns */}
+          {project.videos && project.videos.length > 0 && (
+            <div className="">
+              <div className="columns-1 md:columns-2 gap-4">
+                {/* If videos count is odd, display all except the last one */}
+                {project.videos
+                  .slice(
+                    0,
+                    project.videos.length % 2 === 1
+                      ? project.videos.length - 1
+                      : project.videos.length
+                  )
+                  .map((video, index) => (
+                    <div
+                      key={`video-${video.id}`}
+                      className="rounded-md overflow-hidden cursor-pointer hover:opacity-90 transition-opacity mb-4"
+                      onClick={() =>
+                        handleOpenMedia({ ...video, type: "video" })
+                      }
+                    >
+                      <div className="w-full bg-black overflow-hidden">
+                        {video.youtube_id ? (
+                          <div className="aspect-video w-full">
+                            <YouTubeEmbed
+                              youtubeId={video.youtube_id}
+                              title={project.title || "YouTube video"}
+                            />
+                          </div>
+                        ) : video.vimeo_id ? (
+                          <div className="aspect-video w-full">
+                            <VimeoEmbed
+                              vimeoId={video.vimeo_id}
+                              title={project.title || "Vimeo video"}
+                            />
+                          </div>
+                        ) : video.url ? (
+                          <video controls src={video.url} className="w-full">
+                            <source src={video.url} type="video/mp4" />
+                            Your browser does not support the video tag.
+                          </video>
+                        ) : (
+                          <div className="w-full h-36 flex items-center justify-center bg-gray-800 text-white">
+                            <span className="text-gray-400">
+                              Video not available
+                            </span>
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  ) : media.vimeo_id ? (
-                    <div className="aspect-video w-full">
-                      <VimeoEmbed
-                        vimeoId={media.vimeo_id}
-                        title={project.title || "Vimeo video"}
-                      />
-                    </div>
-                  ) : media.url ? (
-                    <video controls src={media.url} className="w-full">
-                      <source src={media.url} type="video/mp4" />
-                      Your browser does not support the video tag.
-                    </video>
-                  ) : (
-                    <div className="w-full h-36 flex items-center justify-center bg-gray-800 text-white">
-                      <span className="text-gray-400">Video not available</span>
-                    </div>
-                  )}
-                </div>
-              )}
+                  ))}
+              </div>
             </div>
-          ))}
+          )}
+
+          {/* Images section - 3 columns */}
+          {((project.images && project.images.length > 0) ||
+            (project.videos && project.videos.length % 2 === 1)) && (
+            <div>
+              <div className="columns-1 md:columns-2 lg:columns-3 gap-4 space-y-4">
+                {/* If videos count is odd, add the last video at the beginning of the image grid */}
+                {project.videos && project.videos.length % 2 === 1 && (
+                  <div
+                    key={`video-in-images-${project.videos[project.videos.length - 1].id}`}
+                    className="rounded-md overflow-hidden cursor-pointer hover:opacity-90 transition-opacity mb-4"
+                    onClick={() =>
+                      handleOpenMedia({
+                        ...project.videos[project.videos.length - 1],
+                        type: "video",
+                      })
+                    }
+                  >
+                    <div className="w-full bg-black overflow-hidden">
+                      {project.videos[project.videos.length - 1].youtube_id ? (
+                        <div className="aspect-video w-full">
+                          <YouTubeEmbed
+                            youtubeId={
+                              project.videos[project.videos.length - 1]
+                                .youtube_id
+                            }
+                            title={project.title || "YouTube video"}
+                          />
+                        </div>
+                      ) : project.videos[project.videos.length - 1].vimeo_id ? (
+                        <div className="aspect-video w-full">
+                          <VimeoEmbed
+                            vimeoId={
+                              project.videos[project.videos.length - 1].vimeo_id
+                            }
+                            title={project.title || "Vimeo video"}
+                          />
+                        </div>
+                      ) : project.videos[project.videos.length - 1].url ? (
+                        <video
+                          controls
+                          src={project.videos[project.videos.length - 1].url}
+                          className="w-full"
+                        >
+                          <source
+                            src={project.videos[project.videos.length - 1].url}
+                            type="video/mp4"
+                          />
+                          Your browser does not support the video tag.
+                        </video>
+                      ) : (
+                        <div className="w-full h-36 flex items-center justify-center bg-gray-800 text-white">
+                          <span className="text-gray-400">
+                            Video not available
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {project.images &&
+                  project.images.map((image, index) => (
+                    <div
+                      key={`image-${image.id}`}
+                      className="rounded-md overflow-hidden cursor-pointer hover:opacity-90 transition-opacity mb-4"
+                      onClick={() =>
+                        handleOpenMedia({ ...image, type: "image" })
+                      }
+                    >
+                      <img
+                        src={image.url}
+                        alt={`${project.title} - Image ${index + 1}`}
+                        className="w-full object-contain aspect-auto"
+                      />
+                    </div>
+                  ))}
+              </div>
+            </div>
+          )}
         </div>
       ) : (
         <div className="text-center py-16 border border-dashed rounded-md">

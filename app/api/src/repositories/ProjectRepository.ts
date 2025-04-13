@@ -66,7 +66,16 @@ export class ProjectRepository {
    * Create a new project
    */
   async create(
-    data: Pick<Project, "title" | "description" | "creator_id"> & {
+    data: Pick<
+      Project,
+      | "title"
+      | "description"
+      | "creator_id"
+      | "short_description"
+      | "roles"
+      | "client_ids"
+      | "year"
+    > & {
       portfolio_id: string;
     }
   ): Promise<Project> {
@@ -106,7 +115,17 @@ export class ProjectRepository {
    */
   async update(
     id: string,
-    data: Partial<Pick<Project, "title" | "description">>
+    data: Partial<
+      Pick<
+        Project,
+        | "title"
+        | "description"
+        | "short_description"
+        | "roles"
+        | "client_ids"
+        | "year"
+      >
+    >
   ): Promise<Project> {
     const { data: project, error } = await supabase
       .from("projects")

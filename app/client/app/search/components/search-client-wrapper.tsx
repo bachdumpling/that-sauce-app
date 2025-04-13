@@ -542,7 +542,7 @@ export function SearchClientWrapper({
               key={role}
               variant={selectedRole === role ? "default" : "outline"}
               onClick={() => handleRoleSelect(role)}
-              className={selectedRole === role ? "bg-black text-white" : ""}
+              // className={selectedRole === role ? "bg-black text-white"  : ""}
             >
               {role}
             </Button>
@@ -550,7 +550,7 @@ export function SearchClientWrapper({
           {talentRoles.length > 15 && (
             <Button
               variant="outline"
-              className="gap-1"
+              className="gap-1 rounded-full"
               onClick={() => setShowAllRoles(!showAllRoles)}
             >
               {showAllRoles ? "Less" : "More"}{" "}

@@ -24,6 +24,10 @@ export async function getProjectById(
 export async function createProject(projectData: {
   title: string;
   description?: string;
+  short_description?: string;
+  roles?: string[];
+  client_ids?: string[];
+  year?: number;
 }): Promise<ApiResponse<Project>> {
   if (!projectData.title || !projectData.title.trim()) {
     console.error("Project title is required");

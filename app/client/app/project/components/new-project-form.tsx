@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -21,16 +21,20 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { VimeoEmbed, YouTubeEmbed } from "@/components/ui/vimeo-embed";
+import { MultiSelect, Option } from "@/components/ui/multi-select";
 import { Trash2, Upload, Loader2, Link, ExternalLink } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { createProject } from "@/lib/api/client/projects";
+import { getOrganizations } from "@/lib/api/client/organizations";
 import {
   batchUploadMedia,
   uploadVideoLink,
   importUrlMedia,
 } from "@/lib/api/client/media";
 import { extractMediaFromUrl } from "@/lib/api/client/scraper";
+import { CREATOR_ROLES } from "@/lib/constants/creator-options";
+import { Organization } from "@/client/types/project";
 
 interface MediaItem {
   id: string;
@@ -56,12 +60,61 @@ export default function NewProjectForm() {
   // Project information state
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [shortDescription, setShortDescription] = useState("");
+  const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
+  const [selectedClients, setSelectedClients] = useState<string[]>([]);
+  const [year, setYear] = useState<number | undefined>(
+    new Date().getFullYear()
+  );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentStep, setCurrentStep] = useState<string>("");
+
+  // Client/Organization state
+  const [organizations, setOrganizations] = useState<Organization[]>([]);
+  const [isLoadingOrgs, setIsLoadingOrgs] = useState(false);
 
   // Import state
   const [isImporting, setIsImporting] = useState(false);
   const [importError, setImportError] = useState<string | null>(null);
+
+  // Format role options from the constant list
+  const roleOptions: Option[] = CREATOR_ROLES.map((role) => ({
+    value: role,
+    label: role,
+  }));
+
+  // Load organizations on component mount
+  useEffect(() => {
+    async function fetchOrganizations() {
+      setIsLoadingOrgs(true);
+      try {
+        console.log("Fetching organizations...");
+        const response = await getOrganizations();
+        console.log("Organization response:", response);
+        
+        if (response.success && response.data) {
+          console.log("Setting organizations:", response.data);
+          setOrganizations(response.data);
+        } else {
+          console.error("Failed to load organizations:", response.error);
+          toast.error("Failed to load client list");
+        }
+      } catch (error) {
+        console.error("Error fetching organizations:", error);
+        toast.error("Error loading clients");
+      } finally {
+        setIsLoadingOrgs(false);
+      }
+    }
+
+    fetchOrganizations();
+  }, []);
+
+  // Format client options from fetched organizations
+  const clientOptions: Option[] = organizations.map((org) => ({
+    value: org.id,
+    label: org.name,
+  }));
 
   const handleFileDrop = (e: React.DragEvent) => {
     e.preventDefault();
@@ -316,8 +369,24 @@ export default function NewProjectForm() {
   };
 
   const handleCreateProject = async () => {
+    // Validate required fields
     if (!title.trim()) {
       toast.error("Project title is required");
+      return;
+    }
+    
+    if (!shortDescription.trim()) {
+      toast.error("Short description is required");
+      return;
+    }
+    
+    if (selectedRoles.length === 0) {
+      toast.error("At least one project role is required");
+      return;
+    }
+    
+    if (!year) {
+      toast.error("Project year is required");
       return;
     }
 
@@ -329,6 +398,10 @@ export default function NewProjectForm() {
       const projectResponse = await createProject({
         title,
         description,
+        short_description: shortDescription,
+        roles: selectedRoles,
+        client_ids: selectedClients,
+        year,
       });
 
       if (!projectResponse.success || !projectResponse.data) {
@@ -700,31 +773,107 @@ export default function NewProjectForm() {
         <CardContent>
           <div className="space-y-4">
             <div>
-              <Label htmlFor="project-title">Project Title</Label>
+              <Label htmlFor="project-title">Project Title *</Label>
               <Input
                 id="project-title"
                 placeholder="Enter project title"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
+                required
               />
             </div>
+            
             <div>
-              <Label htmlFor="project-description">Description</Label>
+              <Label htmlFor="project-short-description">
+                Short Description *
+              </Label>
+              <Input
+                id="project-short-description"
+                placeholder="Brief summary of your project (max 255 characters)"
+                value={shortDescription}
+                onChange={(e) => setShortDescription(e.target.value)}
+                maxLength={255}
+                required
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                {shortDescription.length}/255 characters
+              </p>
+            </div>
+            
+            <div>
+              <Label htmlFor="project-description">Full Description</Label>
               <textarea
                 id="project-description"
                 rows={4}
                 className="w-full rounded-md border border-input px-3 py-2 text-sm"
-                placeholder="Enter project description"
+                placeholder="Enter detailed project description"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
               />
+            </div>
+            
+            <div>
+              <Label htmlFor="project-year">Year *</Label>
+              <Input
+                id="project-year"
+                type="number"
+                placeholder="Project year"
+                min={1990}
+                max={new Date().getFullYear() + 1}
+                value={year || ""}
+                onChange={(e) => {
+                  const value = e.target.value
+                    ? parseInt(e.target.value)
+                    : undefined;
+                  setYear(value);
+                }}
+                required
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="project-roles">Project Roles *</Label>
+              <MultiSelect
+                options={roleOptions}
+                selected={selectedRoles}
+                onChange={setSelectedRoles}
+                placeholder="Select roles involved in this project"
+              />
+              {selectedRoles.length === 0 && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  At least one role is required
+                </p>
+              )}
+            </div>
+            
+            <div>
+              <Label htmlFor="project-clients">Clients</Label>
+              {isLoadingOrgs ? (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Loading clients...
+                </div>
+              ) : (
+                <MultiSelect
+                  options={clientOptions}
+                  selected={selectedClients}
+                  onChange={setSelectedClients}
+                  placeholder="Select clients for this project (optional)"
+                  emptyMessage="No clients found. Add clients in the admin panel."
+                />
+              )}
             </div>
 
             <Button
               onClick={handleCreateProject}
               className="w-full"
               disabled={
-                isSubmitting || !title.trim() || mediaItems.length === 0
+                isSubmitting || 
+                !title.trim() || 
+                !shortDescription.trim() || 
+                !year || 
+                selectedRoles.length === 0 || 
+                mediaItems.length === 0
               }
             >
               {isSubmitting ? (

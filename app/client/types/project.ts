@@ -36,6 +36,15 @@ export interface ProjectVideo {
   updated_at: string;
 }
 
+export interface Organization {
+  id: string;
+  name: string;
+  logo_url?: string;
+  website?: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Project {
   id: string;
   creator_id: string;
@@ -43,6 +52,9 @@ export interface Project {
   title: string;
   behance_url: string;
   description: string;
+  short_description?: string;
+  roles?: string[];
+  client_ids?: string[];
   year: number | null;
   featured: boolean;
   order: number;
@@ -52,4 +64,5 @@ export interface Project {
   creators: Creator;
   images: ProjectImage[];
   videos: ProjectVideo[];
+  organizations?: Organization[];
 }

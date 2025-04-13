@@ -14,7 +14,7 @@ import creatorsRouter from "../src/routes/creators";
 import profileRouter from "../src/routes/profile";
 import mediaRoutes from "../src/routes/mediaRoutes";
 import portfolioRoutes from "../src/routes/portfolioRoutes";
-
+import organizationRoutes from "../src/routes/organizationRoutes";
 // Add this import
 const scraperRoutes = require("../src/routes/scraperRoutes");
 
@@ -88,6 +88,7 @@ app.use("/api/profile", profileRouter);
 app.use("/api/media", mediaRoutes);
 app.use("/api/portfolios", portfolioRoutes);
 app.use("/api/scraper", scraperRoutes);
+app.use("/api/organizations", organizationRoutes);
 
 // Error handling middleware
 app.use(errorHandler);

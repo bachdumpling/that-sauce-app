@@ -5,6 +5,20 @@ import { body, param, query, validationResult } from "express-validator";
 export const validateProject = [
   body("title").isString().notEmpty().withMessage("Title is required"),
   body("description").optional().isString(),
+  body("short_description")
+    .optional()
+    .isString()
+    .isLength({ max: 255 })
+    .withMessage("Short description must be less than 255 characters"),
+  body("roles").optional().isArray().withMessage("Roles must be an array"),
+  body("client_ids")
+    .optional()
+    .isArray()
+    .withMessage("Client IDs must be an array"),
+  body("client_ids.*")
+    .optional()
+    .isUUID()
+    .withMessage("Each client ID must be a valid UUID"),
   body("year")
     .optional()
     .isInt({ min: 1990, max: new Date().getFullYear() + 1 }),

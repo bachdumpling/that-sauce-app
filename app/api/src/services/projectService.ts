@@ -47,7 +47,11 @@ export class ProjectService {
   async createProject(
     userId: string,
     title: string,
-    description?: string
+    description?: string,
+    short_description?: string,
+    roles?: string[],
+    client_ids?: string[],
+    year?: number
   ): Promise<Project> {
     // Get creator
     const creator = await this.creatorRepo.getByProfileId(userId);
@@ -65,6 +69,10 @@ export class ProjectService {
     const project = await this.projectRepo.create({
       title: title.trim(),
       description: description?.trim() || "",
+      short_description: short_description?.trim(),
+      roles: roles || [],
+      client_ids: client_ids || [],
+      year,
       creator_id: creator.id,
       portfolio_id: portfolio.id,
     });
@@ -262,5 +270,40 @@ export class ProjectService {
    */
   async getProjectVideos(projectId: string) {
     return this.projectRepo.getProjectVideos(projectId);
+  }
+
+  /**
+   * Get projects with their associated organizations
+   */
+  async getProjectWithOrganizations(
+    projectId: string
+  ): Promise<ProjectWithMedia> {
+    const project = await this.projectRepo.getById(projectId);
+
+    if (!project) {
+      throw new Error("Project not found");
+    }
+
+    if (project.client_ids && project.client_ids.length > 0) {
+      // Fetch organizations for this project
+      const { data: organizations, error } = await supabase
+        .from("organizations")
+        .select("*")
+        .in("id", project.client_ids);
+
+      if (error) {
+        logger.error("Error fetching organizations for project:", error);
+      } else {
+        return {
+          ...project,
+          organizations: organizations || [],
+        };
+      }
+    }
+
+    return {
+      ...project,
+      organizations: [],
+    };
   }
 }
