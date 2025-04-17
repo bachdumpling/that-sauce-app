@@ -626,6 +626,8 @@ export class CreatorController {
         years_of_experience,
         work_email,
         social_links,
+        first_name,
+        last_name,
       } = req.body;
 
       // Check if user is authenticated
@@ -712,8 +714,18 @@ export class CreatorController {
 
       creatorUpdateData.updated_at = new Date().toISOString();
 
-      let updatedCreator;
+      // Prepare profile update data (first_name and last_name)
+      const profileUpdateData: any = {};
+      if (first_name !== undefined) profileUpdateData.first_name = first_name;
+      if (last_name !== undefined) profileUpdateData.last_name = last_name;
+      if (Object.keys(profileUpdateData).length > 0) {
+        profileUpdateData.updated_at = new Date().toISOString();
+      }
 
+      let updatedCreator;
+      let profileData;
+
+      // Update the creator record if there are creator fields to update
       if (Object.keys(creatorUpdateData).length > 1) {
         // > 1 because updated_at is always included
         const { data, error: updateError } = await supabase
@@ -751,16 +763,46 @@ export class CreatorController {
         }
       }
 
-      // Get the profile data to return the full response with first_name and last_name
-      const { data: profileData, error: profileFetchError } = await supabase
-        .from("profiles")
-        .select("first_name, last_name")
-        .eq("id", creator.profile_id)
-        .single();
+      // Update the profile record if there are profile fields to update
+      if (Object.keys(profileUpdateData).length > 0) {
+        const { data, error: profileUpdateError } = await supabase
+          .from("profiles")
+          .update(profileUpdateData)
+          .eq("id", creator.profile_id)
+          .select("first_name, last_name")
+          .single();
+
+        if (profileUpdateError) {
+          logger.error(
+            `Error updating profile data: ${profileUpdateError.message}`,
+            { error: profileUpdateError }
+          );
+          return sendError(
+            res,
+            ErrorCode.UPDATE_FAILED,
+            "Failed to update profile data",
+            profileUpdateError.message,
+            500
+          );
+        }
+
+        profileData = data;
+      } else {
+        // Get the profile data to return the full response with first_name and last_name
+        const { data, error: profileFetchError } = await supabase
+          .from("profiles")
+          .select("first_name, last_name")
+          .eq("id", creator.profile_id)
+          .single();
+
+        if (!profileFetchError) {
+          profileData = data;
+        }
+      }
 
       let responseData = updatedCreator;
 
-      if (!profileFetchError && profileData) {
+      if (profileData) {
         responseData = {
           ...updatedCreator,
           first_name: profileData.first_name,

@@ -1,19 +1,19 @@
 import { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
-import { serverApi } from "@/lib/api";
 import { CreatorClient } from "./components/creator-client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AlertTriangle } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { LegacyCreator } from "@/client/types";
+import { Creator } from "@/client/types";
+import { getCreatorAction } from "@/actions/creator-actions";
 
 interface CreatorPageProps {
   params: {
     username: string;
   };
-  creator?: LegacyCreator;
+  creator?: Creator;
 }
 
 export async function generateMetadata({
@@ -23,15 +23,15 @@ export async function generateMetadata({
   const { username } = resolvedParams;
 
   try {
-    const response = await serverApi.getCreatorByUsernameServer(username);
+    const result = await getCreatorAction(username);
 
-    if (!response.success || !response.data) {
+    if (!result.success || !result.data) {
       return {
         title: "Creator Not Found",
       };
     }
 
-    const creator = response.data;
+    const creator = result.data;
 
     return {
       title: `${creator.username} | that sauce`,
@@ -56,10 +56,10 @@ export default async function CreatorPage({
   // If creator isn't provided via props, fetch it directly
   if (!creator) {
     try {
-      const response = await serverApi.getCreatorByUsernameServer(username);
+      const result = await getCreatorAction(username);
 
-      if (!response.success || !response.data) {
-        console.error("Failed to fetch creator:", response.error);
+      if (!result.success || !result.data) {
+        console.error("Failed to fetch creator:", result.error);
         return (
           <div className="py-16 flex flex-col items-center justify-center text-center">
             <AlertTriangle className="h-12 w-12 text-yellow-500 mb-4" />
@@ -74,7 +74,7 @@ export default async function CreatorPage({
         );
       }
 
-      creator = response.data;
+      creator = result.data;
     } catch (error: any) {
       console.error("Error fetching creator data:", error);
       return (

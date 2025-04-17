@@ -25,14 +25,15 @@ import { MultiSelect, Option } from "@/components/ui/multi-select";
 import { Trash2, Upload, Loader2, Link, ExternalLink } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { createProject } from "@/lib/api/client/projects";
-import { getOrganizations } from "@/lib/api/client/organizations";
+// Import server actions instead of client API functions
+import { createProjectAction } from "@/actions/project-actions";
+import { getOrganizationsAction } from "@/actions/organization-actions";
 import {
-  batchUploadMedia,
-  uploadVideoLink,
-  importUrlMedia,
-} from "@/lib/api/client/media";
-import { extractMediaFromUrl } from "@/lib/api/client/scraper";
+  batchUploadMediaAction,
+  uploadVideoLinkAction,
+  importUrlMediaAction,
+} from "@/actions/media-actions";
+import { extractMediaFromUrlAction } from "@/actions/scraper-actions";
 import { CREATOR_ROLES } from "@/lib/constants/creator-options";
 import { Organization } from "@/client/types/project";
 
@@ -88,15 +89,12 @@ export default function NewProjectForm() {
     async function fetchOrganizations() {
       setIsLoadingOrgs(true);
       try {
-        console.log("Fetching organizations...");
-        const response = await getOrganizations();
-        console.log("Organization response:", response);
-        
+        const response = await getOrganizationsAction();
+
         if (response.success && response.data) {
-          console.log("Setting organizations:", response.data);
           setOrganizations(response.data);
         } else {
-          console.error("Failed to load organizations:", response.error);
+          console.error("Failed to load organizations:", response.message);
           toast.error("Failed to load client list");
         }
       } catch (error) {
@@ -259,10 +257,10 @@ export default function NewProjectForm() {
       toast.info("Scraping media from URL. This may take a few seconds...");
 
       // Extract media from external URL
-      const response = await extractMediaFromUrl(projectLink);
+      const response = await extractMediaFromUrlAction(projectLink);
 
       if (!response.success || !response.data) {
-        throw new Error(response.error || "Failed to import media from URL");
+        throw new Error(response.message || "Failed to import media from URL");
       }
 
       // Handle potentially nested response structure
@@ -374,17 +372,17 @@ export default function NewProjectForm() {
       toast.error("Project title is required");
       return;
     }
-    
+
     if (!shortDescription.trim()) {
       toast.error("Short description is required");
       return;
     }
-    
+
     if (selectedRoles.length === 0) {
       toast.error("At least one project role is required");
       return;
     }
-    
+
     if (!year) {
       toast.error("Project year is required");
       return;
@@ -394,8 +392,11 @@ export default function NewProjectForm() {
     setCurrentStep("Creating project...");
 
     try {
+      // Get current user's username
+      const username = window.location.pathname.split("/")[1] || "";
+
       // First, create the project
-      const projectResponse = await createProject({
+      const projectResponse = await createProjectAction(username, {
         title,
         description,
         short_description: shortDescription,
@@ -406,10 +407,10 @@ export default function NewProjectForm() {
 
       if (!projectResponse.success || !projectResponse.data) {
         console.error("Project creation failed:", projectResponse);
-        throw new Error(projectResponse.error || "Failed to create project");
+        throw new Error(projectResponse.message || "Failed to create project");
       }
 
-      const projectId = projectResponse.data.id;
+      const projectId = projectResponse.data.project.id;
 
       if (!projectId) {
         console.error("No project ID returned from API");
@@ -440,12 +441,16 @@ export default function NewProjectForm() {
         setCurrentStep(`Uploading ${fileUploads.length} local files...`);
 
         try {
-          const uploadResponse = await batchUploadMedia(projectId, fileUploads);
+          const uploadResponse = await batchUploadMediaAction(
+            username,
+            projectId,
+            fileUploads
+          );
 
           if (!uploadResponse.success) {
             console.error("File upload failed:", uploadResponse);
             toast.error(
-              `Project created but file upload failed: ${uploadResponse.error}`
+              `Project created but file upload failed: ${uploadResponse.message}`
             );
           } else {
             if (
@@ -470,14 +475,15 @@ export default function NewProjectForm() {
         setCurrentStep(`Uploading ${scrapedMediaItems.length} media URLs...`);
 
         try {
-          const importResponse = await importUrlMedia(
+          const importResponse = await importUrlMediaAction(
+            username,
             projectId,
             scrapedMediaItems
           );
 
           if (!importResponse.success) {
             console.error("Media URL import failed:", importResponse);
-            toast.error(`Media URL import failed: ${importResponse.error}`);
+            toast.error(`Media URL import failed: ${importResponse.message}`);
           } else {
             toast.success(`Imported ${importResponse.data.total} media items`);
 
@@ -515,7 +521,8 @@ export default function NewProjectForm() {
           if (!videoItem.file) {
             // Skip if it's a file that was already uploaded
             try {
-              const videoResponse = await uploadVideoLink(
+              const videoResponse = await uploadVideoLinkAction(
+                username,
                 projectId,
                 videoItem.url,
                 {
@@ -782,7 +789,7 @@ export default function NewProjectForm() {
                 required
               />
             </div>
-            
+
             <div>
               <Label htmlFor="project-short-description">
                 Short Description *
@@ -799,7 +806,7 @@ export default function NewProjectForm() {
                 {shortDescription.length}/255 characters
               </p>
             </div>
-            
+
             <div>
               <Label htmlFor="project-description">Full Description</Label>
               <textarea
@@ -811,7 +818,7 @@ export default function NewProjectForm() {
                 onChange={(e) => setDescription(e.target.value)}
               />
             </div>
-            
+
             <div>
               <Label htmlFor="project-year">Year *</Label>
               <Input
@@ -830,7 +837,7 @@ export default function NewProjectForm() {
                 required
               />
             </div>
-            
+
             <div>
               <Label htmlFor="project-roles">Project Roles *</Label>
               <MultiSelect
@@ -845,7 +852,7 @@ export default function NewProjectForm() {
                 </p>
               )}
             </div>
-            
+
             <div>
               <Label htmlFor="project-clients">Clients</Label>
               {isLoadingOrgs ? (
@@ -868,11 +875,11 @@ export default function NewProjectForm() {
               onClick={handleCreateProject}
               className="w-full"
               disabled={
-                isSubmitting || 
-                !title.trim() || 
-                !shortDescription.trim() || 
-                !year || 
-                selectedRoles.length === 0 || 
+                isSubmitting ||
+                !title.trim() ||
+                !shortDescription.trim() ||
+                !year ||
+                selectedRoles.length === 0 ||
                 mediaItems.length === 0
               }
             >

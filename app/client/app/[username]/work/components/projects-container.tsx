@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { ProjectCard } from "./project-card";
+import { usePathname } from "next/navigation";
+import { Button } from "@/components/ui/button";
 
 interface Project {
   id: string;
@@ -20,6 +22,10 @@ export default function ProjectsContainer({
   isOwner,
 }: ProjectsContainerProps) {
   const [projects, setProjects] = useState(initialProjects);
+  const pathname = usePathname();
+
+  // Extract username from pathname
+  const username = pathname.split("/")[1]; // Gets the username from "/username/work"
 
   const handleProjectDelete = (deletedProjectId: string) => {
     setProjects(projects.filter((project) => project.id !== deletedProjectId));
@@ -48,6 +54,7 @@ export default function ProjectsContainer({
           project={project}
           isOwner={isOwner}
           onDelete={handleProjectDelete}
+          username={username}
         />
       ))}
     </>

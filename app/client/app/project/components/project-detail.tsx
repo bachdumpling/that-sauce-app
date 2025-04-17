@@ -1,27 +1,25 @@
 "use client";
 
 import { useState } from "react";
-import {
-  Creator,
-  Project,
-  Image as ImageType,
-  Video,
-} from "@/components/shared/types";
-import { Button } from "@/components/ui/button";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
 } from "@/components/ui/dialog";
-import { Edit, Trash2, Play } from "lucide-react";
-import { useRouter } from "next/navigation";
-import { updateProject, deleteProject } from "@/lib/api/client/projects";
-import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { VimeoEmbed, YouTubeEmbed } from "@/components/ui/vimeo-embed";
+import { Edit, Trash2 } from "lucide-react";
+import { Project, Creator } from "@/types";
+import {
+  updateProjectAction,
+  deleteProjectAction,
+} from "@/actions/project-actions";
 
 interface ProjectDetailProps {
   project: Project;
@@ -74,7 +72,7 @@ export function ProjectDetail({ project, creator }: ProjectDetailProps) {
     setIsSubmitting(true);
 
     try {
-      const response = await updateProject(project.id, {
+      const response = await updateProjectAction(creator.username, project.id, {
         title,
         description,
       });
@@ -84,7 +82,7 @@ export function ProjectDetail({ project, creator }: ProjectDetailProps) {
         router.refresh();
         setIsEditing(false);
       } else {
-        toast.error(response.error || "Failed to update project");
+        toast.error(response.message || "Failed to update project");
       }
     } catch (error) {
       console.error("Error saving project:", error);
@@ -98,13 +96,13 @@ export function ProjectDetail({ project, creator }: ProjectDetailProps) {
     setIsSubmitting(true);
 
     try {
-      const response = await deleteProject(project.id, true);
+      const response = await deleteProjectAction(creator.username, project.id);
 
       if (response.success) {
         toast.success("Project deleted successfully");
         router.push(`/${creator.username}/work`);
       } else {
-        toast.error(response.error || "Failed to delete project");
+        toast.error(response.message || "Failed to delete project");
       }
     } catch (error) {
       console.error("Error deleting project:", error);

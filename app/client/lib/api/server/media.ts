@@ -40,25 +40,11 @@ interface BatchMediaUploadResponse {
  */
 export async function uploadMediaServer(
   projectId: string,
-  file: File,
-  metadata?: {
-    alt_text?: string;
-    title?: string;
-    description?: string;
-    order?: number;
-  }
+  formData: FormData
 ): Promise<ApiResponse<MediaUploadResponse>> {
-  const formData = new FormData();
-  formData.append("file", file);
-  formData.append("project_id", projectId);
-
-  // Add optional metadata
-  if (metadata) {
-    Object.entries(metadata).forEach(([key, value]) => {
-      if (value !== undefined) {
-        formData.append(key, String(value));
-      }
-    });
+  // Ensure project_id is in the formData
+  if (!formData.has("project_id")) {
+    formData.append("project_id", projectId);
   }
 
   return serverApiRequest.postFormData<MediaUploadResponse>(
@@ -116,10 +102,11 @@ export async function uploadVideoLinkServer(
  * Delete a media item (image or video)
  */
 export async function deleteMediaServer(
-  mediaId: string
+  mediaId: string,
+  mediaType: "image" | "video" = "image"
 ): Promise<ApiResponse<{ message: string }>> {
   return serverApiRequest.delete<{ message: string }>(
-    API_ENDPOINTS.media.deleteMedia(mediaId)
+    API_ENDPOINTS.media.deleteMedia(mediaId, mediaType)
   );
 }
 
@@ -128,7 +115,6 @@ export async function deleteMediaServer(
  */
 export async function updateMediaMetadataServer(
   mediaId: string,
-  mediaType: "image" | "video" | "youtube" | "vimeo",
   metadata: {
     alt_text?: string;
     title?: string;
@@ -137,7 +123,6 @@ export async function updateMediaMetadataServer(
   }
 ): Promise<ApiResponse<MediaUploadResponse>> {
   const payload = {
-    media_type: mediaType,
     ...metadata,
   };
 
@@ -145,4 +130,4 @@ export async function updateMediaMetadataServer(
     API_ENDPOINTS.media.updateMediaMetadata(mediaId),
     payload
   );
-} 
+}

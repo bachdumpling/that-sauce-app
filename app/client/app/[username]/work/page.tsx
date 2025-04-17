@@ -1,12 +1,12 @@
 import { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { serverApi } from "@/lib/api";
 import { Plus, AlertTriangle } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Creator } from "@/client/types";
 import { ProjectCard } from "./components/project-card";
 import ProjectsContainer from "./components/projects-container";
+import { getCreatorAction } from "@/actions/creator-actions";
 
 interface CreatorWorkPageProps {
   params: {
@@ -22,15 +22,15 @@ export async function generateMetadata({
   const { username } = resolvedParams;
 
   try {
-    const response = await serverApi.getCreatorByUsernameServer(username);
+    const result = await getCreatorAction(username);
 
-    if (!response.success) {
+    if (!result.success) {
       return {
         title: "Work Not Found",
       };
     }
 
-    const creator = response.data;
+    const creator = result.data;
 
     return {
       title: `${creator.username}'s Work | that sauce`,
@@ -54,18 +54,18 @@ export default async function CreatorWorkPage({
   // If creator isn't provided via props, fetch it directly
   if (!creator) {
     try {
-      const response = await serverApi.getCreatorByUsernameServer(username);
+      const result = await getCreatorAction(username);
 
-      if (!response.success) {
+      if (!result.success) {
         return (
           <CreatorWorkError
-            error={{ message: response.error }}
+            error={{ message: result.error }}
             username={username}
           />
         );
       }
 
-      creator = response.data;
+      creator = result.data;
     } catch (error: any) {
       return <CreatorWorkError error={error} username={username} />;
     }

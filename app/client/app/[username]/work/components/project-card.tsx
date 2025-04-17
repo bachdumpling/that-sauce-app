@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { deleteProject } from "@/lib/api/client/projects";
+import { deleteProjectAction } from "@/actions/project-actions";
 
 interface Project {
   id: string;
@@ -24,12 +24,14 @@ interface ProjectCardProps {
   project: Project;
   isOwner?: boolean;
   onDelete?: (projectId: string) => void;
+  username?: string; // Add username prop for the action
 }
 
-export function ProjectCard({ 
-  project, 
+export function ProjectCard({
+  project,
   isOwner = false,
-  onDelete 
+  onDelete,
+  username = "",
 }: ProjectCardProps) {
   const [isDeleting, setIsDeleting] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -38,18 +40,18 @@ export function ProjectCard({
 
   const handleDelete = async (e: React.MouseEvent) => {
     e.preventDefault();
-    
+
     if (confirm("Are you sure you want to delete this project?")) {
       try {
         setIsDeleting(true);
-        
-        // Always use cascade=true to ensure all associated media is deleted
-        const response = await deleteProject(project.id, true);
+
+        // Use the server action to delete the project
+        const response = await deleteProjectAction(username, project.id);
 
         if (response.success) {
           // Mark this component as deleted
           setIsDeleted(true);
-          
+
           // Notify the parent component about the deletion
           if (onDelete) {
             onDelete(project.id);
@@ -59,7 +61,7 @@ export function ProjectCard({
           }
         } else {
           console.error("Failed to delete project:", response.error);
-          alert(`Error deleting project: ${response.error}`);
+          alert(`Error deleting project: ${response.message}`);
         }
       } catch (error) {
         console.error("Error deleting project:", error);
@@ -76,7 +78,7 @@ export function ProjectCard({
   if (isDeleted) {
     return null;
   }
-  
+
   return (
     <Link
       href={`/project/${project.id}`}

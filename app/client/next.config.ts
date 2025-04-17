@@ -2,6 +2,11 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   /* config options here */
+  experimental: {
+    serverActions: {
+      bodySizeLimit: "10mb",
+    },
+  },
   images: {
     unoptimized: true,
     remotePatterns: [
@@ -29,11 +34,11 @@ const nextConfig: NextConfig = {
       test: /\.glb$/,
       use: ["url-loader"],
     });
-    
+
     return config;
   },
   // Updated configuration for external packages
-  serverExternalPackages: ['@vercel/og'],
+  serverExternalPackages: ["@vercel/og"],
   eslint: {
     ignoreDuringBuilds: true,
   },

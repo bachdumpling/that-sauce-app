@@ -1,13 +1,12 @@
 import { ReactNode } from "react";
 import { Toaster } from "@/components/ui/sonner";
-import { serverApi } from "@/lib/api/index";
-import { createClient } from "@/utils/supabase/server";
 import { CreatorHeader } from "./components/creator-header";
 import { TabsNav } from "./components/tabs-nav";
 import React from "react";
 import { Creator } from "@/client/types";
 import { cn } from "@/lib/utils";
 import { notFound } from "next/navigation";
+import { checkCreatorExistsAction } from "@/actions/creator-actions";
 
 // Props that will be passed to child components
 interface CreatorPageProps {
@@ -25,22 +24,9 @@ export default async function CreatorLayout({
   const resolvedParams = await Promise.resolve(params);
   const { username } = resolvedParams;
 
-  // Get creator data server-side
-  const response = await serverApi.getCreatorByUsernameServer(username);
-
-  // Handle creator not found - use Next.js notFound() to show the not-found.tsx component
-  if (!response.success) {
-    console.error("Creator not found:", response.error);
-    notFound();
-  }
-
-  const creator = response.data;
-
-  // If creator is still null or undefined, show not found
-  if (!creator) {
-    console.error("Creator data is null or undefined");
-    notFound();
-  }
+  // Get creator data using the server action
+  // This will automatically throw notFound() if the creator doesn't exist
+  const creator = await checkCreatorExistsAction(username);
 
   return (
     <>

@@ -1,6 +1,30 @@
-import { clientApiRequest } from "./apiClient";
+import { apiRequest } from "./apiClient";
 import { ApiResponse, Creator, Project } from "@/client/types";
 import { API_ENDPOINTS, buildApiUrl } from "@/lib/api/shared/endpoints";
+
+/**
+ * Check if a username is available
+ */
+export async function checkUsernameAvailability(username: string) {
+  try {
+    const url = `/creators/username-check?username=${encodeURIComponent(username)}`;
+
+    const response = await apiRequest.get(url);
+
+    return {
+      success: true,
+      available: response.data.available || false,
+      message: response.data.message,
+    };
+  } catch (error: any) {
+    console.error("Error checking username availability:", error);
+    return {
+      success: false,
+      available: false,
+      error: error.message || "Failed to check username availability",
+    };
+  }
+}
 
 /**
  * Get creator by username
@@ -8,9 +32,7 @@ import { API_ENDPOINTS, buildApiUrl } from "@/lib/api/shared/endpoints";
 export async function getCreatorByUsername(
   username: string
 ): Promise<ApiResponse<Creator>> {
-  return clientApiRequest.get<Creator>(
-    API_ENDPOINTS.getCreatorByUsername(username)
-  );
+  return apiRequest.get<Creator>(API_ENDPOINTS.getCreatorByUsername(username));
 }
 
 /**
@@ -26,7 +48,7 @@ export async function getCreatorProjects(
     { page, limit }
   );
 
-  return clientApiRequest.get<{ projects: Project[]; total: number }>(url);
+  return apiRequest.get<{ projects: Project[]; total: number }>(url);
 }
 
 /**
@@ -36,7 +58,7 @@ export async function updateCreatorProfile(
   username: string,
   profileData: Partial<Creator>
 ): Promise<ApiResponse<Creator>> {
-  return clientApiRequest.put<Creator>(
+  return apiRequest.put<Creator>(
     API_ENDPOINTS.updateCreatorProfile(username),
     profileData
   );
@@ -49,7 +71,7 @@ export async function getProjectByTitle(
   username: string,
   projectTitle: string
 ): Promise<ApiResponse<Project>> {
-  return clientApiRequest.get<Project>(
+  return apiRequest.get<Project>(
     API_ENDPOINTS.getProjectByTitle(username, projectTitle)
   );
 }

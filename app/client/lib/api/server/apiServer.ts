@@ -298,4 +298,69 @@ export const serverApiRequest = {
       };
     }
   },
+
+  // Add postFormData method for handling FormData
+  postFormData: async <T>(
+    endpoint: string,
+    formData: FormData,
+    requireAuth = true
+  ): Promise<ApiResponse<T>> => {
+    const url = buildServerApiUrl(endpoint);
+
+    try {
+      const headers: Record<string, string> = {
+        // Don't set Content-Type header, let the browser set it with boundary for FormData
+      };
+
+      if (requireAuth) {
+        const token = await getServerAuthToken();
+        if (!token) {
+          return redirect("/login") as never;
+        }
+
+        headers["Authorization"] = `Bearer ${token}`;
+      }
+
+      const response = await fetch(url, {
+        method: "POST",
+        headers,
+        body: formData,
+        cache: "no-store",
+      });
+
+      const responseData = await response.json();
+
+      // Based on the actual API response format from responseUtils.ts
+      if (responseData && typeof responseData === "object") {
+        // Check if response has the expected API structure
+        if ("success" in responseData) {
+          return {
+            success: responseData.success,
+            data: responseData.success ? responseData.data : null,
+            error:
+              !responseData.success && responseData.error
+                ? responseData.error.message
+                : undefined,
+          };
+        }
+      }
+
+      // Fallback for unexpected response format
+      return {
+        success: response.ok,
+        data: response.ok ? responseData : null,
+        error: !response.ok ? "Unexpected API response format" : undefined,
+      };
+    } catch (error) {
+      console.error("Server API Error:", error);
+      return {
+        success: false,
+        data: null as T,
+        error:
+          error instanceof Error
+            ? error.message
+            : "An unexpected error occurred",
+      };
+    }
+  },
 };

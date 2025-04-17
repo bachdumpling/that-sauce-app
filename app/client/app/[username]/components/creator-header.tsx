@@ -2,9 +2,9 @@
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { MessageCircle, Plus } from "lucide-react";
+import { MessageCircle, Plus, Pencil, Share } from "lucide-react";
 import TiltedCard from "@/components/ui/tilted-card";
-import { Creator } from "@/components/shared/types";
+import { Creator } from "@/client/types";
 import { usePathname } from "next/navigation";
 
 interface CreatorHeaderProps {
@@ -14,10 +14,17 @@ interface CreatorHeaderProps {
 
 export function CreatorHeader({ creator, username }: CreatorHeaderProps) {
   const pathname = usePathname();
-  
+
   // Check if we're on a project detail page - matches pattern /username/work/project-id
-  const isProjectDetailPage = pathname.match(new RegExp(`/${username}/work/[^/]+$`)) !== null;
-  
+  const isProjectDetailPage =
+    pathname.match(new RegExp(`/${username}/work/[^/]+$`)) !== null;
+
+  // Custom event to trigger the profile edit dialog in creator-client.tsx
+  const handleEditProfile = () => {
+    // Dispatch a custom event that will be caught by creator-client.tsx
+    window.dispatchEvent(new Event("edit-creator-profile"));
+  };
+
   if (isProjectDetailPage) {
     return null;
   }
@@ -48,10 +55,7 @@ export function CreatorHeader({ creator, username }: CreatorHeaderProps) {
               </h2>
             </div>
             <span className="text-base text-gray-500">
-              @
-              {creator.username
-                ? creator.username.toLowerCase()
-                : "creator"}
+              @{creator.username ? creator.username.toLowerCase() : "creator"}
             </span>
           </div>
         </div>
@@ -66,9 +70,7 @@ export function CreatorHeader({ creator, username }: CreatorHeaderProps) {
                   variant="secondary"
                   className="text-base px-4 py-2"
                 >
-                  {typeof role === "string"
-                    ? role.replace(/-/g, " ")
-                    : role}
+                  {typeof role === "string" ? role.replace(/-/g, " ") : role}
                 </Badge>
               ))}
             </div>
@@ -78,16 +80,33 @@ export function CreatorHeader({ creator, username }: CreatorHeaderProps) {
         {creator.bio && (
           <p className="max-w-2xl text-muted-foreground">{creator.bio}</p>
         )}
-        <div className="flex flex-row gap-4">
-          <Button variant="default" className="p-6 rounded-full">
-            <MessageCircle className="h-4 w-4 mr-2 mb-1" />
-            Get in touch
-          </Button>
-          <Button variant="outline" className="p-6 rounded-full">
-            <Plus className="h-4 w-4 mr-2 mb-1" />
-            Add to projects
-          </Button>
-        </div>
+        {creator.isOwner ? (
+          <div className="flex flex-row gap-4">
+            <Button
+              variant="default"
+              className="p-6 rounded-full"
+              onClick={handleEditProfile}
+            >
+              <Pencil className="h-4 w-4 mr-2 mb-1" />
+              Edit profile
+            </Button>
+            <Button variant="outline" className="p-6 rounded-full">
+              <Share className="h-4 w-4 mr-2 mb-1" />
+              Share profile
+            </Button>
+          </div>
+        ) : (
+          <div className="flex flex-row gap-4">
+            <Button variant="default" className="p-6 rounded-full">
+              <MessageCircle className="h-4 w-4 mr-2 mb-1" />
+              Get in touch
+            </Button>
+            <Button variant="outline" className="p-6 rounded-full">
+              <Plus className="h-4 w-4 mr-2 mb-1" />
+              Add to projects
+            </Button>
+          </div>
+        )}
       </div>
 
       <div className="items-center gap-3 grid place-items-center">
@@ -119,4 +138,4 @@ export function CreatorHeader({ creator, username }: CreatorHeaderProps) {
       </div>
     </div>
   );
-} 
+}

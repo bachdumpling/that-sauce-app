@@ -2,12 +2,10 @@ import { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { Suspense } from "react";
 import Link from "next/link";
-import { serverApi } from "@/lib/api";
 import { Skeleton } from "@/components/ui/skeleton";
-import { createClient } from "@/utils/supabase/client";
 import { ProjectDetail } from "../components/project-detail";
-import { ChevronLeft, AlertTriangle } from "lucide-react";
-
+import { ChevronLeft } from "lucide-react";
+import { getProjectByIdAction } from "@/actions/project-actions";
 interface ProjectPageProps {
   params: {
     id: string;
@@ -17,7 +15,7 @@ interface ProjectPageProps {
 export default async function ProjectPage({ params }: ProjectPageProps) {
   const { id } = await params;
 
-  const projectResponse = await serverApi.getProjectByIdServer(id);
+  const projectResponse = await getProjectByIdAction(id);
 
   const project = projectResponse.data.project;
 
