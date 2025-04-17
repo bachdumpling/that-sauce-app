@@ -74,17 +74,17 @@ export function MultiSelect({
           const label =
             safeOptions.find((option) => option.value === item)?.label || item;
           return (
-            <Badge key={item} variant="secondary" className="mr-1 mb-1">
+            <Badge key={item} variant="default" className="mr-1 py-2 px-3 text-xs">
               {label}
-              <span
-                className="ml-1 rounded-full cursor-pointer hover:text-foreground text-muted-foreground"
+              <div
+                className="ml-2 rounded-full cursor-pointer hover:text-primary-foreground/80 text-primary-foreground"
                 onClick={(e) => {
                   e.stopPropagation();
                   handleUnselect(item);
                 }}
               >
                 <X className="h-3 w-3" />
-              </span>
+              </div>
             </Badge>
           );
         })}
@@ -99,7 +99,7 @@ export function MultiSelect({
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          className={cn("w-full justify-between", className)}
+          className={cn("w-full justify-between px-4 py-4", className)}
           onClick={() => setOpen(!open)}
           disabled={disabled}
         >
@@ -108,7 +108,7 @@ export function MultiSelect({
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-full p-0">
-        <div className="p-2">
+        <div className="p-4">
           <Input
             placeholder="Search options..."
             value={searchQuery}

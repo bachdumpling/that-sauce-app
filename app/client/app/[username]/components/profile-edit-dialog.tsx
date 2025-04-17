@@ -4,6 +4,8 @@ import {
   DialogHeader,
   DialogFooter,
   DialogClose,
+  DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -39,8 +41,23 @@ const ROLE_OPTIONS: Option[] = CREATOR_ROLES.map((role) => ({
 interface ProfileEditDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  profileForm: any;
-  handleFormChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  profileForm: {
+    username: string;
+    first_name: string;
+    last_name: string;
+    bio: string;
+    location: string;
+    years_of_experience: string;
+    work_email: string;
+    primary_role: string[];
+    social_links?: {
+      [key: string]: string;
+    };
+    [key: string]: any; // For dynamic social platform fields
+  };
+  handleFormChange: (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => void;
   handlePrimaryRoleChange: (selectedRoles: string[]) => void;
   handleProfileUpdate: () => void;
   isSubmitting: boolean;
@@ -76,13 +93,23 @@ export default function ProfileEditDialog({
     handleProfileUpdate();
   };
 
+  // Social links handler - creates controlled inputs for all social platforms
+  const handleSocialLinkChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    handleFormChange(e);
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[60vh] p-0">
-        <DialogHeader className="p-4"></DialogHeader>
-        <div className="flex h-full">
+      <DialogContent className="max-w-2xl min-h-[60vh] p-0">
+        <DialogHeader className="p-0">
+          <DialogTitle className="sr-only">Edit Profile</DialogTitle>
+          <DialogDescription className="sr-only">
+            Edit your profile information and settings
+          </DialogDescription>
+        </DialogHeader>
+        <div className="flex min-h-[60vh] py-4">
           {/* Left column - Tabs */}
-          <div className="w-48 border-r min-h-[70vh] flex flex-col p-4 gap-4">
+          <div className="w-48 border-r flex flex-col p-4 gap-4">
             {/* User Avatar */}
             <div className="flex flex-col items-center mb-4">
               <div className="relative">
@@ -141,9 +168,16 @@ export default function ProfileEditDialog({
           </div>
 
           {/* Right column - Content */}
-          <div className="flex-1 p-10 overflow-y-auto max-h-[50vh]">
+          <div className="flex-1 p-8 overflow-y-auto max-h-[50vh]">
             {activeTab === "profile" && (
               <div className="grid gap-4">
+                <div className="space-x-2 flex">
+                  <Label>Edit Profile</Label>
+                  <p className="text-xs text-gray-500">
+                    Edit your profile information
+                  </p>
+                </div>
+
                 <div className="space-y-2">
                   <Label htmlFor="username">Username</Label>
                   <div className="relative">
@@ -245,7 +279,7 @@ export default function ProfileEditDialog({
                 <div className="space-y-2">
                   <Label htmlFor="primary_role">Primary Role</Label>
                   <MultiSelect
-                    className="h-fit py-4"
+                    className="h-fit"
                     options={ROLE_OPTIONS}
                     selected={profileForm.primary_role}
                     onChange={handleRoleChange}
@@ -258,17 +292,6 @@ export default function ProfileEditDialog({
                       Select up to 3 primary roles
                     </p>
                   )}
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="website">Website</Label>
-                  <Input
-                    id="website"
-                    name="website"
-                    value={profileForm.website}
-                    onChange={handleFormChange}
-                    placeholder="Website"
-                  />
                 </div>
 
                 <div className="space-y-2">
@@ -288,22 +311,26 @@ export default function ProfileEditDialog({
                   />
                 </div>
 
-                <DialogFooter className="absolute bottom-2 right-2">
+                <DialogFooter className="absolute bottom-4 right-4">
                   <Button onClick={handleSubmit} disabled={isSubmitting}>
                     {isSubmitting ? "Saving..." : "Save changes"}
                   </Button>
+                  <DialogClose asChild>
+                    <Button variant="outline">Cancel</Button>
+                  </DialogClose>
                 </DialogFooter>
               </div>
             )}
 
             {activeTab === "social" && (
               <div className="grid gap-4">
-                <div className="space-y-2">
-                  <Label>Social Links</Label>
-                  <p className="text-xs text-gray-500">
-                    Connect your social profiles
-                  </p>
-
+                <div className="space-y-4">
+                  <div className="space-x-2 flex">
+                    <Label>Social Links</Label>
+                    <p className="text-xs text-gray-500">
+                      Connect your social profiles
+                    </p>
+                  </div>
                   {SOCIAL_PLATFORMS.map((platform) => (
                     <div key={platform.id} className="relative mt-3">
                       <div className="absolute left-4 top-1/2 -translate-y-1/2">
@@ -315,8 +342,8 @@ export default function ProfileEditDialog({
                       <Input
                         id={`social_${platform.id}`}
                         name={`social_${platform.id}`}
-                        value={profileForm[`social_${platform.id}`] || ""}
-                        onChange={handleFormChange}
+                        value={profileForm.social_links?.[platform.id] || ""}
+                        onChange={handleSocialLinkChange}
                         className="pl-12"
                         placeholder={platform.placeholder}
                       />
@@ -324,10 +351,13 @@ export default function ProfileEditDialog({
                   ))}
                 </div>
 
-                <DialogFooter className="absolute bottom-2 right-2">
+                <DialogFooter className="absolute bottom-4 right-4">
                   <Button onClick={handleSubmit} disabled={isSubmitting}>
                     {isSubmitting ? "Saving..." : "Save changes"}
                   </Button>
+                  <DialogClose asChild>
+                    <Button variant="outline">Cancel</Button>
+                  </DialogClose>
                 </DialogFooter>
               </div>
             )}

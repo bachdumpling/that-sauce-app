@@ -22,7 +22,14 @@ import {
 } from "@/components/ui/dialog";
 import { VimeoEmbed, YouTubeEmbed } from "@/components/ui/vimeo-embed";
 import { MultiSelect, Option } from "@/components/ui/multi-select";
-import { Trash2, Upload, Loader2, Link, ExternalLink } from "lucide-react";
+import {
+  Trash2,
+  Upload,
+  Loader2,
+  Link,
+  ExternalLink,
+  ArrowRight,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 // Import server actions instead of client API functions
@@ -36,6 +43,8 @@ import {
 import { extractMediaFromUrlAction } from "@/actions/scraper-actions";
 import { CREATOR_ROLES } from "@/lib/constants/creator-options";
 import { Organization } from "@/client/types/project";
+import MediaUploadStep from "./new-project-steps/media-upload-step";
+import ProjectDetailsStep from "./new-project-steps/project-details-step";
 
 interface MediaItem {
   id: string;
@@ -51,12 +60,15 @@ interface MediaItem {
 export default function NewProjectForm() {
   const router = useRouter();
   const [files, setFiles] = useState<File[]>([]);
-  const [mediaType, setMediaType] = useState<string>("youtube");
   const [mediaLink, setMediaLink] = useState<string>("");
   const [projectLink, setProjectLink] = useState<string>("");
   const [isLargeFile, setIsLargeFile] = useState<boolean>(false);
   const [mediaItems, setMediaItems] = useState<MediaItem[]>([]);
   const [selectedMedia, setSelectedMedia] = useState<MediaItem | null>(null);
+
+  // Form step state
+  const [formStep, setFormStep] = useState<number>(1); // 1 = Media upload, 2 = Project details
+  const [showImportOption, setShowImportOption] = useState<boolean>(true);
 
   // Project information state
   const [title, setTitle] = useState("");
@@ -118,17 +130,40 @@ export default function NewProjectForm() {
     e.preventDefault();
     const droppedFiles = Array.from(e.dataTransfer.files);
 
-    // Check for file size
+    // Supported file types
+    const supportedImageTypes = ["image/jpeg", "image/png", "image/gif", "image/webp"];
+    const supportedVideoTypes = ["video/mp4", "video/quicktime", "video/x-msvideo", "video/x-ms-wmv", "video/webm"];
+    const supportedTypes = [...supportedImageTypes, ...supportedVideoTypes];
+
+    // Check for file size and type
     const hasLargeFile = droppedFiles.some(
       (file) => file.size > 5 * 1024 * 1024
     );
+    
+    // Filter out unsupported file types
+    const invalidFiles = droppedFiles.filter(
+      (file) => !supportedTypes.includes(file.type)
+    );
+    
+    if (invalidFiles.length > 0) {
+      const invalidFileNames = invalidFiles.map(f => f.name).join(", ");
+      toast.error(
+        `Unsupported file type(s): ${invalidFileNames}. Supported types: JPEG, PNG, GIF, WEBP, MP4, MOV, AVI, WMV, WEBM`
+      );
+    }
+    
+    // Filter to only valid files
+    const validFiles = droppedFiles.filter(
+      (file) => supportedTypes.includes(file.type) && file.size <= 5 * 1024 * 1024
+    );
+    
     setIsLargeFile(hasLargeFile);
 
-    if (!hasLargeFile) {
-      setFiles((prevFiles) => [...prevFiles, ...droppedFiles]);
+    if (validFiles.length > 0) {
+      setFiles((prevFiles) => [...prevFiles, ...validFiles]);
 
       // Create media items from files
-      const newMediaItems = droppedFiles.map((file) => {
+      const newMediaItems = validFiles.map((file) => {
         const isVideo = file.type.startsWith("video/");
         return {
           id: `file-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
@@ -139,6 +174,9 @@ export default function NewProjectForm() {
       });
 
       setMediaItems((prev) => [...prev, ...newMediaItems]);
+      
+      // Hide import option once user uploads files
+      setShowImportOption(false);
     }
   };
 
@@ -146,17 +184,40 @@ export default function NewProjectForm() {
     if (e.target.files) {
       const selectedFiles = Array.from(e.target.files);
 
-      // Check for file size
+      // Supported file types
+      const supportedImageTypes = ["image/jpeg", "image/png", "image/gif", "image/webp"];
+      const supportedVideoTypes = ["video/mp4", "video/quicktime", "video/x-msvideo", "video/x-ms-wmv", "video/webm"];
+      const supportedTypes = [...supportedImageTypes, ...supportedVideoTypes];
+
+      // Check for file size and type
       const hasLargeFile = selectedFiles.some(
         (file) => file.size > 5 * 1024 * 1024
       );
+      
+      // Filter out unsupported file types
+      const invalidFiles = selectedFiles.filter(
+        (file) => !supportedTypes.includes(file.type)
+      );
+      
+      if (invalidFiles.length > 0) {
+        const invalidFileNames = invalidFiles.map(f => f.name).join(", ");
+        toast.error(
+          `Unsupported file type(s): ${invalidFileNames}. Supported types: JPEG, PNG, GIF, WEBP, MP4, MOV, AVI, WMV, WEBM`
+        );
+      }
+      
+      // Filter to only valid files
+      const validFiles = selectedFiles.filter(
+        (file) => supportedTypes.includes(file.type) && file.size <= 5 * 1024 * 1024
+      );
+      
       setIsLargeFile(hasLargeFile);
 
-      if (!hasLargeFile) {
-        setFiles((prevFiles) => [...prevFiles, ...selectedFiles]);
+      if (validFiles.length > 0) {
+        setFiles((prevFiles) => [...prevFiles, ...validFiles]);
 
         // Create media items from files
-        const newMediaItems = selectedFiles.map((file) => {
+        const newMediaItems = validFiles.map((file) => {
           const isVideo = file.type.startsWith("video/");
           return {
             id: `file-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
@@ -167,6 +228,9 @@ export default function NewProjectForm() {
         });
 
         setMediaItems((prev) => [...prev, ...newMediaItems]);
+        
+        // Hide import option once user uploads files
+        setShowImportOption(false);
       }
     }
   };
@@ -178,51 +242,41 @@ export default function NewProjectForm() {
   const handleAddMediaLink = () => {
     if (!mediaLink) return;
 
-    let newMedia: MediaItem;
+    let newMedia: MediaItem | null = null;
 
-    if (mediaType === "youtube") {
-      // Extract YouTube ID
-      const youtubeRegex =
-        /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;
-      const match = mediaLink.match(youtubeRegex);
-      const youtube_id = match ? match[1] : null;
+    // Check for YouTube link
+    const youtubeRegex =
+      /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;
+    const youtubeMatch = mediaLink.match(youtubeRegex);
 
-      if (!youtube_id) {
-        // Handle invalid YouTube URL
-        alert("Invalid YouTube URL");
-        return;
-      }
+    // Check for Vimeo link
+    const vimeoRegex =
+      /(?:vimeo\.com\/(?:channels\/(?:\w+\/)?|groups\/[^\/]+\/videos\/|album\/\d+\/video\/|)(\d+)(?:$|\/|\?))/;
+    const vimeoMatch = mediaLink.match(vimeoRegex);
 
+    if (youtubeMatch && youtubeMatch[1]) {
+      // It's a YouTube link
       newMedia = {
         id: `youtube-${Date.now()}`,
         type: "youtube",
         url: mediaLink,
-        youtube_id,
+        youtube_id: youtubeMatch[1],
       };
-    } else if (mediaType === "vimeo") {
-      // Extract Vimeo ID
-      const vimeoRegex =
-        /(?:vimeo\.com\/(?:channels\/(?:\w+\/)?|groups\/[^\/]+\/videos\/|album\/\d+\/video\/|)(\d+)(?:$|\/|\?))/;
-      const match = mediaLink.match(vimeoRegex);
-      const vimeo_id = match ? match[1] : null;
-
-      if (!vimeo_id) {
-        // Handle invalid Vimeo URL
-        alert("Invalid Vimeo URL");
-        return;
-      }
-
+    } else if (vimeoMatch && vimeoMatch[1]) {
+      // It's a Vimeo link
       newMedia = {
         id: `vimeo-${Date.now()}`,
         type: "vimeo",
         url: mediaLink,
-        vimeo_id,
+        vimeo_id: vimeoMatch[1],
       };
     } else {
-      return; // No more image link support
+      // Invalid video URL
+      toast.error("Please enter a valid YouTube or Vimeo URL");
+      return;
     }
 
-    setMediaItems((prev) => [...prev, newMedia]);
+    setMediaItems((prev) => [...prev, newMedia!]);
     setMediaLink("");
   };
 
@@ -344,6 +398,9 @@ export default function NewProjectForm() {
 
       // Clear the project link field
       setProjectLink("");
+
+      // Hide import option after successful import
+      setShowImportOption(false);
     } catch (error: any) {
       console.error("Import error:", error);
       setImportError(error.message || "Failed to import media");
@@ -364,6 +421,20 @@ export default function NewProjectForm() {
 
   const handleOpenMedia = (media: MediaItem) => {
     setSelectedMedia(media);
+  };
+
+  const handleProceedToDetails = () => {
+    // Validate there's at least one media item before proceeding
+    if (mediaItems.length === 0) {
+      toast.error("Please add at least one media item before proceeding");
+      return;
+    }
+
+    setFormStep(2);
+  };
+
+  const handleGoBackToMedia = () => {
+    setFormStep(1);
   };
 
   const handleCreateProject = async () => {
@@ -564,337 +635,48 @@ export default function NewProjectForm() {
 
   return (
     <>
-      {/* Project Link Import Section */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Import Media from URL</CardTitle>
-          <CardDescription>
-            Import images and videos from Behance or Dribbble projects
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div className="flex items-end gap-4">
-              <div className="flex-1">
-                <Input
-                  type="url"
-                  placeholder="Paste Behance/Dribbble URL here"
-                  value={projectLink}
-                  onChange={(e) => setProjectLink(e.target.value)}
-                />
-                {importError && (
-                  <p className="text-sm text-red-500 mt-1">{importError}</p>
-                )}
-              </div>
-              <Button
-                onClick={handleImportMedia}
-                disabled={isImporting || !projectLink}
-                className="flex items-center gap-2"
-              >
-                {isImporting ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Importing...
-                  </>
-                ) : (
-                  <>
-                    <ExternalLink className="h-4 w-4" />
-                    Import
-                  </>
-                )}
-              </Button>
-            </div>
-            <div className="text-xs text-muted-foreground space-y-1">
-              <p>
-                <strong>Supported platforms:</strong> Behance projects, Dribbble
-                shots
-              </p>
-              <p>
-                <strong>What gets imported:</strong> Images, embedded videos,
-                YouTube & Vimeo links
-              </p>
-              <p className="italic text-2xs">
-                Note: Large projects may take a few seconds to process
-              </p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Media Upload Section */}
-      <Card className="mt-6">
-        <CardHeader>
-          <CardTitle>Upload Media</CardTitle>
-          <CardDescription>
-            Drag and drop or browse to upload images and videos
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div
-            onDrop={handleFileDrop}
-            onDragOver={handleDragOver}
-            className="border-2 border-dashed rounded-lg p-8 text-center cursor-pointer hover:bg-gray-50 transition"
-            onClick={() => {
-              // Trigger file input click
-              const fileInput = document.getElementById(
-                "media-upload"
-              ) as HTMLInputElement;
-              if (fileInput) fileInput.click();
-            }}
-          >
-            <Upload className="h-8 w-8 mx-auto mb-2 text-gray-400" />
-            <p className="text-sm font-medium">
-              Drop files here or click to browse
-            </p>
-            <p className="text-xs text-gray-500 mt-1">
-              Supported formats: JPG, PNG, GIF, MP4 (up to 5MB)
-            </p>
-            <input
-              type="file"
-              id="media-upload"
-              multiple
-              className="hidden"
-              accept="image/*,video/*"
-              onChange={handleFileSelect}
-            />
-            {isLargeFile && (
-              <p className="text-xs text-red-500 mt-2">
-                Some files exceed the 5MB limit and were not added.
-              </p>
-            )}
-          </div>
-
-          {/* Embed External Media */}
-          <div className="mt-6">
-            <h3 className="text-sm font-medium mb-2">Add Media From Link</h3>
-            <Tabs defaultValue="youtube">
-              <TabsList className="mb-2">
-                <TabsTrigger
-                  value="youtube"
-                  onClick={() => setMediaType("youtube")}
-                >
-                  YouTube
-                </TabsTrigger>
-                <TabsTrigger
-                  value="vimeo"
-                  onClick={() => setMediaType("vimeo")}
-                >
-                  Vimeo
-                </TabsTrigger>
-              </TabsList>
-
-              <div className="flex gap-2">
-                <Input
-                  type="url"
-                  placeholder={
-                    mediaType === "youtube"
-                      ? "Paste YouTube URL here"
-                      : "Paste Vimeo URL here"
-                  }
-                  value={mediaLink}
-                  onChange={(e) => setMediaLink(e.target.value)}
-                  className="flex-1"
-                />
-                <Button onClick={handleAddMediaLink}>Add</Button>
-              </div>
-            </Tabs>
-          </div>
-
-          {/* Media Preview */}
-          {mediaItems.length > 0 && (
-            <div className="mt-6">
-              <h3 className="text-sm font-medium mb-2">Media Preview</h3>
-              <div className="columns-1 md:columns-2 lg:columns-3 gap-4 space-y-4">
-                {mediaItems.map((media, index) => (
-                  <div
-                    key={`${media.type}-${media.id}`}
-                    className={`rounded-md overflow-hidden cursor-pointer hover:opacity-90 transition-opacity relative group ${
-                      // For the first item, make it span 2 columns on larger screens if there are at least 3 items
-                      index === 0 && mediaItems.length >= 3
-                        ? "md:col-span-2 md:row-span-2"
-                        : ""
-                    }`}
-                    onClick={() => handleOpenMedia(media)}
-                  >
-                    {media.type === "image" && (
-                      <img
-                        src={media.url}
-                        alt="Preview"
-                        className="w-full object-contain aspect-auto"
-                      />
-                    )}
-                    {media.type === "video" && (
-                      <div className="w-full bg-black overflow-hidden">
-                        <video controls src={media.url} className="w-full">
-                          <source src={media.url} type="video/mp4" />
-                          Your browser does not support the video tag.
-                        </video>
-                      </div>
-                    )}
-                    {media.type === "youtube" && media.youtube_id && (
-                      <div className="w-full bg-black overflow-hidden">
-                        <div className="aspect-video w-full">
-                          <YouTubeEmbed
-                            youtubeId={media.youtube_id}
-                            title="YouTube video"
-                          />
-                        </div>
-                      </div>
-                    )}
-                    {media.type === "vimeo" && media.vimeo_id && (
-                      <div className="w-full bg-black overflow-hidden">
-                        <div className="aspect-video w-full">
-                          <VimeoEmbed
-                            vimeoId={media.vimeo_id}
-                            title="Vimeo video"
-                          />
-                        </div>
-                      </div>
-                    )}
-
-                    <button
-                      className="absolute top-1 right-1 bg-black/70 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleRemoveMedia(media.id);
-                      }}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Project Information Section */}
-      <Card className="mt-6">
-        <CardHeader>
-          <CardTitle>Project Information</CardTitle>
-          <CardDescription>
-            Enter the details for your new project
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="project-title">Project Title *</Label>
-              <Input
-                id="project-title"
-                placeholder="Enter project title"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                required
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="project-short-description">
-                Short Description *
-              </Label>
-              <Input
-                id="project-short-description"
-                placeholder="Brief summary of your project (max 255 characters)"
-                value={shortDescription}
-                onChange={(e) => setShortDescription(e.target.value)}
-                maxLength={255}
-                required
-              />
-              <p className="text-xs text-muted-foreground mt-1">
-                {shortDescription.length}/255 characters
-              </p>
-            </div>
-
-            <div>
-              <Label htmlFor="project-description">Full Description</Label>
-              <textarea
-                id="project-description"
-                rows={4}
-                className="w-full rounded-md border border-input px-3 py-2 text-sm"
-                placeholder="Enter detailed project description"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="project-year">Year *</Label>
-              <Input
-                id="project-year"
-                type="number"
-                placeholder="Project year"
-                min={1990}
-                max={new Date().getFullYear() + 1}
-                value={year || ""}
-                onChange={(e) => {
-                  const value = e.target.value
-                    ? parseInt(e.target.value)
-                    : undefined;
-                  setYear(value);
-                }}
-                required
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="project-roles">Project Roles *</Label>
-              <MultiSelect
-                options={roleOptions}
-                selected={selectedRoles}
-                onChange={setSelectedRoles}
-                placeholder="Select roles involved in this project"
-              />
-              {selectedRoles.length === 0 && (
-                <p className="text-xs text-muted-foreground mt-1">
-                  At least one role is required
-                </p>
-              )}
-            </div>
-
-            <div>
-              <Label htmlFor="project-clients">Clients</Label>
-              {isLoadingOrgs ? (
-                <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Loading clients...
-                </div>
-              ) : (
-                <MultiSelect
-                  options={clientOptions}
-                  selected={selectedClients}
-                  onChange={setSelectedClients}
-                  placeholder="Select clients for this project (optional)"
-                  emptyMessage="No clients found. Add clients in the admin panel."
-                />
-              )}
-            </div>
-
-            <Button
-              onClick={handleCreateProject}
-              className="w-full"
-              disabled={
-                isSubmitting ||
-                !title.trim() ||
-                !shortDescription.trim() ||
-                !year ||
-                selectedRoles.length === 0 ||
-                mediaItems.length === 0
-              }
-            >
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  {currentStep || "Creating Project..."}
-                </>
-              ) : (
-                "Create Project"
-              )}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+      {formStep === 1 ? (
+        <MediaUploadStep
+          showImportOption={showImportOption}
+          projectLink={projectLink}
+          setProjectLink={setProjectLink}
+          importError={importError}
+          isImporting={isImporting}
+          handleImportMedia={handleImportMedia}
+          handleFileDrop={handleFileDrop}
+          handleDragOver={(e: React.DragEvent) => e.preventDefault()}
+          isLargeFile={isLargeFile}
+          handleFileSelect={handleFileSelect}
+          mediaLink={mediaLink}
+          setMediaLink={setMediaLink}
+          handleAddMediaLink={handleAddMediaLink}
+          mediaItems={mediaItems}
+          handleOpenMedia={handleOpenMedia}
+          handleRemoveMedia={handleRemoveMedia}
+          handleProceedToDetails={handleProceedToDetails}
+        />
+      ) : (
+        <ProjectDetailsStep
+          title={title}
+          setTitle={setTitle}
+          shortDescription={shortDescription}
+          setShortDescription={setShortDescription}
+          description={description}
+          setDescription={setDescription}
+          year={year}
+          setYear={setYear}
+          selectedRoles={selectedRoles}
+          setSelectedRoles={setSelectedRoles}
+          selectedClients={selectedClients}
+          setSelectedClients={setSelectedClients}
+          isLoadingOrgs={isLoadingOrgs}
+          organizations={organizations}
+          handleGoBackToMedia={handleGoBackToMedia}
+          handleCreateProject={handleCreateProject}
+          isSubmitting={isSubmitting}
+          currentStep={currentStep}
+        />
+      )}
 
       {/* Media Preview Dialog */}
       <Dialog

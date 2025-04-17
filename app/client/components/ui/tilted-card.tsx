@@ -17,6 +17,7 @@ interface TiltedCardProps {
   showTooltip?: boolean;
   overlayContent?: React.ReactNode;
   displayOverlayContent?: boolean;
+  fullSize?: boolean;
   className?: string;
 }
 
@@ -40,6 +41,7 @@ export default function TiltedCard({
   showTooltip = true,
   overlayContent = null,
   displayOverlayContent = false,
+  fullSize = false,
   className,
 }: TiltedCardProps) {
   const ref = useRef<HTMLElement>(null);
@@ -99,8 +101,8 @@ export default function TiltedCard({
         className
       )}
       style={{
-        height: containerHeight,
-        width: containerWidth,
+        height: fullSize ? "100%" : containerHeight,
+        width: fullSize ? "100%" : containerWidth,
       }}
       onMouseMove={handleMouse}
       onMouseEnter={handleMouseEnter}
@@ -115,8 +117,8 @@ export default function TiltedCard({
       <motion.div
         className="relative [transform-style:preserve-3d]"
         style={{
-          width: imageWidth,
-          height: imageHeight,
+          width: fullSize ? "100%" : imageWidth,
+          height: fullSize ? "100%" : imageHeight,
           rotateX,
           rotateY,
           scale,
@@ -127,8 +129,8 @@ export default function TiltedCard({
           alt={altText}
           className="shadow-lg shadow-white/50 absolute top-0 left-0 object-cover rounded-[15px] will-change-transform [transform:translateZ(0)]"
           style={{
-            width: imageWidth,
-            height: imageHeight,
+            width: fullSize ? "100%" : imageWidth,
+            height: fullSize ? "100%" : imageHeight,
           }}
         />
 

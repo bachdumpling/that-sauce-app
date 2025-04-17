@@ -14,22 +14,13 @@ import {
   MapPin,
 } from "lucide-react";
 import { useEffect, useState } from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { updateCreatorProfileAction } from "@/actions/creator-actions";
 import { Toaster } from "@/components/ui/sonner";
 import { toast } from "sonner";
 import { MultiSelect, Option } from "@/components/ui/multi-select";
-import { CREATOR_ROLES, SOCIAL_PLATFORMS } from "@/lib/constants/creator-options";
-import ProfileEditDialog from "./profile-edit-dialog";
+import {
+  CREATOR_ROLES,
+  SOCIAL_PLATFORMS,
+} from "@/lib/constants/creator-options";
 
 // Role options for the MultiSelect component
 const ROLE_OPTIONS: Option[] = CREATOR_ROLES.map((role) => ({
@@ -44,100 +35,6 @@ interface CreatorClientProps {
 
 export function CreatorClient({ creator, username }: CreatorClientProps) {
   const pathname = usePathname();
-  const [isProfileDialogOpen, setIsProfileDialogOpen] = useState(false);
-  const [profileForm, setProfileForm] = useState({
-    username: creator.username || "",
-    first_name: creator.first_name || "",
-    last_name: creator.last_name || "",
-    website: creator.website || "",
-    bio: creator.bio || "",
-    location: creator.location || "",
-    years_of_experience: creator.years_of_experience?.toString() || "",
-    work_email: creator.work_email || "",
-    primary_role: creator.primary_role || [],
-    socialUsername: "",
-  });
-  const [bioLength, setBioLength] = useState(profileForm.bio.length);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  // Event emitter/listener for the Edit Profile button in creator-header.tsx
-  useEffect(() => {
-    const handleEditProfile = () => setIsProfileDialogOpen(true);
-    window.addEventListener("edit-creator-profile", handleEditProfile);
-    return () =>
-      window.removeEventListener("edit-creator-profile", handleEditProfile);
-  }, []);
-
-  // Handle form field changes
-  const handleFormChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) => {
-    const { name, value } = e.target;
-    setProfileForm((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-
-    if (name === "bio") {
-      setBioLength(value.length);
-    }
-  };
-
-  // Handle primary role selection changes
-  const handlePrimaryRoleChange = (selectedRoles: string[]) => {
-    setProfileForm((prev) => ({
-      ...prev,
-      primary_role: selectedRoles,
-    }));
-  };
-
-  // Handle profile update submission
-  const handleProfileUpdate = async () => {
-    setIsSubmitting(true);
-    try {
-      // Prepare social links as a JSON object
-      const socialLinks = {};
-      SOCIAL_PLATFORMS.forEach((platform) => {
-        const value = profileForm[`social_${platform.id}`];
-        if (value) {
-          socialLinks[platform.id] = value;
-        }
-      });
-
-      // Use the server action instead of client API call
-      const response = await updateCreatorProfileAction(username, {
-        username: profileForm.username,
-        first_name: profileForm.first_name,
-        last_name: profileForm.last_name,
-        website: profileForm.website,
-        bio: profileForm.bio,
-        location: profileForm.location,
-        years_of_experience: profileForm.years_of_experience
-          ? parseInt(profileForm.years_of_experience, 10)
-          : undefined,
-        work_email: profileForm.work_email,
-        primary_role: profileForm.primary_role,
-        social_links: socialLinks, // Add social links object
-      });
-
-      if (response.success) {
-        toast("Profile updated successfully");
-        setIsProfileDialogOpen(false);
-
-        // If username was changed, redirect to the new profile page
-        if (profileForm.username !== username) {
-          window.location.href = `/${profileForm.username}`;
-        }
-      } else {
-        toast(response.message || "Failed to update profile");
-      }
-    } catch (error) {
-      console.error("Error updating profile:", error);
-      toast("An unexpected error occurred");
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
 
   // Determine active tab based on current path
   const getActiveTab = () => {
@@ -151,17 +48,6 @@ export function CreatorClient({ creator, username }: CreatorClientProps) {
 
   return (
     <>
-      {/* Profile Edit Dialog */}
-      <ProfileEditDialog
-        isOpen={isProfileDialogOpen}
-        onClose={() => setIsProfileDialogOpen(false)}
-        profileForm={profileForm}
-        handleFormChange={handleFormChange}
-        handlePrimaryRoleChange={handlePrimaryRoleChange}
-        handleProfileUpdate={handleProfileUpdate}
-        isSubmitting={isSubmitting}
-      />
-
       {/* Main content area based on active tab */}
       {activeTab === "overview" && <Overview creator={creator} />}
 
