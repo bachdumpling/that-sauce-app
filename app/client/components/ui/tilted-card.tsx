@@ -19,6 +19,7 @@ interface TiltedCardProps {
   displayOverlayContent?: boolean;
   fullSize?: boolean;
   className?: string;
+  onClick?: () => void;
 }
 
 const springValues: SpringOptions = {
@@ -43,6 +44,7 @@ export default function TiltedCard({
   displayOverlayContent = false,
   fullSize = false,
   className,
+  onClick,
 }: TiltedCardProps) {
   const ref = useRef<HTMLElement>(null);
   const x = useMotionValue(0);
@@ -107,6 +109,7 @@ export default function TiltedCard({
       onMouseMove={handleMouse}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
+      onClick={onClick}
     >
       {showMobileWarning && (
         <div className="absolute top-4 text-center text-sm block sm:hidden">
@@ -135,7 +138,7 @@ export default function TiltedCard({
         />
 
         {displayOverlayContent && overlayContent && (
-          <motion.div className="absolute top-6 left-6 z-[2] will-change-transform [transform:translateZ(30px)]">
+          <motion.div className="absolute inset-0 z-[2] will-change-transform [transform:translateZ(30px)] flex items-center justify-center">
             {overlayContent}
           </motion.div>
         )}

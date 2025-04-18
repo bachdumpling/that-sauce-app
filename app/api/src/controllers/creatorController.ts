@@ -3,9 +3,11 @@ import logger from "../config/logger";
 import { AuthenticatedRequest } from "../middleware/extractUser";
 import { CreatorProfileService } from "../services/creatorProfileService";
 import { CreatorService } from "../services/creatorService";
+import { MediaService } from "../services/mediaService";
 import { supabase } from "../lib/supabase";
 import { invalidateCache } from "../lib/cache";
 import { ErrorCode } from "../models/ApiResponse";
+import { UploadedFile } from "express-fileupload";
 import {
   sendSuccess,
   sendError,
@@ -971,4 +973,352 @@ export class CreatorController {
       );
     }
   }
+
+  /**
+ * Upload profile avatar
+ * POST /api/creators/:username/avatar
+ */
+async uploadProfileImage(req: AuthenticatedRequest, res: Response) {
+  try {
+    const { username } = req.params;
+    const userId = req.user?.id;
+
+    if (!userId) {
+      return sendError(
+        res,
+        ErrorCode.UNAUTHORIZED,
+        "Authentication required",
+        null,
+        401
+      );
+    }
+
+    // Check if files were uploaded
+    if (!req.files || Object.keys(req.files).length === 0) {
+      return sendError(
+        res,
+        ErrorCode.BAD_REQUEST,
+        "No files were uploaded",
+        null,
+        400
+      );
+    }
+
+    // Get the creator by username
+    const { data: creator, error: creatorError } = await supabase
+      .from("creators")
+      .select("id, profile_id, avatar_url")
+      .eq("username", username)
+      .single();
+
+    if (creatorError) {
+      return sendError(
+        res,
+        ErrorCode.NOT_FOUND,
+        "Creator not found",
+        null,
+        404
+      );
+    }
+
+    // Verify ownership
+    if (creator.profile_id !== userId) {
+      return sendError(
+        res,
+        ErrorCode.FORBIDDEN,
+        "You don't have permission to update this profile",
+        null,
+        403
+      );
+    }
+
+    // Handle file upload
+    let file: UploadedFile;
+    if (req.files.file) {
+      if (Array.isArray(req.files.file)) {
+        file = req.files.file[0];
+      } else {
+        file = req.files.file as UploadedFile;
+      }
+    } else {
+      // Try to get first file if not in 'file' field
+      const firstFileKey = Object.keys(req.files)[0];
+      if (firstFileKey) {
+        const firstFile = req.files[firstFileKey];
+        if (Array.isArray(firstFile)) {
+          file = firstFile[0];
+        } else {
+          file = firstFile as UploadedFile;
+        }
+      } else {
+        return sendError(
+          res,
+          ErrorCode.BAD_REQUEST,
+          "No file field found in upload",
+          null,
+          400
+        );
+      }
+    }
+
+    // Validate file type
+    const validImageTypes = [
+      "image/jpeg",
+      "image/jpg",
+      "image/png",
+      "image/gif",
+      "image/webp",
+    ];
+
+    if (!validImageTypes.includes(file.mimetype)) {
+      return sendError(
+        res,
+        ErrorCode.BAD_REQUEST,
+        "Invalid file type. Supported types: JPEG, PNG, GIF, WebP",
+        null,
+        400
+      );
+    }
+
+    // Initialize media service
+    const mediaService = new MediaService();
+    
+    // Delete old avatar if it exists
+    if (creator.avatar_url) {
+      try {
+        const oldUrl = new URL(creator.avatar_url);
+        const oldPathParts = oldUrl.pathname.split("/");
+        const oldFilePath = oldPathParts
+          .slice(oldPathParts.indexOf("media") + 1)
+          .join("/");
+
+        await supabase.storage.from("media").remove([oldFilePath]);
+      } catch (error) {
+        // Log but continue if old file deletion fails
+        logger.warn("Error deleting old avatar file", { error });
+      }
+    }
+
+    // Upload the new avatar
+    const { url: avatarUrl } = await mediaService.uploadProfileImage(
+      file,
+      userId,
+      creator.id,
+      'avatar'
+    );
+
+    // Update creator with new avatar URL
+    const { data: updatedCreator, error: updateError } = await supabase
+      .from("creators")
+      .update({ 
+        avatar_url: avatarUrl,
+        updated_at: new Date().toISOString() 
+      })
+      .eq("id", creator.id)
+      .select()
+      .single();
+
+    if (updateError) {
+      return sendError(
+        res,
+        ErrorCode.SERVER_ERROR,
+        "Failed to update avatar",
+        null,
+        500
+      );
+    }
+
+    // Invalidate cache
+    invalidateCache(`creator_username_${username}`);
+    invalidateCache(`creator_details_${username}`);
+
+    return sendSuccess(res, {
+      avatar_url: avatarUrl,
+      message: "Avatar updated successfully",
+    });
+  } catch (error: any) {
+    logger.error(`Error uploading avatar: ${error.message}`, { error });
+    return sendError(
+      res,
+      ErrorCode.SERVER_ERROR,
+      "Failed to upload avatar",
+      error.message,
+      500
+    );
+  }
+}
+
+/**
+ * Upload profile banner
+ * POST /api/creators/:username/banner
+ */
+async uploadProfileBanner(req: AuthenticatedRequest, res: Response) {
+  try {
+    const { username } = req.params;
+    const userId = req.user?.id;
+
+    if (!userId) {
+      return sendError(
+        res,
+        ErrorCode.UNAUTHORIZED,
+        "Authentication required",
+        null,
+        401
+      );
+    }
+
+    // Check if files were uploaded
+    if (!req.files || Object.keys(req.files).length === 0) {
+      return sendError(
+        res,
+        ErrorCode.BAD_REQUEST,
+        "No files were uploaded",
+        null,
+        400
+      );
+    }
+
+    // Get the creator by username
+    const { data: creator, error: creatorError } = await supabase
+      .from("creators")
+      .select("id, profile_id, banner_url")
+      .eq("username", username)
+      .single();
+
+    if (creatorError) {
+      return sendError(
+        res,
+        ErrorCode.NOT_FOUND,
+        "Creator not found",
+        null,
+        404
+      );
+    }
+
+    // Verify ownership
+    if (creator.profile_id !== userId) {
+      return sendError(
+        res,
+        ErrorCode.FORBIDDEN,
+        "You don't have permission to update this profile",
+        null,
+        403
+      );
+    }
+
+    // Handle file upload
+    let file: UploadedFile;
+    if (req.files.file) {
+      if (Array.isArray(req.files.file)) {
+        file = req.files.file[0];
+      } else {
+        file = req.files.file as UploadedFile;
+      }
+    } else {
+      // Try to get first file if not in 'file' field
+      const firstFileKey = Object.keys(req.files)[0];
+      if (firstFileKey) {
+        const firstFile = req.files[firstFileKey];
+        if (Array.isArray(firstFile)) {
+          file = firstFile[0];
+        } else {
+          file = firstFile as UploadedFile;
+        }
+      } else {
+        return sendError(
+          res,
+          ErrorCode.BAD_REQUEST,
+          "No file field found in upload",
+          null,
+          400
+        );
+      }
+    }
+
+    // Validate file type
+    const validImageTypes = [
+      "image/jpeg",
+      "image/jpg",
+      "image/png",
+      "image/gif",
+      "image/webp",
+    ];
+
+    if (!validImageTypes.includes(file.mimetype)) {
+      return sendError(
+        res,
+        ErrorCode.BAD_REQUEST,
+        "Invalid file type. Supported types: JPEG, PNG, GIF, WebP",
+        null,
+        400
+      );
+    }
+
+    // Initialize media service
+    const mediaService = new MediaService();
+    
+    // Delete old banner if it exists
+    if (creator.banner_url) {
+      try {
+        const oldUrl = new URL(creator.banner_url);
+        const oldPathParts = oldUrl.pathname.split("/");
+        const oldFilePath = oldPathParts
+          .slice(oldPathParts.indexOf("media") + 1)
+          .join("/");
+
+        await supabase.storage.from("media").remove([oldFilePath]);
+      } catch (error) {
+        // Log but continue if old file deletion fails
+        logger.warn("Error deleting old banner file", { error });
+      }
+    }
+
+    // Upload the new banner
+    const { url: bannerUrl } = await mediaService.uploadProfileImage(
+      file,
+      userId,
+      creator.id,
+      'banner'
+    );
+
+    // Update creator with new banner URL
+    const { data: updatedCreator, error: updateError } = await supabase
+      .from("creators")
+      .update({ 
+        banner_url: bannerUrl,
+        updated_at: new Date().toISOString() 
+      })
+      .eq("id", creator.id)
+      .select()
+      .single();
+
+    if (updateError) {
+      return sendError(
+        res,
+        ErrorCode.SERVER_ERROR,
+        "Failed to update banner",
+        null,
+        500
+      );
+    }
+
+    // Invalidate cache
+    invalidateCache(`creator_username_${username}`);
+    invalidateCache(`creator_details_${username}`);
+
+    return sendSuccess(res, {
+      banner_url: bannerUrl,
+      message: "Banner updated successfully",
+    });
+  } catch (error: any) {
+    logger.error(`Error uploading banner: ${error.message}`, { error });
+    return sendError(
+      res,
+      ErrorCode.SERVER_ERROR,
+      "Failed to upload banner",
+      error.message,
+      500
+    );
+  }
+}
 }

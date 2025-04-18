@@ -5,6 +5,7 @@ export interface Creator {
   display_name?: string;
   bio?: string;
   avatar_url?: string;
+  banner_url?: string;
   location?: string;
   primary_role?: string;
   years_of_experience?: number;
@@ -24,4 +25,4 @@ export interface CreatorWithProfile extends Creator {
   first_name?: string;
   last_name?: string;
   projects?: any[];
-} 
+}

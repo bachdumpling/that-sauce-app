@@ -65,6 +65,38 @@ export async function updateCreatorProfile(
 }
 
 /**
+ * Upload a creator's avatar image
+ */
+export async function uploadCreatorAvatar(
+  username: string,
+  file: File
+): Promise<ApiResponse<{ avatar_url: string }>> {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  return apiRequest.postFormData<{ avatar_url: string }>(
+    API_ENDPOINTS.uploadCreatorAvatar(username),
+    formData
+  );
+}
+
+/**
+ * Upload a creator's banner image
+ */
+export async function uploadCreatorBanner(
+  username: string,
+  file: File
+): Promise<ApiResponse<{ banner_url: string }>> {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  return apiRequest.postFormData<{ banner_url: string }>(
+    API_ENDPOINTS.uploadCreatorBanner(username),
+    formData
+  );
+}
+
+/**
  * Get project by title
  */
 export async function getProjectByTitle(

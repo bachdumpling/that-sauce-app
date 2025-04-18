@@ -22,6 +22,7 @@ import {
   X,
   Link as LinkIcon,
   Pencil,
+  Loader2,
 } from "lucide-react";
 import {
   CREATOR_ROLES,
@@ -29,8 +30,11 @@ import {
 } from "@/lib/constants/creator-options";
 import { MultiSelect, Option } from "@/components/ui/multi-select";
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { SocialIcon } from "@/components/ui/social-icon";
+import { toast } from "sonner";
+import { uploadCreatorAvatarAction } from "@/actions/creator-actions";
+import Image from "next/image";
 
 // Map CREATOR_ROLES to the format required by MultiSelect
 const ROLE_OPTIONS: Option[] = CREATOR_ROLES.map((role) => ({
@@ -50,6 +54,7 @@ interface ProfileEditDialogProps {
     years_of_experience: string;
     work_email: string;
     primary_role: string[];
+    avatar_url?: string;
     social_links?: {
       [key: string]: string;
     };
@@ -75,6 +80,8 @@ export default function ProfileEditDialog({
   const bioLength = profileForm.bio?.length || 0;
   const [activeTab, setActiveTab] = useState<string>("profile");
   const [roleSelectError, setRoleSelectError] = useState<string>("");
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Wrapper for handlePrimaryRoleChange to add validation
   const handleRoleChange = (selectedRoles: string[]) => {
@@ -98,6 +105,55 @@ export default function ProfileEditDialog({
     handleFormChange(e);
   };
 
+  // Avatar upload handler
+  const handleAvatarClick = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
+  };
+
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || e.target.files.length === 0) return;
+
+    const file = e.target.files[0];
+    setIsUploadingAvatar(true);
+
+    try {
+      const result = await uploadCreatorAvatarAction(
+        profileForm.username,
+        file
+      );
+
+      if (result.success) {
+        // Update the form with the new avatar URL
+        handleFormChange({
+          target: {
+            name: "avatar_url",
+            value: result.data.avatar_url,
+          },
+        } as React.ChangeEvent<HTMLInputElement>);
+
+        toast.success("Profile picture updated successfully");
+      } else {
+        throw new Error(result.message || "Failed to upload profile picture");
+      }
+    } catch (error) {
+      console.error("Error uploading avatar:", error);
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Failed to upload profile picture"
+      );
+    } finally {
+      setIsUploadingAvatar(false);
+
+      // Clear the file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl min-h-[60vh] p-0">
@@ -113,21 +169,44 @@ export default function ProfileEditDialog({
             {/* User Avatar */}
             <div className="flex flex-col items-center mb-4">
               <div className="relative">
-                <div className="h-24 w-24 rounded-full bg-gray-300 overflow-hidden">
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  className="hidden"
+                  accept="image/jpeg,image/png,image/gif,image/webp"
+                  onChange={handleAvatarChange}
+                />
+                <div className="h-20 w-20 rounded-full bg-gray-300 overflow-hidden">
                   {profileForm.avatar_url ? (
-                    <img
+                    <Image
                       src={profileForm.avatar_url}
                       alt="Profile"
+                      width={60}
+                      height={60}
                       className="h-full w-full object-cover"
                     />
                   ) : (
                     <User className="h-full w-full p-6 text-gray-500" />
                   )}
                 </div>
-                <button className="cursor-pointer bg-gray-500 absolute right-0 bottom-0 rounded-full h-8 w-8 flex items-center justify-center">
-                  <Pencil className="h-4 w-4 text-white" />
+                <button
+                  className="cursor-pointer bg-gray-500 absolute right-0 bottom-0 rounded-full h-8 w-8 flex items-center justify-center"
+                  onClick={handleAvatarClick}
+                  disabled={isUploadingAvatar}
+                  type="button"
+                >
+                  {isUploadingAvatar ? (
+                    <Loader2 className="h-4 w-4 text-white animate-spin" />
+                  ) : (
+                    <Pencil className="h-4 w-4 text-white" />
+                  )}
                 </button>
               </div>
+              {/* <span className="text-xs text-gray-500 mt-2">
+                {isUploadingAvatar
+                  ? "Uploading..."
+                  : "Click to change profile picture"}
+              </span> */}
             </div>
 
             <Button

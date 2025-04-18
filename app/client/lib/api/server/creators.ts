@@ -92,6 +92,34 @@ export async function updateCreatorProfileServer(
 }
 
 /**
+ * Upload creator avatar image from the server-side
+ * Uses server-side authentication and data fetching
+ */
+export async function uploadCreatorAvatarServer(
+  username: string,
+  formData: FormData
+): Promise<ApiResponse<{ avatar_url: string }>> {
+  return serverApiRequest.postFormData<{ avatar_url: string }>(
+    API_ENDPOINTS.uploadCreatorAvatar(username),
+    formData
+  );
+}
+
+/**
+ * Upload creator banner image from the server-side
+ * Uses server-side authentication and data fetching
+ */
+export async function uploadCreatorBannerServer(
+  username: string,
+  formData: FormData
+): Promise<ApiResponse<{ banner_url: string }>> {
+  return serverApiRequest.postFormData<{ banner_url: string }>(
+    API_ENDPOINTS.uploadCreatorBanner(username),
+    formData
+  );
+}
+
+/**
  * Get project by title from a specific creator
  * Uses server-side authentication and data fetching
  */

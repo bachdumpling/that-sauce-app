@@ -6,6 +6,7 @@ import { cacheMiddleware, cacheClearMiddleware } from "../lib/cache";
 import { supabase } from "../lib/supabase";
 import logger from "../config/logger";
 import { Response } from "express";
+import { uploadMiddleware } from "../middleware/uploadMiddleware";
 
 const router = Router();
 const creatorController = new CreatorController();
@@ -28,6 +29,34 @@ const getCreatorPortfolio =
 
 // Apply extractUser middleware but don't require authentication for public endpoints
 router.use(extractUser);
+
+// Upload profile image
+router.post(
+  "/:username/avatar",
+  extractUser,
+  uploadMiddleware, // Reuse the same middleware as media uploads
+  cacheClearMiddleware([
+    `creator_username_`,
+    `creator_project_`,
+    `creator_projects_`,
+    `creator_portfolio_`,
+  ]),
+  creatorController.uploadProfileImage.bind(creatorController)
+);
+
+// Upload profile banner
+router.post(
+  "/:username/banner",
+  extractUser,
+  uploadMiddleware,
+  cacheClearMiddleware([
+    `creator_username_`,
+    `creator_project_`,
+    `creator_projects_`,
+    `creator_portfolio_`,
+  ]),
+  creatorController.uploadProfileBanner.bind(creatorController)
+);
 
 // List creators (with filtering via query params)
 router.get(

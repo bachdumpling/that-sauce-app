@@ -15,6 +15,8 @@ export const API_ENDPOINTS = {
   getProjectByTitle: (username: string, projectTitle: string) =>
     `/creators/${username}/projects/${projectTitle}`,
   updateCreatorProfile: (username: string) => `/creators/${username}`,
+  uploadCreatorAvatar: (username: string) => `/creators/${username}/avatar`,
+  uploadCreatorBanner: (username: string) => `/creators/${username}/banner`,
 
   // Organization endpoints
   organizations: "/organizations",

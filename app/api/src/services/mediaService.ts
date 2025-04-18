@@ -722,4 +722,70 @@ export class MediaService {
     // Return both results and errors to allow API to show partial success
     return { results, errors };
   }
+
+  /**
+   * Upload a profile image (avatar or banner)
+   */
+  async uploadProfileImage(
+    file: UploadedFile,
+    userId: string,
+    creatorId: string,
+    type: "avatar" | "banner"
+  ): Promise<{ url: string }> {
+    try {
+      // Generate a unique filename with appropriate prefix
+      const fileExtension = path.extname(file.name).toLowerCase();
+      const fileName = `${type}-${uuidv4()}${fileExtension}`;
+
+      // Create path structure: userId/profile/filename
+      const filePath = `${userId}/profile/${fileName}`;
+
+      // Get file data to upload
+      let fileData;
+
+      // Prefer using tempFilePath if it exists and has content
+      if (file.tempFilePath && fs.existsSync(file.tempFilePath)) {
+        const stats = fs.statSync(file.tempFilePath);
+        if (stats.size > 0) {
+          fileData = fs.readFileSync(file.tempFilePath);
+        } else if (file.data && file.data.length > 0) {
+          fileData = file.data;
+        } else {
+          throw new Error(
+            "Cannot access file data - both tempFilePath and data are empty"
+          );
+        }
+      } else if (file.data && file.data.length > 0) {
+        fileData = file.data;
+      } else {
+        throw new Error("Cannot access file data - no valid source available");
+      }
+
+      if (!fileData || (Buffer.isBuffer(fileData) && fileData.length === 0)) {
+        throw new Error("File data is empty");
+      }
+
+      const { data: storageData, error: storageError } = await supabase.storage
+        .from("media")
+        .upload(filePath, fileData, {
+          contentType: file.mimetype,
+          cacheControl: "3600",
+        });
+
+      if (storageError) {
+        logger.error("Storage upload error", { error: storageError });
+        throw storageError;
+      }
+
+      // Get public URL
+      const { data: publicUrlData } = supabase.storage
+        .from("media")
+        .getPublicUrl(filePath);
+
+      return { url: publicUrlData.publicUrl };
+    } catch (error) {
+      logger.error(`Profile ${type} upload failed`, { error });
+      throw error;
+    }
+  }
 }

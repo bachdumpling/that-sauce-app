@@ -39,6 +39,8 @@ export default function CreatorLayout({
   // Form state for profile editing with type that allows dynamic social platform fields
   const [profileForm, setProfileForm] = useState<{
     username: string;
+    avatar_url: string;
+    banner_url: string;
     first_name: string;
     last_name: string;
     bio: string;
@@ -52,6 +54,8 @@ export default function CreatorLayout({
     [key: string]: any; // Allow dynamic social media fields like social_linkedin, social_twitter, etc.
   }>({
     username: "",
+    avatar_url: "",
+    banner_url: "",
     first_name: "",
     last_name: "",
     bio: "",
@@ -72,6 +76,8 @@ export default function CreatorLayout({
         // Initialize form with creator data
         const initialForm = {
           username: response.username || "",
+          avatar_url: response.avatar_url || "",
+          banner_url: response.banner_url || "",
           first_name: response.first_name || "",
           last_name: response.last_name || "",
           bio: response.bio || "",
