@@ -87,8 +87,6 @@ export function CreatorHeader({ creator, username }: CreatorHeaderProps) {
     return <LoadingAnimation />;
   }
 
-  console.log(creator);
-
   return (
     <div className="flex flex-row gap-10 p-8">
       <div className="flex-1 flex-col items-start justify-center space-y-6">
@@ -208,7 +206,7 @@ export function CreatorHeader({ creator, username }: CreatorHeaderProps) {
       </div>
 
       <div
-        className="items-center grid place-items-center aspect-[4/3] max-w-[500px] w-full justify-self-center relative"
+        className="items-center grid place-items-center aspect-[4/3] max-w-[600px] w-full justify-self-center relative"
         onMouseEnter={() => creator?.isOwner && setIsHovering(true)}
         onMouseLeave={() => setIsHovering(false)}
       >

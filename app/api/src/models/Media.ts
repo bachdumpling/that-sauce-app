@@ -17,6 +17,10 @@ export interface MediaBase {
 export interface ImageMedia extends MediaBase {
   alt_text: string;
   resolutions: Record<string, string>;
+  ai_analysis?: string | null;
+  embedding?: number[] | null;
+  analysis_status?: AnalysisStatus | null;
+  analysis_error?: string | null;
 }
 
 /**
@@ -27,6 +31,10 @@ export interface VideoMedia extends MediaBase {
   description: string;
   vimeo_id?: string;
   youtube_id?: string;
+  ai_analysis?: string | null;
+  embedding?: number[] | null;
+  analysis_status?: AnalysisStatus | null;
+  analysis_error?: string | null;
 }
 
 /**
@@ -99,3 +107,6 @@ export interface FormattedMedia {
     username: string;
   };
 }
+
+// Define the AnalysisStatus type based on the enum
+export type AnalysisStatus = "pending" | "processing" | "success" | "failed";

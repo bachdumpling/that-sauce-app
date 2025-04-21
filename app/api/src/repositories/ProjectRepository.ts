@@ -7,8 +7,26 @@ import {
 import { ImageMedia, VideoMedia } from "../models/Media";
 import { invalidateCache } from "../lib/cache";
 import logger from "../config/logger";
+import { AnalysisStatus } from "../models/Media";
+
+// Define interfaces for specific analysis-related project data
+export interface ProjectForAnalysis {
+  id: string;
+  title: string;
+  description: string | null;
+  ai_analysis: string | null;
+}
+
+export interface AnalyzedProjectForPortfolio {
+  id: string;
+  title: string;
+  description: string | null;
+  ai_analysis: string;
+}
 
 export class ProjectRepository {
+  private tableName = "projects"; // Added tableName
+
   /**
    * Get projects by creator ID
    */
@@ -249,6 +267,132 @@ export class ProjectRepository {
     } catch (error) {
       logger.error("Error fetching project videos:", error);
       return { success: false, error: "Failed to fetch project videos" };
+    }
+  }
+
+  // --- Methods added for Analysis Service ---
+
+  /**
+   * Get basic project details needed for analysis
+   */
+  async getProjectDetails(
+    projectId: string
+  ): Promise<Pick<Project, "id" | "title" | "description"> | null> {
+    const { data, error } = await supabase
+      .from(this.tableName)
+      .select("id, title, description")
+      .eq("id", projectId)
+      .single();
+
+    if (error) {
+      logger.error(
+        `Error fetching project details for analysis ${projectId}: ${error.message}`
+      );
+      return null;
+    }
+    return data;
+  }
+
+  /**
+   * Get projects for a portfolio, suitable for starting analysis
+   */
+  async getProjectsForPortfolio(
+    portfolioId: string
+  ): Promise<ProjectForAnalysis[]> {
+    const { data, error } = await supabase
+      .from(this.tableName)
+      .select("id, title, description, ai_analysis") // Select fields needed for analysis start
+      .eq("portfolio_id", portfolioId);
+
+    if (error) {
+      logger.error(
+        `Error fetching projects for portfolio ${portfolioId}: ${error.message}`
+      );
+      throw error;
+    }
+    return data || [];
+  }
+
+  /**
+   * Get analyzed projects for a portfolio
+   */
+  async getAnalyzedProjectsForPortfolio(
+    portfolioId: string
+  ): Promise<AnalyzedProjectForPortfolio[]> {
+    const { data, error } = await supabase
+      .from(this.tableName)
+      .select("id, title, description, ai_analysis")
+      .eq("portfolio_id", portfolioId)
+      .not("ai_analysis", "is", null);
+
+    if (error) {
+      logger.error(
+        `Error fetching analyzed projects for portfolio ${portfolioId}: ${error.message}`
+      );
+      throw error;
+    }
+    // Filter out any potential nulls just in case and ensure ai_analysis is string
+    return (
+      (data?.filter(
+        (p) => p.ai_analysis !== null
+      ) as AnalyzedProjectForPortfolio[]) || []
+    );
+  }
+
+  /**
+   * Update project with AI analysis and embedding
+   */
+  async updateProjectAnalysis(
+    projectId: string,
+    analysis: string,
+    embedding: number[]
+  ): Promise<void> {
+    const { error } = await supabase
+      .from(this.tableName)
+      .update({
+        ai_analysis: analysis,
+        embedding: embedding,
+        analysis_status: "success",
+        analysis_error: null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", projectId);
+
+    if (error) {
+      logger.error(
+        `Error updating project analysis for ${projectId}: ${error.message}`
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Update project analysis status and optionally error message.
+   */
+  async updateProjectAnalysisStatus(
+    projectId: string,
+    status: AnalysisStatus,
+    errorMessage?: string | null
+  ): Promise<void> {
+    const updateData: Partial<Project> = {
+      analysis_status: status,
+      updated_at: new Date().toISOString(),
+    };
+    // Only include analysis_error if provided
+    if (errorMessage !== undefined) {
+      updateData.analysis_error = errorMessage;
+    }
+
+    const { error } = await supabase
+      .from(this.tableName)
+      .update(updateData)
+      .eq("id", projectId);
+
+    if (error) {
+      logger.error(
+        `Error updating project analysis status for ${projectId}: ${error.message}`
+      );
+      throw error;
     }
   }
 }

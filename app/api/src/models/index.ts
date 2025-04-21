@@ -9,3 +9,4 @@ export * from "./User";
 export * from "./ApiResponse";
 export * from "./Media";
 export * from "./Admin";
+export * from "./AnalysisJob";

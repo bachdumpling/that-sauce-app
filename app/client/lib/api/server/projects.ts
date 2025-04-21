@@ -184,5 +184,8 @@ export async function updateProjectServer(
 export async function deleteProjectServer(
   projectId: string
 ): Promise<ApiResponse<void>> {
-  return serverApiRequest.delete<void>(API_ENDPOINTS.getProject(projectId));
+  // Always attempt cascade delete from the server action
+  return serverApiRequest.delete<void>(API_ENDPOINTS.getProject(projectId), {
+    cascade: true,
+  });
 }

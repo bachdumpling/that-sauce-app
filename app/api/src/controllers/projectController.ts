@@ -177,17 +177,47 @@ export const projectController = {
         creatorUsername = creator?.username;
       }
 
-      await projectService.deleteProject(id, userId, cascade);
+      const deleteResult = await projectService.deleteProject(
+        id,
+        userId,
+        cascade
+      );
 
-      // Invalidate caches
+      // Check if the service layer reported an error
+      if (!deleteResult.success) {
+        // Log the error for debugging
+        logger.error(`Failed to delete project ${id}: ${deleteResult.error}`);
+        // Return a specific error response (e.g., 403 for permission, 500 for others)
+        // We might need more specific error handling based on deleteResult.error
+        if (deleteResult.error?.includes("permission")) {
+          return res.status(403).json({
+            success: false,
+            error:
+              "Forbidden: You don't have permission to delete this project",
+          });
+        }
+        return res.status(500).json({
+          success: false,
+          error: deleteResult.error || "Failed to delete project",
+        });
+      }
+
+      // Invalidate caches only on successful deletion
       if (creatorUsername) {
         invalidateCache(`creator_username_${creatorUsername}`);
       }
       invalidateCache(`project_${id}`);
 
-      return res.status(200).json({ message: "Project deleted successfully" });
+      return res
+        .status(200)
+        .json({ success: true, message: "Project deleted successfully" });
     } catch (error) {
-      return next(error);
+      // Log the caught error as well
+      logger.error(
+        `Unexpected error in deleteProject controller for project ${req.params.id}:`,
+        error
+      );
+      return next(error); // Keep passing to error handler for unexpected issues
     }
   },
 

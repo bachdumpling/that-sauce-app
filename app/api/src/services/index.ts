@@ -6,4 +6,5 @@ export * from "./mediaAnalysisService";
 export * from "./projectService";
 export * from "./searchService";
 export * from "./mediaService";
+export * from "./analysisService";
 export { createScraper } from "./scraperService";

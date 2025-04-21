@@ -1,10 +1,15 @@
+import { AnalysisStatus } from "./Media"; // Import AnalysisStatus
+
 export interface Portfolio {
   id: string;
   creator_id: string;
   created_at: string;
   updated_at: string;
   embedding?: number[];
-  ai_analysis?: Record<string, any>;
+  ai_analysis?: string | null; // Changed from Record<string, any> to match other tables
+  // Add analysis fields
+  analysis_status?: AnalysisStatus | null;
+  analysis_error?: string | null;
 }
 
 export interface PortfolioWithProjects extends Portfolio {

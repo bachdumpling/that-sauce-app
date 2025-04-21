@@ -2,6 +2,7 @@ import { supabase } from "../lib/supabase";
 import { Creator, CreatorWithProfile } from "../models/Creator";
 import { Portfolio } from "../models/Portfolio";
 import { invalidateCache } from "../lib/cache";
+import logger from "../config/logger";
 
 export class CreatorRepository {
   /**
@@ -158,5 +159,24 @@ export class CreatorRepository {
 
     if (newPortfolioError) return null;
     return newPortfolio;
+  }
+
+  /**
+   * Get creator details for analysis context
+   */
+  async getCreatorDetails(
+    creatorId: string
+  ): Promise<{ username: string; primary_role: any; bio: string | null } | null> {
+    const { data, error } = await supabase
+      .from("creators")
+      .select("username, primary_role, bio")
+      .eq("id", creatorId)
+      .single();
+
+    if (error) {
+      logger.error(`Error fetching creator details for ${creatorId}: ${error.message}`);
+      return null;
+    }
+    return data;
   }
 }

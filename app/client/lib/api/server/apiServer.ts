@@ -23,6 +23,8 @@ async function getServerAuthToken() {
     data: { session },
   } = await supabase.auth.getSession();
 
+  console.log("session", session);
+
   return session?.access_token;
 }
 
@@ -239,9 +241,10 @@ export const serverApiRequest = {
 
   delete: async <T>(
     endpoint: string,
+    queryParams?: Record<string, string | number | boolean | undefined>,
     requireAuth = true
   ): Promise<ApiResponse<T>> => {
-    const url = buildServerApiUrl(endpoint);
+    const url = buildServerApiUrl(endpoint, queryParams);
 
     try {
       const headers: Record<string, string> = {

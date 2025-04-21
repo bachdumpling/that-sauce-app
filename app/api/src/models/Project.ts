@@ -1,5 +1,6 @@
 // src/models/Project.ts
 import { ImageMedia, VideoMedia } from "./Media";
+import { AnalysisStatus } from "./Media";
 
 export interface Project {
   id: string;
@@ -14,6 +15,10 @@ export interface Project {
   roles?: string[];
   client_ids?: string[];
   year?: number;
+  ai_analysis?: string | null;
+  embedding?: number[] | null;
+  analysis_status?: AnalysisStatus | null;
+  analysis_error?: string | null;
 }
 
 export interface Creator {
