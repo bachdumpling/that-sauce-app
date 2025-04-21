@@ -5,6 +5,24 @@ import { ImageMedia, AnalysisStatus } from "../../models/Media";
 export class ImageRepository {
   private tableName = "images";
 
+  async getImageById(imageId: string): Promise<ImageMedia | null> {
+    const { data, error } = await supabase
+      .from(this.tableName)
+      .select("*")
+      .eq("id", imageId)
+      .single();
+
+    if (error) {
+      if (error.code === "PGRST116") {
+        // Record not found
+        return null;
+      }
+      logger.error(`Error fetching image with ID ${imageId}: ${error.message}`);
+      throw error;
+    }
+    return data;
+  }
+
   async getImagesForProject(projectId: string): Promise<ImageMedia[]> {
     const { data, error } = await supabase
       .from(this.tableName)

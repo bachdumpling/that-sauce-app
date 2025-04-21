@@ -5,6 +5,24 @@ import { VideoMedia, AnalysisStatus } from "../../models/Media";
 export class VideoRepository {
   private tableName = "videos";
 
+  async getVideoById(videoId: string): Promise<VideoMedia | null> {
+    const { data, error } = await supabase
+      .from(this.tableName)
+      .select("*")
+      .eq("id", videoId)
+      .single();
+
+    if (error) {
+      if (error.code === "PGRST116") {
+        // Record not found
+        return null;
+      }
+      logger.error(`Error fetching video with ID ${videoId}: ${error.message}`);
+      throw error;
+    }
+    return data;
+  }
+
   async getVideosForProject(projectId: string): Promise<VideoMedia[]> {
     const { data, error } = await supabase
       .from(this.tableName)

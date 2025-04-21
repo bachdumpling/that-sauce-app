@@ -921,7 +921,7 @@ ${mediaContext}
   /**
    * Helper function to get highest resolution URL from image
    */
-  private async getHighestResUrl(image: ImageMedia): Promise<string | null> {
+  public async getHighestResUrl(image: ImageMedia): Promise<string | null> {
     // (Keep existing implementation - no direct DB calls)
     try {
       // Prioritize higher resolutions if available

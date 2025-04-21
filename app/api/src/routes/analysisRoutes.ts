@@ -20,6 +20,12 @@ router.post(
   analysisController.startPortfolioAnalysis
 );
 
+// Start project analysis
+router.post(
+  "/projects/:projectId",
+  analysisController.startProjectAnalysis
+);
+
 // Get portfolio analysis results
 router.get("/portfolios/:portfolioId", analysisController.getPortfolioAnalysis);
 

@@ -6,6 +6,8 @@ import { supabase } from "../lib/supabase";
 import logger from "../config/logger";
 import { sendError, sendSuccess } from "../utils/responseUtils";
 import { ErrorCode } from "../models/ApiResponse";
+import { tasks } from "@trigger.dev/sdk/v3";
+import type { portfolioAnalysisTask, projectAnalysisTask } from "../trigger";
 
 const analysisService = new AnalysisService();
 
@@ -176,15 +178,36 @@ export class AnalysisController {
         throw jobError;
       }
 
-      // For MVP, start the analysis immediately
-      // In production, this would be added to a queue
-      setTimeout(() => {
-        analysisService
-          .startPortfolioAnalysis(portfolioId, portfolio.creator_id, job.id)
-          .catch((err) => {
-            logger.error("Background analysis error:", err);
-          });
-      }, 0);
+      // Trigger the portfolio analysis task using Trigger.dev
+      try {
+        const handle = await tasks.trigger<typeof portfolioAnalysisTask>(
+          "portfolio-analysis",
+          {
+            portfolioId: portfolioId,
+            userId: creator.profile_id,
+            jobId: job.id,
+          }
+        );
+
+        logger.info(
+          `Portfolio analysis job ${job.id} triggered via Trigger.dev (handle: ${handle.id})`,
+          {
+            portfolioId,
+            jobId: job.id,
+            triggerHandleId: handle.id,
+          }
+        );
+      } catch (triggerError) {
+        logger.error("Error triggering portfolio analysis task:", triggerError);
+        // Update job status to failed if trigger fails
+        await supabase
+          .from("analysis_jobs")
+          .update({
+            status: "failed",
+            status_message: `Failed to start analysis: ${triggerError instanceof Error ? triggerError.message : String(triggerError)}`,
+          })
+          .eq("id", job.id);
+      }
 
       return sendSuccess(res, {
         message: "Portfolio analysis started",
@@ -197,6 +220,121 @@ export class AnalysisController {
         res,
         ErrorCode.SERVER_ERROR,
         "Error starting portfolio analysis",
+        error,
+        500
+      );
+    }
+  }
+
+  /**
+   * Start analysis of a single project
+   * POST /api/analysis/projects/:projectId
+   */
+  async startProjectAnalysis(req: AuthenticatedRequest, res: Response) {
+    try {
+      const { projectId } = req.params;
+      const userId = req.user?.id;
+
+      if (!userId) {
+        return sendError(
+          res,
+          ErrorCode.UNAUTHORIZED,
+          "Authentication required",
+          null,
+          401
+        );
+      }
+
+      // Check if the project exists and verify ownership
+      const { data: project, error: projectError } = await supabase
+        .from("projects")
+        .select("id, creator_id")
+        .eq("id", projectId)
+        .single();
+
+      if (projectError) {
+        return sendError(
+          res,
+          ErrorCode.NOT_FOUND,
+          "Project not found",
+          null,
+          404
+        );
+      }
+
+      // Verify creator ownership
+      const { data: creator, error: creatorError } = await supabase
+        .from("creators")
+        .select("profile_id")
+        .eq("id", project.creator_id)
+        .single();
+
+      if (creatorError || creator.profile_id !== userId) {
+        return sendError(
+          res,
+          ErrorCode.FORBIDDEN,
+          "You don't have permission to analyze this project",
+          null,
+          403
+        );
+      }
+
+      // Create a new analysis job
+      const { data: job, error: jobError } = await supabase
+        .from("analysis_jobs")
+        .insert({
+          project_id: projectId,
+          creator_id: project.creator_id,
+          status: "pending",
+        })
+        .select()
+        .single();
+
+      if (jobError) {
+        throw jobError;
+      }
+
+      // Trigger the project analysis task using Trigger.dev
+      try {
+        const handle = await tasks.trigger<typeof projectAnalysisTask>(
+          "project-analysis",
+          {
+            projectId: projectId,
+            userId: creator.profile_id,
+          }
+        );
+
+        logger.info(
+          `Project analysis job ${job.id} triggered via Trigger.dev (handle: ${handle.id})`,
+          {
+            projectId,
+            jobId: job.id,
+            triggerHandleId: handle.id,
+          }
+        );
+      } catch (triggerError) {
+        logger.error("Error triggering project analysis task:", triggerError);
+        // Update job status to failed if trigger fails
+        await supabase
+          .from("analysis_jobs")
+          .update({
+            status: "failed",
+            status_message: `Failed to start analysis: ${triggerError instanceof Error ? triggerError.message : String(triggerError)}`,
+          })
+          .eq("id", job.id);
+      }
+
+      return sendSuccess(res, {
+        message: "Project analysis started",
+        job_id: job.id,
+        status: "pending",
+      });
+    } catch (error) {
+      logger.error("Error starting project analysis:", error);
+      return sendError(
+        res,
+        ErrorCode.SERVER_ERROR,
+        "Error starting project analysis",
         error,
         500
       );

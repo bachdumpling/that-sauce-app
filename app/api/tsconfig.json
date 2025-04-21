@@ -9,6 +9,11 @@
     "esModuleInterop": true,
     "skipLibCheck": true
   },
-  "include": ["**/*.ts", "src/**/*", "api/**/*"],
+  "include": [
+    "**/*.ts",
+    "src/**/*",
+    "api/**/*",
+    "trigger.config.ts"
+  ],
   "exclude": ["node_modules", "dist"]
 }

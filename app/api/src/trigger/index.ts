@@ -1,0 +1,5 @@
+// Export all Trigger.dev tasks
+export { imageAnalysisTask } from "./imageAnalysisTask";
+export { videoAnalysisTask } from "./videoAnalysisTask";
+export { projectAnalysisTask } from "./projectAnalysisTask";
+export { portfolioAnalysisTask } from "./portfolioAnalysisTask";

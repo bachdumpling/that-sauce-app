@@ -12,9 +12,9 @@
     "packages/*"
   ],
   "scripts": {
-    "dev": "concurrently \"npm run dev:client\" \"npm run dev:api\"",
-    "dev:client": "cd app/client && npm run dev",
-    "dev:api": "cd app/api && npm run dev",
+    "dev": "NODE_NO_WARNINGS=1 concurrently \"npm run dev:client\" \"npm run dev:api\"",
+    "dev:client": "cd app/client && NODE_NO_WARNINGS=1 npm run dev",
+    "dev:api": "cd app/api && NODE_NO_WARNINGS=1 npm run dev",
     "build": "concurrently \"npm run build:client\" \"npm run build:api\"",
     "build:client": "cd app/client && npm run build",
     "build:api": "cd app/api && npm run build"
