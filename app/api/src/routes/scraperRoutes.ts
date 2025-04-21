@@ -1,9 +1,12 @@
-// src/routes/mediaScrapeRoutes.js
-const express = require("express");
-const { scrapeMediaFromUrl } = require("../controllers/scraperController");
-const { extractUser } = require("../middleware/extractUser");
+// src/routes/scraperRoutes.ts
+import { Router } from "express";
+import {
+  scrapeMediaFromUrl,
+  getScrapeJobStatus,
+} from "../controllers/scraperController";
+import { extractUser } from "../middleware/extractUser";
 
-const router = express.Router();
+const router = Router();
 
 // Apply extractUser middleware
 router.use(extractUser);
@@ -13,6 +16,12 @@ router.use(extractUser);
  * @desc Scrape media from a URL
  */
 router.post("/extract", scrapeMediaFromUrl);
+
+/**
+ * @route GET /api/scraper/status/:handle_id
+ * @desc Get status of a scraper job
+ */
+router.get("/status/:handle_id", getScrapeJobStatus);
 
 /**
  * @route POST /api/scraper/import
@@ -27,4 +36,4 @@ router.post("/import", (req, res) => {
   });
 });
 
-module.exports = router;
+export default router;

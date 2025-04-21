@@ -18,7 +18,7 @@ import organizationRoutes from "../src/routes/organizationRoutes";
 import analysisRoutes from "../src/routes/analysisRoutes";
 
 // Add this import
-const scraperRoutes = require("../src/routes/scraperRoutes");
+import scraperRoutes from "../src/routes/scraperRoutes";
 
 // Middleware
 import { errorHandler } from "../src/middleware/errorHandler";

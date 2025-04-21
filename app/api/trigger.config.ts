@@ -3,7 +3,13 @@ import { defineConfig } from "@trigger.dev/sdk/v3";
 export default defineConfig({
   project: "proj_fnkqlhyyqvkxnkpqubcu",
   build: {
-    external: ["pino", "pino-pretty"],
+    external: [
+      "pino",
+      "pino-pretty",
+      "puppeteer",
+      "puppeteer-core",
+      "@sparticuz/chromium",
+    ],
   },
   runtime: "node",
   logLevel: "log",

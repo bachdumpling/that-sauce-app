@@ -3,3 +3,4 @@ export { imageAnalysisTask } from "./imageAnalysisTask";
 export { videoAnalysisTask } from "./videoAnalysisTask";
 export { projectAnalysisTask } from "./projectAnalysisTask";
 export { portfolioAnalysisTask } from "./portfolioAnalysisTask";
+export { scraperTask } from "./scraperTask";
