@@ -9,6 +9,7 @@ export default defineConfig({
       "puppeteer",
       "puppeteer-core",
       "@sparticuz/chromium",
+      "puppeteer()"
     ],
   },
   runtime: "node",

@@ -1,5 +1,5 @@
 const logger = require("../config/logger").default;
-
+const { BROWSERBASE_API_KEY, NODE_ENV } = require("../config/env");
 /**
  * Base scraper class with common functionality
  */
@@ -15,24 +15,21 @@ class BaseScraper {
   async initialize() {
     logger.debug("Launching headless browser");
 
-    const isProduction = process.env.NODE_ENV === "production";
+    const isProduction = NODE_ENV === "production";
 
     if (isProduction) {
-      // Import dependencies for production (Vercel)
-      logger.info("Launching browser in production");
+      // Import dependencies for production (Browserbase)
+      logger.info("Connecting to Browserbase in production");
       try {
         const puppeteerCore = require("puppeteer-core");
-        const chromium = require("@sparticuz/chromium");
 
-        this.browser = await puppeteerCore.launch({
-          args: chromium.args,
-          executablePath: await chromium.executablePath(),
-          defaultViewport: chromium.defaultViewport,
-          headless: chromium.headless,
-          ignoreHTTPSErrors: true,
+        this.browser = await puppeteerCore.connect({
+          browserWSEndpoint: `wss://connect.browserbase.com?apiKey=${BROWSERBASE_API_KEY}`,
         });
       } catch (error) {
-        logger.error(`Error launching browser in production: ${error.message}`);
+        logger.error(
+          `Error connecting to Browserbase in production: ${error.message}`
+        );
         throw error;
       }
     } else {
