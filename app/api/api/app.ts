@@ -95,6 +95,19 @@ app.use("/api/analysis", analysisRoutes);
 // Error handling middleware
 app.use(errorHandler);
 
+try {
+  console.log("ENV CHECK", {
+    triggerKey: process.env.TRIGGER_API_KEY,
+    triggerId: process.env.TRIGGER_CLIENT_ID,
+  });
+
+  const result = await tasks.trigger<typeof myTask>("my-task", { url });
+
+  console.log("Triggered:", result);
+} catch (error) {
+  console.error("Error triggering scraper task:", error);
+}
+
 // Start server
 app.listen(port, () => {
   logger.info(`Server is running on http://localhost:${port}`);

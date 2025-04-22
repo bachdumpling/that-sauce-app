@@ -56,6 +56,15 @@ export const scrapeMediaFromUrl = async (
 
     try {
       // Trigger the scraper task using Trigger.dev
+      logger.info(
+        `Attempting to trigger scraper task with params: ${JSON.stringify({
+          url,
+          projectId: project_id || undefined,
+          userId: req.user.id,
+          autoImport: auto_import || false,
+        })}`
+      );
+
       const handle = await tasks.trigger<typeof scraperTask>(
         "website-scraper",
         {
@@ -64,6 +73,10 @@ export const scrapeMediaFromUrl = async (
           userId: req.user.id,
           autoImport: auto_import || false,
         }
+      );
+
+      logger.info(
+        `Scraper task triggered successfully with handle ID: ${handle.id}`
       );
 
       // Return a response to the user with the job ID
@@ -75,7 +88,21 @@ export const scrapeMediaFromUrl = async (
         publicAccessToken: handle.publicAccessToken,
       });
     } catch (triggerError) {
-      logger.error("Error triggering scraper task:", triggerError);
+      logger.error("Error triggering scraper task:", {
+        error:
+          triggerError instanceof Error
+            ? {
+                message: triggerError.message,
+                name: triggerError.name,
+                stack: triggerError.stack,
+                cause: triggerError.cause,
+              }
+            : String(triggerError),
+        url,
+        userId: req.user.id,
+        projectId: project_id,
+      });
+
       return sendError(
         res,
         ErrorCode.SERVER_ERROR,
