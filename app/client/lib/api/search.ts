@@ -90,7 +90,7 @@ export async function search(params: SearchParams) {
       params: queryParams,
     });
 
-    console.log("Search API response:", response);
+    // console.log("Search API response:", response);
 
     // Check if the data is nested within a data property
     if (response.data && response.data.data) {

@@ -230,7 +230,6 @@ export function EditUsernameForm({ creator }: EditUsernameFormProps) {
             }
             onClick={() => {
               handleSave();
-              console.log("clicked");
             }}
           >
             Save

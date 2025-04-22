@@ -1,6 +1,6 @@
 import { signOutAction } from "@/app/actions";
 import Link from "next/link";
-import { Button } from "./ui/button";
+import { Button } from "@/components/ui/button";
 import { createClient } from "@/utils/supabase/server";
 import Image from "next/image";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -14,6 +14,13 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
+import {
+  mainRoutes,
+  userAuthRoutes,
+  userProfileRoutes,
+  adminRoutes,
+  isAdminEmail,
+} from "./routes";
 
 export default async function Nav() {
   const supabase = await createClient();
@@ -58,12 +65,17 @@ export default async function Nav() {
     <div className="flex items-center justify-between gap-4 w-full">
       {/* Left */}
       <div className="flex gap-4 justify-start items-center w-full">
-        <Button asChild size="sm" variant="ghost" className="p-4 rounded-full">
-          <Link href="/">Home</Link>
-        </Button>
-        <Button asChild size="sm" variant="ghost" className="p-4 rounded-full">
-          <Link href="/search">Search</Link>
-        </Button>
+        {mainRoutes.map((route) => (
+          <Button
+            key={route.path}
+            asChild
+            size="sm"
+            variant="ghost"
+            className="p-4 rounded-full"
+          >
+            <Link href={route.path}>{route.label}</Link>
+          </Button>
+        ))}
       </div>
 
       {/* Middle */}
@@ -81,14 +93,14 @@ export default async function Nav() {
 
       {/* Right */}
       <div className="flex justify-end items-center w-full gap-2">
-        {user.email?.includes("ohos.nyc") && (
+        {isAdminEmail(user.email) && (
           <Button
             asChild
             size="sm"
             variant="ghost"
             className="p-4 rounded-full"
           >
-            <Link href="/admin">Admin</Link>
+            <Link href={adminRoutes[0].path}>{adminRoutes[0].label}</Link>
           </Button>
         )}
 
@@ -137,8 +149,11 @@ export default async function Nav() {
               </div>
 
               <DropdownMenuItem className="focus:bg-zinc-200 dark:focus:bg-zinc-600 rounded-[16px] p-4">
-                <Link href={`/settings`} className="w-full text-sm font-medium">
-                  Settings
+                <Link
+                  href={userProfileRoutes[0].path}
+                  className="w-full text-sm font-medium"
+                >
+                  {userProfileRoutes[0].label}
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem className="focus:bg-zinc-200 dark:focus:bg-zinc-600 rounded-[16px] p-4">
@@ -164,12 +179,17 @@ export default async function Nav() {
     <div className="flex items-center justify-between gap-4 w-full">
       {/* Left */}
       <div className="flex gap-4 justify-start items-center w-full">
-        <Button asChild size="sm" variant="ghost" className="p-4 rounded-full">
-          <Link href="/">Home</Link>
-        </Button>
-        <Button asChild size="sm" variant="ghost" className="p-4 rounded-full">
-          <Link href="/search">Search</Link>
-        </Button>
+        {mainRoutes.map((route) => (
+          <Button
+            key={route.path}
+            asChild
+            size="sm"
+            variant="ghost"
+            className="p-4 rounded-full"
+          >
+            <Link href={route.path}>{route.label}</Link>
+          </Button>
+        ))}
       </div>
 
       {/* Middle */}
@@ -188,12 +208,20 @@ export default async function Nav() {
       {/* Right */}
       <div className="flex gap-2 justify-end items-center w-full">
         <ThemeSwitcher />
-        <Button asChild variant="ghost" className="p-6 rounded-full">
-          <Link href="/sign-in">Log in</Link>
-        </Button>
-        <Button asChild variant="default" className="px-4 py-2 rounded-full">
-          <Link href="/sign-up">Sign up</Link>
-        </Button>
+        {userAuthRoutes.map((route) => (
+          <Button
+            key={route.path}
+            asChild
+            variant={route.path === "/sign-up" ? "default" : "ghost"}
+            className={
+              route.path === "/sign-up"
+                ? "px-4 py-2 rounded-full"
+                : "p-6 rounded-full"
+            }
+          >
+            <Link href={route.path}>{route.label}</Link>
+          </Button>
+        ))}
       </div>
     </div>
   );

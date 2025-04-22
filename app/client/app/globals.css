@@ -2,8 +2,13 @@
 @tailwind components;
 @tailwind utilities;
 
-@layer base { 
+@layer base {
   :root {
+    --that-sauce-white: #fffffe;
+    --that-sauce-black: #000000;
+    --that-sauce-red: #e21313;
+    --that-sauce-green: #1fe55c;
+    --that-sauce-yellow: #ff9d00;
     --background: 0 0% 100%;
     --foreground: 240 10% 3.9%;
     --card: 0 0% 100%;
@@ -32,6 +37,11 @@
   }
 
   .dark {
+    --that-sauce-white: #fffffe;
+    --that-sauce-black: #000000;
+    --that-sauce-red: #e21313;
+    --that-sauce-green: #1fe55c;
+    --that-sauce-yellow: #ff9d00;
     --background: 240 10% 3.9%;
     --foreground: 0 0% 98%;
     --card: 240 10% 3.9%;

@@ -7,10 +7,11 @@ import "./globals.css";
 import "@/styles/nprogress-custom.css";
 import { Analytics } from "@vercel/analytics/react";
 import localFont from "next/font/local";
-import { MobileNav } from "@/components/mobile-nav";
+import { MobileNav } from "@/components/Nav/mobile-nav";
 import { ProgressBar } from "@/components/ProgressBar";
 import { ProgressBarProvider } from "@/providers/ProgressBarProvider";
-import Nav from "@/components/nav";
+import Nav from "@/components/Nav/nav";
+
 const defaultUrl = process.env.NEXT_PUBLIC_CLIENT_URL
   ? `https://${process.env.NEXT_PUBLIC_CLIENT_URL}`
   : "https://localhost:3000";
@@ -113,7 +114,7 @@ export default function RootLayout({
                 </div>
               </nav>
 
-              <main className="flex-1 container w-full mx-auto">
+              <main className="flex-1 w-full mx-auto px-8">
                 {children}
               </main>
 

@@ -12,9 +12,10 @@ import {
 } from "@/components/ui/sheet";
 import Link from "next/link";
 import Image from "next/image";
-import NavClient from "@/components/nav-client";
-import { ThemeSwitcher } from "@/components/theme-switcher";
+import NavClient from "./nav-client";
+import { ThemeSwitcher } from "./theme-switcher";
 import { usePathname } from "next/navigation";
+import { adminRoutes } from "./routes";
 
 export function MobileNav() {
   const [open, setOpen] = useState(false);
@@ -70,20 +71,16 @@ export function MobileNav() {
                       Admin
                     </span>
                   </div>
-                  <Link
-                    href="/admin/creators"
-                    className="px-4 py-3 rounded-md hover:bg-accent transition-colors flex items-center gap-2 font-medium"
-                    onClick={handleLinkClick}
-                  >
-                    Creator Management
-                  </Link>
-                  <Link
-                    href="/admin/creators/rejected"
-                    className="px-4 py-3 rounded-md hover:bg-accent transition-colors flex items-center gap-2 font-medium"
-                    onClick={handleLinkClick}
-                  >
-                    Rejected Creators
-                  </Link>
+                  {adminRoutes.slice(1).map((route) => (
+                    <Link
+                      key={route.path}
+                      href={route.path}
+                      className="px-4 py-3 rounded-md hover:bg-accent transition-colors flex items-center gap-2 font-medium"
+                      onClick={handleLinkClick}
+                    >
+                      {route.label}
+                    </Link>
+                  ))}
                 </>
               )}
             </nav>

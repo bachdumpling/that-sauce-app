@@ -69,7 +69,7 @@ export function Overview({ creator }: OverviewProps) {
                         alt={firstImage.alt_text || project.title || ""}
                         width={500}
                         height={300}
-                        className="w-full h-auto transition-transform duration-300 group-hover:scale-105"
+                        className="w-full h-auto transition-transform duration-300 hover:scale-105"
                         sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                         style={{ objectFit: "cover" }}
                       />

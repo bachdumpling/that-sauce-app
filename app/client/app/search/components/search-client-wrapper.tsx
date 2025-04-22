@@ -57,7 +57,7 @@ import {
   DialogClose,
 } from "@/components/ui/dialog";
 import { DropzoneInput } from "@/components/ui/dropzone-input";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Carousel,
   CarouselContent,
@@ -72,6 +72,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { Textarea } from "@/components/ui/textarea";
 import { Slider } from "@/components/ui/slider";
 import Link from "next/link";
 
@@ -531,51 +532,282 @@ export function SearchClientWrapper({
 
   return (
     <div className="space-y-10">
-      {/* Role Selection */}
-      <div>
-        <h2 className="text-xl font-semibold mb-3">
-          What kind of talent are you looking for?
-        </h2>
-        <div className="flex flex-wrap gap-2">
-          {visibleRoles.map((role) => (
-            <Button
-              key={role}
-              variant={selectedRole === role ? "default" : "outline"}
-              onClick={() => handleRoleSelect(role)}
-              // className={selectedRole === role ? "bg-black text-white"  : ""}
-            >
-              {role}
-            </Button>
-          ))}
-          {talentRoles.length > 15 && (
-            <Button
-              variant="outline"
-              className="gap-1 rounded-full"
-              onClick={() => setShowAllRoles(!showAllRoles)}
-            >
-              {showAllRoles ? "Less" : "More"}{" "}
-              <ArrowUpRight className="h-4 w-4" />
-            </Button>
-          )}
-        </div>
+      <div className="space-y-4">
+        <h1 className="text-2xl font-bold">Describe your creator(s)</h1>
       </div>
+      {/* Role Selection */}
+      <Card className="p-4">
+        <CardHeader>
+          <CardTitle>
+            <h2 className="text-xl font-semibold">
+              What kind of talent are you looking for?
+            </h2>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-wrap gap-2">
+            {visibleRoles.map((role) => (
+              <Button
+                key={role}
+                variant={"outline"}
+                onClick={() => handleRoleSelect(role)}
+                className={
+                  selectedRole === role
+                    ? "bg-white border-that-sauce-red text-that-sauce-red border-2"
+                    : "border-2"
+                }
+              >
+                {role}
+              </Button>
+            ))}
+            {talentRoles.length > 15 && (
+              <Button
+                variant="outline"
+                className="gap-1 rounded-full"
+                onClick={() => setShowAllRoles(!showAllRoles)}
+              >
+                {showAllRoles ? "Less" : "More"}{" "}
+                <ArrowUpRight className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Search Form */}
-      <div className="space-y-4">
-        <div className="relative">
-          <div className="flex space-x-4 items-center mb-3">
-            <h2 className="text-xl font-semibold">Tell us the specifics</h2>
-            <Link
-              href="/search/history"
-              className="flex items-center text-sm text-muted-foreground hover:text-foreground transition-colors"
-            >
-              <History className="h-4 w-4 mr-1" />
-              View search history
-            </Link>
-          </div>
+      <Card className="p-4">
+        <CardHeader>
+          <CardTitle>
+            <div className="flex flex-row justify-between gap-4">
+              <div className="flex space-x-4 items-center">
+                <h2 className="text-xl font-semibold">Tell us the specifics</h2>
+                <Link
+                  href="/search/history"
+                  className="flex items-center text-sm text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <History className="h-4 w-4 mr-1" />
+                  View search history
+                </Link>
+              </div>
+              <div className="flex items-center justify-end gap-2">
+                {/* Budget Filter */}
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className={
+                        hasBudgetFilter
+                          ? "border-green-500 text-green-500 hover:text-green-600 hover:border-green-600"
+                          : ""
+                      }
+                    >
+                      <DollarSign className="h-4 w-4 mr-2 mb-1" />
+                      {hasBudgetFilter ? `Up to $${maxBudget}/hr` : "Budget"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-80 p-4">
+                    <div className="space-y-4">
+                      <h4 className="font-medium text-sm">
+                        Maximum Budget (per hour)
+                      </h4>
+                      <div className="space-y-5">
+                        <Slider
+                          defaultValue={[200]}
+                          min={25}
+                          max={500}
+                          step={5}
+                          value={[maxBudget]}
+                          onValueChange={(values) => {
+                            setMaxBudget(values[0]);
+                          }}
+                          className="mt-6"
+                        />
+                        <div className="flex items-center justify-between">
+                          <div className="text-sm">$25</div>
+                          <div className="border rounded-md px-2 py-1 w-24">
+                            <div className="text-xs text-muted-foreground mb-1">
+                              Max ($)
+                            </div>
+                            <input
+                              type="number"
+                              min={25}
+                              max={500}
+                              value={maxBudget}
+                              onChange={(e) => {
+                                const value = parseInt(e.target.value);
+                                if (
+                                  !isNaN(value) &&
+                                  value >= 25 &&
+                                  value <= 500
+                                ) {
+                                  setMaxBudget(value);
+                                }
+                              }}
+                              className="w-full focus:outline-none text-sm"
+                            />
+                          </div>
+                          <div className="text-sm">$500</div>
+                        </div>
+                      </div>
+                      <div className="flex justify-end gap-2 pt-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setMaxBudget(200);
+                            setHasBudgetFilter(false);
+                          }}
+                        >
+                          Reset
+                        </Button>
+                        <Button
+                          variant="default"
+                          size="sm"
+                          onClick={() => setHasBudgetFilter(true)}
+                        >
+                          Apply
+                        </Button>
+                      </div>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+
+                {/* Inspiration Upload */}
+                <Dialog
+                  open={isUploadDialogOpen}
+                  onOpenChange={setIsUploadDialogOpen}
+                >
+                  <DialogTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className={
+                        filesUploaded.length > 0
+                          ? "border-blue-500 text-blue-500 hover:text-blue-600 hover:border-blue-600"
+                          : ""
+                      }
+                    >
+                      <Upload className="h-4 w-4 mr-2 mb-1" />
+                      {filesUploaded.length > 0
+                        ? `${filesUploaded.length} document${filesUploaded.length > 1 ? "s" : ""}`
+                        : "Add Inspo"}
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                      <DialogTitle>Upload Inspiration</DialogTitle>
+                      <DialogDescription>
+                        Upload documents or images that will help us understand
+                        your creative needs better.
+                      </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="space-y-4 py-4">
+                      {/* <div className="bg-muted/50 p-3 rounded-md flex items-start gap-2 text-sm">
+                    <Info className="h-5 w-5 text-blue-500 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-medium mb-1">What we can process:</p>
+                      <ul className="list-disc list-inside space-y-1 text-muted-foreground">
+                        <li>Images in JPG, PNG format (.jpg, .jpeg, .png)</li>
+                        <li>PDF documents (.pdf)</li>
+                        <li>Word documents (.doc, .docx)</li>
+                        <li>Maximum 5 files, up to 5MB each</li>
+                      </ul>
+                    </div>
+                  </div> */}
+
+                      {filesUploaded.length > 0 && (
+                        <div className="mb-4">
+                          <h4 className="text-sm font-medium mb-2">
+                            Currently Uploaded ({filesUploaded.length}/5):
+                          </h4>
+                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 max-h-60 overflow-y-auto p-2 bg-muted/20 rounded-md">
+                            {filesUploaded.map((file, index) => {
+                              // Check if the file is an image
+                              const isImage = file.type.startsWith("image/");
+
+                              return (
+                                <div
+                                  key={index}
+                                  className="relative group aspect-video rounded-md overflow-hidden"
+                                >
+                                  {isImage ? (
+                                    <div className="w-full h-full relative">
+                                      <img
+                                        src={URL.createObjectURL(file)}
+                                        alt={file.name}
+                                        className="object-cover w-full h-full"
+                                      />
+                                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all duration-200"></div>
+                                    </div>
+                                  ) : (
+                                    <div className="w-full h-full flex items-center justify-center bg-muted/40">
+                                      <FileText className="h-8 w-8 text-blue-500" />
+                                    </div>
+                                  )}
+
+                                  <Button
+                                    variant="destructive"
+                                    size="icon"
+                                    onClick={() => handleRemoveFile(index)}
+                                    className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                                  >
+                                    <X className="h-3 w-3" />
+                                    <span className="sr-only">
+                                      Remove {file.name}
+                                    </span>
+                                  </Button>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+
+                      <DropzoneInput
+                        onFilesSelected={handleFilesSelected}
+                        acceptedFileTypes={{
+                          "image/jpeg": [".jpg", ".jpeg"],
+                          "image/png": [".png"],
+                          "application/pdf": [".pdf"],
+                          "application/msword": [".doc"],
+                          "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
+                            [".docx"],
+                        }}
+                        maxFiles={5}
+                        maxSize={5 * 1024 * 1024} // 5MB
+                      />
+                    </div>
+
+                    <div className="flex justify-end gap-2">
+                      <DialogClose asChild>
+                        <Button variant="outline">Cancel</Button>
+                      </DialogClose>
+                      <DialogClose asChild>
+                        <Button
+                          variant="default"
+                          disabled={filesUploaded.length === 0}
+                          onClick={() => {
+                            // Here you could also trigger processing of the files
+                          }}
+                        >
+                          Apply{" "}
+                          {filesUploaded.length > 0 &&
+                            `(${filesUploaded.length})`}
+                        </Button>
+                      </DialogClose>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              </div>
+            </div>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="relative">
           <div className="relative">
-            <textarea
-              className="w-full pl-6 pr-6 py-4 h-28 border rounded-md resize-none text-base"
+            <Textarea
+              className=""
               placeholder={
                 selectedRole
                   ? getRoleExamples(selectedRole)[0]
@@ -586,13 +818,14 @@ export function SearchClientWrapper({
               disabled={!selectedRole}
             />
             {searchQuery && (
-              <button
-                type="button"
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={clearSearch}
-                className="absolute right-3 top-4 text-muted-foreground hover:text-foreground transition-colors"
+                className="absolute right-2 top-2"
               >
                 <X className="h-4 w-4" />
-              </button>
+              </Button>
             )}
           </div>
 
@@ -637,219 +870,14 @@ export function SearchClientWrapper({
               )}
             </div>
           )}
+        </CardContent>
+      </Card>
 
-          <div className="absolute right-0 -top-2 flex items-center gap-2">
-            {/* Budget Filter */}
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className={
-                    hasBudgetFilter
-                      ? "border-green-500 text-green-500 hover:text-green-600 hover:border-green-600"
-                      : ""
-                  }
-                >
-                  <DollarSign className="h-4 w-4 mr-2 mb-1" />
-                  {hasBudgetFilter ? `Up to $${maxBudget}/hr` : "Budget"}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-80 p-4">
-                <div className="space-y-4">
-                  <h4 className="font-medium text-sm">
-                    Maximum Budget (per hour)
-                  </h4>
-                  <div className="space-y-5">
-                    <Slider
-                      defaultValue={[200]}
-                      min={25}
-                      max={500}
-                      step={5}
-                      value={[maxBudget]}
-                      onValueChange={(values) => {
-                        setMaxBudget(values[0]);
-                      }}
-                      className="mt-6"
-                    />
-                    <div className="flex items-center justify-between">
-                      <div className="text-sm">$25</div>
-                      <div className="border rounded-md px-2 py-1 w-24">
-                        <div className="text-xs text-muted-foreground mb-1">
-                          Max ($)
-                        </div>
-                        <input
-                          type="number"
-                          min={25}
-                          max={500}
-                          value={maxBudget}
-                          onChange={(e) => {
-                            const value = parseInt(e.target.value);
-                            if (!isNaN(value) && value >= 25 && value <= 500) {
-                              setMaxBudget(value);
-                            }
-                          }}
-                          className="w-full focus:outline-none text-sm"
-                        />
-                      </div>
-                      <div className="text-sm">$500</div>
-                    </div>
-                  </div>
-                  <div className="flex justify-end gap-2 pt-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setMaxBudget(200);
-                        setHasBudgetFilter(false);
-                      }}
-                    >
-                      Reset
-                    </Button>
-                    <Button
-                      variant="default"
-                      size="sm"
-                      onClick={() => setHasBudgetFilter(true)}
-                    >
-                      Apply
-                    </Button>
-                  </div>
-                </div>
-              </PopoverContent>
-            </Popover>
-
-            <Dialog
-              open={isUploadDialogOpen}
-              onOpenChange={setIsUploadDialogOpen}
-            >
-              <DialogTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className={
-                    filesUploaded.length > 0
-                      ? "border-blue-500 text-blue-500 hover:text-blue-600 hover:border-blue-600"
-                      : ""
-                  }
-                >
-                  <Upload className="h-4 w-4 mr-2 mb-1" />
-                  {filesUploaded.length > 0
-                    ? `${filesUploaded.length} document${filesUploaded.length > 1 ? "s" : ""}`
-                    : "Add Inspo"}
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-md">
-                <DialogHeader>
-                  <DialogTitle>Upload Inspiration</DialogTitle>
-                  <DialogDescription>
-                    Upload documents or images that will help us understand your
-                    creative needs better.
-                  </DialogDescription>
-                </DialogHeader>
-
-                <div className="space-y-4 py-4">
-                  {/* <div className="bg-muted/50 p-3 rounded-md flex items-start gap-2 text-sm">
-                    <Info className="h-5 w-5 text-blue-500 flex-shrink-0 mt-0.5" />
-                    <div>
-                      <p className="font-medium mb-1">What we can process:</p>
-                      <ul className="list-disc list-inside space-y-1 text-muted-foreground">
-                        <li>Images in JPG, PNG format (.jpg, .jpeg, .png)</li>
-                        <li>PDF documents (.pdf)</li>
-                        <li>Word documents (.doc, .docx)</li>
-                        <li>Maximum 5 files, up to 5MB each</li>
-                      </ul>
-                    </div>
-                  </div> */}
-
-                  {filesUploaded.length > 0 && (
-                    <div className="mb-4">
-                      <h4 className="text-sm font-medium mb-2">
-                        Currently Uploaded ({filesUploaded.length}/5):
-                      </h4>
-                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 max-h-60 overflow-y-auto p-2 bg-muted/20 rounded-md">
-                        {filesUploaded.map((file, index) => {
-                          // Check if the file is an image
-                          const isImage = file.type.startsWith("image/");
-
-                          return (
-                            <div
-                              key={index}
-                              className="relative group aspect-video rounded-md overflow-hidden"
-                            >
-                              {isImage ? (
-                                <div className="w-full h-full relative">
-                                  <img
-                                    src={URL.createObjectURL(file)}
-                                    alt={file.name}
-                                    className="object-cover w-full h-full"
-                                  />
-                                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all duration-200"></div>
-                                </div>
-                              ) : (
-                                <div className="w-full h-full flex items-center justify-center bg-muted/40">
-                                  <FileText className="h-8 w-8 text-blue-500" />
-                                </div>
-                              )}
-
-                              <Button
-                                variant="destructive"
-                                size="icon"
-                                onClick={() => handleRemoveFile(index)}
-                                className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
-                              >
-                                <X className="h-3 w-3" />
-                                <span className="sr-only">
-                                  Remove {file.name}
-                                </span>
-                              </Button>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-
-                  <DropzoneInput
-                    onFilesSelected={handleFilesSelected}
-                    acceptedFileTypes={{
-                      "image/jpeg": [".jpg", ".jpeg"],
-                      "image/png": [".png"],
-                      "application/pdf": [".pdf"],
-                      "application/msword": [".doc"],
-                      "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
-                        [".docx"],
-                    }}
-                    maxFiles={5}
-                    maxSize={5 * 1024 * 1024} // 5MB
-                  />
-                </div>
-
-                <div className="flex justify-end gap-2">
-                  <DialogClose asChild>
-                    <Button variant="outline">Cancel</Button>
-                  </DialogClose>
-                  <DialogClose asChild>
-                    <Button
-                      variant="default"
-                      disabled={filesUploaded.length === 0}
-                      onClick={() => {
-                        // Here you could also trigger processing of the files
-                      }}
-                    >
-                      Apply{" "}
-                      {filesUploaded.length > 0 && `(${filesUploaded.length})`}
-                    </Button>
-                  </DialogClose>
-                </div>
-              </DialogContent>
-            </Dialog>
-          </div>
-        </div>
-
-        {/* Refinement Section */}
-        {isRefining && searchQuery && (
-          <div className="mt-6 bg-slate-50 rounded-md p-6 border border-slate-200">
-            <div className="flex justify-between items-center mb-4">
+      {/* Refinement Section */}
+      {isRefining && searchQuery && (
+        <Card className="p-4">
+          <CardHeader>
+            <CardTitle className="flex justify-between items-center">
               <h3 className="text-xl font-bold">
                 Refining your search{" "}
                 <span className="inline-block ml-1">✨</span>
@@ -861,8 +889,9 @@ export function SearchClientWrapper({
               >
                 <X className="h-4 w-4" />
               </Button>
-            </div>
-
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
             {refinementEnhancement.length > 0 ? (
               <div>
                 <h4 className="text-base font-medium mb-3">
@@ -873,13 +902,7 @@ export function SearchClientWrapper({
                     (option) => (
                       <Button
                         key={option}
-                        variant={
-                          selectedOptions[
-                            refinementEnhancement[currentQuestionIndex].question
-                          ] === option
-                            ? "default"
-                            : "outline"
-                        }
+                        variant={"outline"}
                         size="sm"
                         onClick={() =>
                           handleOptionSelect(
@@ -892,7 +915,7 @@ export function SearchClientWrapper({
                           selectedOptions[
                             refinementEnhancement[currentQuestionIndex].question
                           ] === option
-                            ? "bg-black text-white"
+                            ? "bg-white border-that-sauce-red text-that-sauce-red border-2"
                             : ""
                         }
                       >
@@ -918,40 +941,41 @@ export function SearchClientWrapper({
                 <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
               </div>
             )}
-          </div>
-        )}
+          </CardContent>
+        </Card>
+      )}
 
-        {/* Buttons */}
-        {searchQuery && (
-          <div className="flex justify-end gap-2 mt-4">
-            <Button
-              type="button"
-              variant="outline"
-              className="gap-2 px-4"
-              disabled={isRefinementLoading}
-              onClick={handleRefinementClick}
-            >
-              {isRefinementLoading ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" /> Refining...
-                </>
-              ) : (
-                <>
-                  <Sparkles className="h-4 w-4" /> Refine Search
-                </>
-              )}
-            </Button>
+      {/* Buttons */}
+      {searchQuery && (
+        <div className="w-full flex justify-center gap-2 mt-4">
+          <Button
+            type="button"
+            variant="outline"
+            className="gap-2 px-10 py-6"
+            disabled={isRefinementLoading}
+            onClick={handleRefinementClick}
+          >
+            {isRefinementLoading ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" /> Refining...
+              </>
+            ) : (
+              <>
+                <Sparkles className="h-4 w-4" /> Refine Search
+              </>
+            )}
+          </Button>
 
-            <Button
-              onClick={handleSearch}
-              className="px-6 bg-black"
-              disabled={isLoading || !searchQuery.trim() || !selectedRole}
-            >
-              {isLoading ? "Searching..." : "Search Now"}
-            </Button>
-          </div>
-        )}
-      </div>
+          <Button
+            onClick={handleSearch}
+            className="px-10 py-6 bg-black"
+            disabled={isLoading || !searchQuery.trim() || !selectedRole}
+          >
+            <Search className="h-4 w-4 mr-2" />
+            {isLoading ? "Searching..." : "Search Now"}
+          </Button>
+        </div>
+      )}
 
       {/* Example Queries for Selected Role */}
       {selectedRole && !searchQuery && (

@@ -5,7 +5,7 @@ import { API_BASE_URL } from "@/lib/api/shared/endpoints";
 import { ApiResponse } from "@/client/types";
 
 // Helper function to get server-side authentication token
-async function getServerAuthToken() {
+async function getServerAuthToken(requireAuth = true) {
   const cookieStore = cookies();
   const supabase = await createClient(cookieStore);
 
@@ -15,15 +15,15 @@ async function getServerAuthToken() {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return null;
+    // If authentication is required, return null to signal auth failure
+    // Otherwise return false to signal no auth but proceed anyway
+    return requireAuth ? null : false;
   }
 
   // After verifying the user is authenticated, we can safely get the session token
   const {
     data: { session },
   } = await supabase.auth.getSession();
-
-  console.log("session", session);
 
   return session?.access_token;
 }
@@ -51,7 +51,7 @@ export const serverApiRequest = {
   get: async <T>(
     endpoint: string,
     queryParams?: Record<string, string | number | boolean | undefined>,
-    requireAuth = true
+    requireAuth = false // Change the default to false
   ): Promise<ApiResponse<T>> => {
     const url = buildServerApiUrl(endpoint, queryParams);
 
@@ -61,12 +61,21 @@ export const serverApiRequest = {
       };
 
       if (requireAuth) {
-        const token = await getServerAuthToken();
-        if (!token) {
-          return redirect("/login") as never;
+        const token = await getServerAuthToken(true);
+        if (token === null) {
+          return redirect("/sign-in") as never;
         }
 
-        headers["Authorization"] = `Bearer ${token}`;
+        if (token) {
+          // Only add Authorization header if there's a token
+          headers["Authorization"] = `Bearer ${token}`;
+        }
+      } else {
+        // Get token but don't fail if there isn't one
+        const token = await getServerAuthToken(false);
+        if (token) {
+          headers["Authorization"] = `Bearer ${token}`;
+        }
       }
 
       const response = await fetch(url, {

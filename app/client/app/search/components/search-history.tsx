@@ -64,7 +64,7 @@ export function SearchHistory() {
       setIsLoading(true);
       setError(null);
       const response = await getSearchHistory();
-      console.log("Search history response:", response);
+      // console.log("Search history response:", response);
 
       if (response && Array.isArray(response.history)) {
         setHistory(response.history);

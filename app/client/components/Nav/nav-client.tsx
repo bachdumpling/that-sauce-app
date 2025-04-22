@@ -5,6 +5,14 @@ import { createClient } from "@/utils/supabase/client";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import {
+  mainRoutes,
+  userAuthRoutes,
+  userProfileRoutes,
+  adminRoutes,
+  creatorRoutes,
+  isAdminEmail,
+} from "./routes";
 
 export default function NavClient() {
   const [user, setUser] = useState(null);
@@ -77,14 +85,19 @@ export default function NavClient() {
       >
         Sign out
       </Button>
-      <Button
-        asChild
-        size="sm"
-        variant={"outline"}
-        className="w-full justify-center py-4"
-      >
-        <Link href="/settings">Settings</Link>
-      </Button>
+
+      {userProfileRoutes.map((route) => (
+        <Button
+          key={route.path}
+          asChild
+          size="sm"
+          variant={"outline"}
+          className="w-full justify-center py-4"
+        >
+          <Link href={route.path}>{route.label}</Link>
+        </Button>
+      ))}
+
       {creatorUsername && (
         <Button
           asChild
@@ -92,54 +105,62 @@ export default function NavClient() {
           variant={"outline"}
           className="w-full justify-center py-4"
         >
-          <Link href={`/${creatorUsername}`}>My Portfolio</Link>
+          <Link href={`/${creatorUsername}`}>{creatorRoutes[0].label}</Link>
         </Button>
       )}
-      <Button
-        asChild
-        size="sm"
-        variant={"outline"}
-        className="w-full justify-center py-4"
-      >
-        <Link href="/search">Search</Link>
-      </Button>
-      {user.email?.includes("ohos.nyc") && (
+
+      {mainRoutes
+        .filter((route) => route.path !== "/")
+        .map((route) => (
+          <Button
+            key={route.path}
+            asChild
+            size="sm"
+            variant={"outline"}
+            className="w-full justify-center py-4"
+          >
+            <Link href={route.path}>{route.label}</Link>
+          </Button>
+        ))}
+
+      {isAdminEmail(user.email) && (
         <Button
           asChild
           size="sm"
           variant={"outline"}
           className="w-full justify-center py-4"
         >
-          <Link href="/admin">Admin</Link>
+          <Link href={adminRoutes[0].path}>{adminRoutes[0].label}</Link>
         </Button>
       )}
     </div>
   ) : (
     <div className="flex flex-col gap-2 w-full">
-      <Button
-        asChild
-        size="sm"
-        variant={"outline"}
-        className="w-full justify-start"
-      >
-        <Link href="/sign-in">Sign in</Link>
-      </Button>
-      <Button
-        asChild
-        size="sm"
-        variant={"default"}
-        className="w-full justify-start"
-      >
-        <Link href="/sign-up">Sign up</Link>
-      </Button>
-      <Button
-        asChild
-        size="sm"
-        variant={"outline"}
-        className="w-full justify-start"
-      >
-        <Link href="/search">Search</Link>
-      </Button>
+      {userAuthRoutes.map((route) => (
+        <Button
+          key={route.path}
+          asChild
+          size="sm"
+          variant={route.path === "/sign-up" ? "default" : "outline"}
+          className="w-full justify-start"
+        >
+          <Link href={route.path}>{route.label}</Link>
+        </Button>
+      ))}
+
+      {mainRoutes
+        .filter((route) => route.path.includes("search"))
+        .map((route) => (
+          <Button
+            key={route.path}
+            asChild
+            size="sm"
+            variant={"outline"}
+            className="w-full justify-start"
+          >
+            <Link href={route.path}>{route.label}</Link>
+          </Button>
+        ))}
     </div>
   );
 }
