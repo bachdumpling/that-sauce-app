@@ -95,7 +95,6 @@ export const scrapeMediaFromUrl = async (
                 message: triggerError.message,
                 name: triggerError.name,
                 stack: triggerError.stack,
-                cause: triggerError.cause,
               }
             : String(triggerError),
         url,
