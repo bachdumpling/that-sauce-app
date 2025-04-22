@@ -45,6 +45,7 @@ import { CREATOR_ROLES } from "@/lib/constants/creator-options";
 import { Organization } from "@/client/types/project";
 import MediaUploadStep from "./new-project-steps/media-upload-step";
 import ProjectDetailsStep from "./new-project-steps/project-details-step";
+import { ScraperProgress } from "@/components/scraper-progress";
 
 interface MediaItem {
   id: string;
@@ -89,6 +90,8 @@ export default function NewProjectForm() {
   // Import state
   const [isImporting, setIsImporting] = useState(false);
   const [importError, setImportError] = useState<string | null>(null);
+  const [scrapingHandleId, setScrapingHandleId] = useState<string | null>(null);
+  const [accessToken, setAccessToken] = useState<string | null>(null);
 
   // Format role options from the constant list
   const roleOptions: Option[] = CREATOR_ROLES.map((role) => ({
@@ -131,32 +134,44 @@ export default function NewProjectForm() {
     const droppedFiles = Array.from(e.dataTransfer.files);
 
     // Supported file types
-    const supportedImageTypes = ["image/jpeg", "image/png", "image/gif", "image/webp"];
-    const supportedVideoTypes = ["video/mp4", "video/quicktime", "video/x-msvideo", "video/x-ms-wmv", "video/webm"];
+    const supportedImageTypes = [
+      "image/jpeg",
+      "image/png",
+      "image/gif",
+      "image/webp",
+    ];
+    const supportedVideoTypes = [
+      "video/mp4",
+      "video/quicktime",
+      "video/x-msvideo",
+      "video/x-ms-wmv",
+      "video/webm",
+    ];
     const supportedTypes = [...supportedImageTypes, ...supportedVideoTypes];
 
     // Check for file size and type
     const hasLargeFile = droppedFiles.some(
       (file) => file.size > 5 * 1024 * 1024
     );
-    
+
     // Filter out unsupported file types
     const invalidFiles = droppedFiles.filter(
       (file) => !supportedTypes.includes(file.type)
     );
-    
+
     if (invalidFiles.length > 0) {
-      const invalidFileNames = invalidFiles.map(f => f.name).join(", ");
+      const invalidFileNames = invalidFiles.map((f) => f.name).join(", ");
       toast.error(
         `Unsupported file type(s): ${invalidFileNames}. Supported types: JPEG, PNG, GIF, WEBP, MP4, MOV, AVI, WMV, WEBM`
       );
     }
-    
+
     // Filter to only valid files
     const validFiles = droppedFiles.filter(
-      (file) => supportedTypes.includes(file.type) && file.size <= 5 * 1024 * 1024
+      (file) =>
+        supportedTypes.includes(file.type) && file.size <= 5 * 1024 * 1024
     );
-    
+
     setIsLargeFile(hasLargeFile);
 
     if (validFiles.length > 0) {
@@ -174,7 +189,7 @@ export default function NewProjectForm() {
       });
 
       setMediaItems((prev) => [...prev, ...newMediaItems]);
-      
+
       // Hide import option once user uploads files
       setShowImportOption(false);
     }
@@ -185,32 +200,44 @@ export default function NewProjectForm() {
       const selectedFiles = Array.from(e.target.files);
 
       // Supported file types
-      const supportedImageTypes = ["image/jpeg", "image/png", "image/gif", "image/webp"];
-      const supportedVideoTypes = ["video/mp4", "video/quicktime", "video/x-msvideo", "video/x-ms-wmv", "video/webm"];
+      const supportedImageTypes = [
+        "image/jpeg",
+        "image/png",
+        "image/gif",
+        "image/webp",
+      ];
+      const supportedVideoTypes = [
+        "video/mp4",
+        "video/quicktime",
+        "video/x-msvideo",
+        "video/x-ms-wmv",
+        "video/webm",
+      ];
       const supportedTypes = [...supportedImageTypes, ...supportedVideoTypes];
 
       // Check for file size and type
       const hasLargeFile = selectedFiles.some(
         (file) => file.size > 5 * 1024 * 1024
       );
-      
+
       // Filter out unsupported file types
       const invalidFiles = selectedFiles.filter(
         (file) => !supportedTypes.includes(file.type)
       );
-      
+
       if (invalidFiles.length > 0) {
-        const invalidFileNames = invalidFiles.map(f => f.name).join(", ");
+        const invalidFileNames = invalidFiles.map((f) => f.name).join(", ");
         toast.error(
           `Unsupported file type(s): ${invalidFileNames}. Supported types: JPEG, PNG, GIF, WEBP, MP4, MOV, AVI, WMV, WEBM`
         );
       }
-      
+
       // Filter to only valid files
       const validFiles = selectedFiles.filter(
-        (file) => supportedTypes.includes(file.type) && file.size <= 5 * 1024 * 1024
+        (file) =>
+          supportedTypes.includes(file.type) && file.size <= 5 * 1024 * 1024
       );
-      
+
       setIsLargeFile(hasLargeFile);
 
       if (validFiles.length > 0) {
@@ -228,7 +255,7 @@ export default function NewProjectForm() {
         });
 
         setMediaItems((prev) => [...prev, ...newMediaItems]);
-        
+
         // Hide import option once user uploads files
         setShowImportOption(false);
       }
@@ -288,6 +315,8 @@ export default function NewProjectForm() {
 
     setIsImporting(true);
     setImportError(null);
+    setScrapingHandleId(null);
+    setAccessToken(null);
 
     try {
       // Validate URL
@@ -317,18 +346,17 @@ export default function NewProjectForm() {
         throw new Error(response.message || "Failed to import media from URL");
       }
 
-      // Handle potentially nested response structure
-      const scrapeData =
-        response.data.success && response.data.data
-          ? response.data.data // Handle double-wrapped response
-          : response.data; // Handle single-wrapped response
-
-      if (
-        !scrapeData.media ||
-        !Array.isArray(scrapeData.media) ||
-        scrapeData.media.length === 0
-      ) {
-        throw new Error("No media found at the provided URL");
+      // We now have a handle_id instead of direct media data
+      if (response.data.handle_id) {
+        setScrapingHandleId(response.data.handle_id);
+        // Store the access token if available
+        if (response.data.publicAccessToken) {
+          setAccessToken(response.data.publicAccessToken);
+        }
+        // The actual media will be handled by the ScraperProgress component
+        // via the onScraperComplete callback
+      } else {
+        throw new Error("No scraper handle ID returned");
       }
 
       // Extract project title from URL if possible
@@ -341,6 +369,40 @@ export default function NewProjectForm() {
 
       if (!title && suggestedTitle) {
         setTitle(suggestedTitle);
+      }
+
+      // Clear the project link field
+      setProjectLink("");
+
+      // isImporting will be set to false when the scraper completes
+      // in onScraperComplete
+    } catch (error: any) {
+      console.error("Import error:", error);
+      setImportError(error.message || "Failed to import media");
+      toast.error(error.message || "Failed to import media");
+      setIsImporting(false);
+    }
+  };
+
+  // Handle the completion of the scraper task
+  const onScraperComplete = (data: any) => {
+    if (!data || !data.success) {
+      setImportError(data?.error || "Failed to import media");
+      toast.error(data?.error || "Failed to import media");
+      setIsImporting(false);
+      return;
+    }
+
+    try {
+      // Process the scraped data
+      const scrapeData = data.data;
+
+      if (
+        !scrapeData.media ||
+        !Array.isArray(scrapeData.media) ||
+        scrapeData.media.length === 0
+      ) {
+        throw new Error("No media found at the provided URL");
       }
 
       // Convert scraped media to our MediaItem format
@@ -396,15 +458,12 @@ export default function NewProjectForm() {
             .join(", ")
       );
 
-      // Clear the project link field
-      setProjectLink("");
-
       // Hide import option after successful import
       setShowImportOption(false);
     } catch (error: any) {
-      console.error("Import error:", error);
-      setImportError(error.message || "Failed to import media");
-      toast.error(error.message || "Failed to import media");
+      console.error("Import processing error:", error);
+      setImportError(error.message || "Failed to process imported media");
+      toast.error(error.message || "Failed to process imported media");
     } finally {
       setIsImporting(false);
     }
@@ -654,6 +713,9 @@ export default function NewProjectForm() {
           handleOpenMedia={handleOpenMedia}
           handleRemoveMedia={handleRemoveMedia}
           handleProceedToDetails={handleProceedToDetails}
+          scrapingHandleId={scrapingHandleId}
+          onScraperComplete={onScraperComplete}
+          accessToken={accessToken}
         />
       ) : (
         <ProjectDetailsStep

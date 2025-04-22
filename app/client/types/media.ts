@@ -13,25 +13,58 @@ export interface Media {
   metadata?: Record<string, any>;
 }
 
-export interface ScrapedMedia {
+export interface MediaPreviewItem {
+  id: string;
+  type: MediaType;
   url: string;
   alt_text?: string;
-  type: "image" | "video";
+  order?: number;
+  youtube_id?: string;
+  vimeo_id?: string;
+}
+
+export type MediaType = "image" | "video" | "youtube" | "vimeo";
+
+export interface MediaUploadResponse {
+  id: string;
+  url: string;
+  type: string;
+  message: string;
+  success: boolean;
+}
+
+export interface MediaBatchUploadResponse {
+  total: number;
+  uploaded: number;
+  errors: any[];
+  media: MediaUploadResponse[];
+}
+
+export interface ScrapedMedia {
+  url: string;
+  type: MediaType;
+  alt_text?: string;
   order?: number;
   youtube_id?: string;
   vimeo_id?: string;
 }
 
 export interface ScrapeResponse {
-  source_url: string;
+  handle_id: string;
+  status: "pending" | "completed" | "failed";
+  url: string;
+  message?: string;
+}
+
+export interface ScrapedMediaResult {
   media: ScrapedMedia[];
   total: number;
+  url: string;
 }
 
 export interface ImportResponse {
-  project_id: string;
-  imported_count: number;
-  failed_count: number;
-  media: any[];
-  errors?: { url: string; error: string }[];
+  total: number;
+  imported: number;
+  errors: any[];
+  media: MediaUploadResponse[];
 }

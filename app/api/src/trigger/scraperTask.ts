@@ -15,9 +15,9 @@ export const scraperTask = task({
   id: "website-scraper",
   // Set a much higher timeout than the Vercel 60-second limit
   // This allows for complex scraping operations
-  maxDuration: 500, // 5 minutes (adjust as needed)
+  maxDuration: 120, // 2 minutes (adjust as needed)
 
-  run: async (payload: ScraperPayload, { ctx }) => {
+  run: async (payload: ScraperPayload, { ctx, run }) => {
     logger.info("Starting website scraper task", { payload, ctx });
 
     try {

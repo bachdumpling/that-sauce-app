@@ -17,6 +17,7 @@ import {
   Link as LinkIcon,
 } from "lucide-react";
 import { VimeoEmbed, YouTubeEmbed } from "@/components/ui/vimeo-embed";
+import { ScraperProgress } from "@/components/scraper-progress";
 
 interface MediaItem {
   id: string;
@@ -35,7 +36,7 @@ interface MediaUploadStepProps {
   setProjectLink: (value: string) => void;
   importError: string | null;
   isImporting: boolean;
-  handleImportMedia: () => Promise<void>;
+  handleImportMedia: () => void;
   handleFileDrop: (e: React.DragEvent) => void;
   handleDragOver: (e: React.DragEvent) => void;
   isLargeFile: boolean;
@@ -47,6 +48,9 @@ interface MediaUploadStepProps {
   handleOpenMedia: (media: MediaItem) => void;
   handleRemoveMedia: (id: string) => void;
   handleProceedToDetails: () => void;
+  scrapingHandleId: string | null;
+  accessToken: string | null;
+  onScraperComplete: (data: any) => void;
 }
 
 export default function MediaUploadStep({
@@ -67,6 +71,9 @@ export default function MediaUploadStep({
   handleOpenMedia,
   handleRemoveMedia,
   handleProceedToDetails,
+  scrapingHandleId,
+  onScraperComplete,
+  accessToken,
 }: MediaUploadStepProps) {
   return (
     <>
@@ -129,8 +136,27 @@ export default function MediaUploadStep({
         </Card>
       )}
 
+      {/* Scraper Progress - Show when scraping is in progress */}
+      {scrapingHandleId && (
+        <Card className="mt-6">
+          <CardHeader>
+            <CardTitle>Import Progress</CardTitle>
+            <CardDescription>
+              Real-time progress of media scraping
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ScraperProgress
+              handleId={scrapingHandleId}
+              accessToken={accessToken}
+              onComplete={onScraperComplete}
+            />
+          </CardContent>
+        </Card>
+      )}
+
       {/* Media Upload Section */}
-      <Card className={showImportOption ? "mt-6" : ""}>
+      <Card className={showImportOption || scrapingHandleId ? "mt-6" : ""}>
         <CardHeader>
           <CardTitle>Upload Media</CardTitle>
           <CardDescription>
@@ -155,7 +181,8 @@ export default function MediaUploadStep({
               Drop files here or click to browse
             </p>
             <p className="text-xs text-gray-500 mt-1">
-              Supported formats: JPEG, PNG, GIF, WEBP, MP4, MOV, AVI, WMV, WEBM (up to 5MB)
+              Supported formats: JPEG, PNG, GIF, WEBP, MP4, MOV, AVI, WMV, WEBM
+              (up to 5MB)
             </p>
             <input
               type="file"

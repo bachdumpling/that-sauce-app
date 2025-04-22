@@ -9,6 +9,7 @@ import {
 
 /**
  * Extract media from an external URL (Behance, Dribbble, etc.) - server-side
+ * This function now returns the Trigger.dev handle ID which can be used with useRun hook
  */
 export async function extractMediaFromUrlServer(
   url: string,

@@ -5,7 +5,7 @@ import logger from "../config/logger";
 import { ErrorCode } from "../models/ApiResponse";
 import { sendError, sendSuccess } from "../utils/responseUtils";
 import { tasks } from "@trigger.dev/sdk/v3";
-import type { scraperTask } from "../trigger";
+import type { scraperTask } from "../trigger/scraperTask";
 
 /**
  * Scrape media (images) from a URL
@@ -72,6 +72,7 @@ export const scrapeMediaFromUrl = async (
         handle_id: handle.id,
         status: "pending",
         url: url,
+        publicAccessToken: handle.publicAccessToken,
       });
     } catch (triggerError) {
       logger.error("Error triggering scraper task:", triggerError);
@@ -99,43 +100,6 @@ export const scrapeMediaFromUrl = async (
           ? error.message
           : String(error)
         : undefined,
-      500
-    );
-  }
-};
-
-/**
- * Get status of a scraper job
- */
-export const getScrapeJobStatus = async (req: Request, res: Response) => {
-  try {
-    const { handle_id } = req.params;
-
-    if (!handle_id) {
-      return sendError(
-        res,
-        ErrorCode.MISSING_REQUIRED_FIELD,
-        "Job handle ID is required",
-        null,
-        400
-      );
-    }
-
-    // You would need to implement a way to check the job status
-    // This could be through Trigger.dev's API or by storing job statuses in your database
-
-    // For now, return a basic response
-    return sendSuccess(res, {
-      message: "Job status check not implemented yet",
-      handle_id: handle_id,
-    });
-  } catch (error) {
-    logger.error(`Error getting scrape job status:`, error);
-    return sendError(
-      res,
-      ErrorCode.SERVER_ERROR,
-      "Failed to get scrape job status",
-      null,
       500
     );
   }
