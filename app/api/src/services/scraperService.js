@@ -19,6 +19,7 @@ class BaseScraper {
 
     if (isProduction) {
       // Import dependencies for production (Vercel)
+      logger.info("Launching browser in production");
       try {
         const puppeteerCore = require("puppeteer-core");
         const chromium = require("@sparticuz/chromium");
@@ -36,6 +37,7 @@ class BaseScraper {
       }
     } else {
       // Import for local development
+      logger.info("Launching browser in development");
       try {
         const puppeteer = require("puppeteer");
         this.browser = await puppeteer.launch({
