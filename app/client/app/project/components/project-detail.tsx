@@ -16,20 +16,26 @@ import { Textarea } from "@/components/ui/textarea";
 import { VimeoEmbed, YouTubeEmbed } from "@/components/ui/vimeo-embed";
 import { Edit, Trash2 } from "lucide-react";
 import { Project, Creator } from "@/types";
+import { ProjectImage, ProjectVideo } from "@/client/types/project";
 import {
   updateProjectAction,
   deleteProjectAction,
 } from "@/actions/project-actions";
-
+import ProjectHeader from "./project-header";
 interface ProjectDetailProps {
   project: Project;
   creator: Creator;
+  viewOnly?: boolean;
 }
 
-export function ProjectDetail({ project, creator }: ProjectDetailProps) {
+export function ProjectDetail({
+  project,
+  creator,
+  viewOnly = false,
+}: ProjectDetailProps) {
   const router = useRouter();
   const [selectedMedia, setSelectedMedia] = useState<
-    ((ImageType | Video) & { type: "image" | "video" }) | null
+    ((ProjectImage | ProjectVideo) & { type: "image" | "video" }) | null
   >(null);
   const [isEditing, setIsEditing] = useState(false);
   const [isDeletingProject, setIsDeletingProject] = useState(false);
@@ -49,14 +55,18 @@ export function ProjectDetail({ project, creator }: ProjectDetailProps) {
     })),
   ];
 
-  const handleOpenMedia = (
-    media: (ImageType | Video) & { type: "image" | "video" }
-  ) => {
-    setSelectedMedia(media);
+  // Type used for media items
+  type MediaItemWithType = {
+    id: string;
+    url?: string;
+    youtube_id?: string;
+    vimeo_id?: string;
+    type: "image" | "video";
+    [key: string]: any;
   };
 
-  const handleEditProject = () => {
-    setIsEditing(true);
+  const handleOpenMedia = (media: MediaItemWithType) => {
+    setSelectedMedia(media as any);
   };
 
   const handleDeleteProject = () => {
@@ -116,36 +126,11 @@ export function ProjectDetail({ project, creator }: ProjectDetailProps) {
   return (
     <div>
       {/* Project Header */}
-      <div className="flex justify-between items-start mb-8">
-        <div>
-          <h1 className="text-3xl font-bold">{project.title}</h1>
-          {project.description && (
-            <p className="text-muted-foreground mt-2 max-w-2xl truncate">
-              {project.description}
-            </p>
-          )}
-          <p className="text-sm text-muted-foreground mt-4">
-            By {creator.name || creator.username}
-          </p>
-        </div>
-
-        {creator.isOwner && (
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={handleEditProject}>
-              <Edit className="h-4 w-4 mr-2" />
-              Edit
-            </Button>
-            <Button
-              variant="destructive"
-              size="sm"
-              onClick={handleDeleteProject}
-            >
-              <Trash2 className="h-4 w-4 mr-2" />
-              Delete
-            </Button>
-          </div>
-        )}
-      </div>
+      <ProjectHeader
+        onDelete={handleDeleteProject}
+        project={project}
+        creator={creator}
+      />
 
       {/* Masonry Grid for Media */}
       {allMedia.length > 0 ? (
@@ -324,57 +309,6 @@ export function ProjectDetail({ project, creator }: ProjectDetailProps) {
           </DialogContent>
         </Dialog>
       )}
-
-      {/* Edit Project Dialog */}
-      <Dialog
-        open={isEditing}
-        onOpenChange={(open) => !open && setIsEditing(false)}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Edit Project</DialogTitle>
-            <DialogDescription>
-              Make changes to your project information.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div>
-              <label htmlFor="title" className="text-sm font-medium mb-2 block">
-                Title
-              </label>
-              <Input
-                id="title"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="Project title"
-              />
-            </div>
-            <div>
-              <label
-                htmlFor="description"
-                className="text-sm font-medium mb-2 block"
-              >
-                Description
-              </label>
-              <Textarea
-                id="description"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Project description (optional)"
-                rows={4}
-              />
-            </div>
-          </div>
-          <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => setIsEditing(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleSaveProject} disabled={isSubmitting}>
-              {isSubmitting ? "Saving..." : "Save Changes"}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
 
       {/* Delete Project Dialog */}
       <Dialog

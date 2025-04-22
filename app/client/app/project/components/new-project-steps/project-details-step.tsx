@@ -33,6 +33,9 @@ interface ProjectDetailsStepProps {
   handleCreateProject: () => Promise<void>;
   isSubmitting: boolean;
   currentStep: string;
+  customButtonText?: string;
+  customTitle?: string;
+  customDescription?: string;
 }
 
 export default function ProjectDetailsStep({
@@ -54,6 +57,9 @@ export default function ProjectDetailsStep({
   handleCreateProject,
   isSubmitting,
   currentStep,
+  customButtonText,
+  customTitle,
+  customDescription,
 }: ProjectDetailsStepProps) {
   // Format role options from the constant list
   const roleOptions: Option[] = CREATOR_ROLES.map((role) => ({
@@ -70,9 +76,9 @@ export default function ProjectDetailsStep({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Project Information</CardTitle>
+        <CardTitle>{customTitle || "Project Information"}</CardTitle>
         <CardDescription>
-          Enter the details for your new project
+          {customDescription || "Enter the details for your new project"}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -195,7 +201,7 @@ export default function ProjectDetailsStep({
                   {currentStep || "Creating Project..."}
                 </>
               ) : (
-                "Create Project"
+                customButtonText || "Create Project"
               )}
             </Button>
           </div>

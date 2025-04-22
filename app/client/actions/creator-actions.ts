@@ -26,7 +26,7 @@ export async function getCreatorAction(username: string) {
       return { success: false, error: response.error || "Creator not found" };
     }
 
-    return { success: true, data: response.data };
+    return response;
   } catch (error: any) {
     console.error("Error in getCreatorAction:", error);
     return {
@@ -225,8 +225,6 @@ export async function getRandomCreatorsWithLatestWork(limit: number = 8) {
   // Create a specific cache key for this limit value
   const cacheKey = `random_creators_${limit}`;
 
-  console.log("[CreatorsCache] Function called with limit:", limit);
-
   // Check if we have valid cached data
   if (SERVER_CACHE[cacheKey]) {
     const cachedData = SERVER_CACHE[cacheKey];
@@ -234,28 +232,18 @@ export async function getRandomCreatorsWithLatestWork(limit: number = 8) {
     const cacheAge = currentTime - cachedData.timestamp;
     const cacheAgeHours = Math.round((cacheAge / (60 * 60 * 1000)) * 10) / 10;
 
-    console.log(
-      `[CreatorsCache] Found cached data, age: ${cacheAgeHours} hours`
-    );
-
     // If cache is still valid (less than 12 hours old)
     if (cacheAge < CACHE_DURATION) {
-      console.log("[CreatorsCache] Using valid cached data");
       return cachedData.data;
     }
-
-    console.log("[CreatorsCache] Cache expired, fetching fresh data");
   } else {
-    console.log("[CreatorsCache] No cached data found");
   }
 
   // If no valid cache exists, fetch from API
-  console.log("[CreatorsCache] Fetching data from API");
   try {
     // Create an anonymous Supabase client that doesn't require authentication
     const supabase = await createClient();
 
-    console.log("[CreatorsCache] Fetching creators from Supabase");
     // Fetch approved creators using public data access
     const { data: creators, error: creatorsError } = await supabase
       .from("creators")
@@ -278,19 +266,14 @@ export async function getRandomCreatorsWithLatestWork(limit: number = 8) {
     }
 
     if (!creators || creators.length === 0) {
-      console.log("[CreatorsCache] No creators found");
       return [];
     }
 
-    console.log(
-      `[CreatorsCache] Found ${creators.length} creators, shuffling and limiting to ${limit}`
-    );
     // Shuffle and limit creators
     const shuffledCreators = creators
       .sort(() => 0.5 - Math.random())
       .slice(0, limit);
 
-    console.log("[CreatorsCache] Fetching projects for each creator");
     // Fetch latest project for each creator
     const creatorsWithProjects = await Promise.all(
       shuffledCreators.map(async (creator) => {
@@ -340,18 +323,12 @@ export async function getRandomCreatorsWithLatestWork(limit: number = 8) {
     // Filter out entries where the project is null
     const result = creatorsWithProjects.filter((item) => item.project !== null);
 
-    console.log(`[CreatorsCache] Got ${result.length} creators with projects`);
-
     // Store in server-side cache
     SERVER_CACHE[cacheKey] = {
       timestamp: Date.now(),
       data: result,
       limit,
     };
-
-    console.log(
-      `[CreatorsCache] Successfully cached ${result.length} creators with projects for 12 hours`
-    );
 
     return result;
   } catch (error) {

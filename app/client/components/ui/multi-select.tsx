@@ -74,7 +74,11 @@ export function MultiSelect({
           const label =
             safeOptions.find((option) => option.value === item)?.label || item;
           return (
-            <Badge key={item} variant="default" className="mr-1 py-2 px-3 text-xs">
+            <Badge
+              key={item}
+              variant="default"
+              className="mr-1 py-2 px-3 text-xs"
+            >
               {label}
               <div
                 className="ml-2 rounded-full cursor-pointer hover:text-primary-foreground/80 text-primary-foreground"

@@ -24,7 +24,6 @@ export async function getOrganizationsAction() {
       message: "Organizations retrieved successfully",
     };
   } catch (error: any) {
-    console.error("Error in getOrganizationsAction:", error);
     return {
       success: false,
       error: error.message,

@@ -9,7 +9,10 @@ export class CreatorProfileRepository {
    * @param username The username to look up
    * @param userId Optional user ID to check ownership
    */
-  async getByUsername(username: string, userId?: string): Promise<CreatorProfile | null> {
+  async getByUsername(
+    username: string,
+    userId?: string
+  ): Promise<CreatorProfile | null> {
     try {
       if (!username) {
         logger.warn("getByUsername called with empty username");
@@ -47,7 +50,7 @@ export class CreatorProfileRepository {
               description
             )
           )
-        `
+          `
         )
         .eq("username", username)
         .single();
@@ -85,7 +88,7 @@ export class CreatorProfileRepository {
         first_name: data.profile?.first_name || null,
         last_name: data.profile?.last_name || null,
         // Check if the user is the owner by comparing profile_id with userId
-        isOwner: userId ? data.profile_id === userId : false
+        isOwner: userId ? data.profile_id === userId : false,
       };
 
       delete creator.profile; // Remove the nested profile object
@@ -319,7 +322,7 @@ export class CreatorProfileRepository {
       // Invalidate related caches
       invalidateCache(`admin_project_details_${projectId}`);
       invalidateCache(`project_${projectId}`);
-      
+
       if (creatorData && creatorData.username) {
         invalidateCache(`creator_username_${creatorData.username}`);
         invalidateCache(`creator_project_`);
