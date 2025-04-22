@@ -64,7 +64,7 @@ export default function CreatorWorkCard({
         href={`/project/${project.id}`}
         className="relative block overflow-hidden w-full"
       >
-        <div className="overflow-hidden relative bg-gray-100 break-inside-avoid mb-4">
+        <div className="overflow-hidden relative bg-gray-100 break-inside-avoid mb-4 m-4 shadow-lg">
           <Image
             src={imageUrl}
             alt={project.title || "Creator Work"}
