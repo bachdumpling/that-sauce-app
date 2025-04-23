@@ -104,7 +104,9 @@ export async function GET(request, { params }) {
                 fontFamily: "HelveticaNeueLight",
               }}
             >
-              {creator.first_name} {creator.last_name}
+              {creator.first_name
+                ? `${creator.first_name} ${creator.last_name}`
+                : creator.username}
             </div>
             <div
               style={{
