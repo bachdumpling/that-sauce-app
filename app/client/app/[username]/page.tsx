@@ -7,15 +7,13 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Creator } from "@/client/types";
 import { getCreatorAction } from "@/actions/creator-actions";
-
+import { getDisplayName } from "@/utils/display-name";
 export async function generateMetadata({
   params,
 }: CreatorPageProps): Promise<Metadata> {
-  // 1️⃣ await params
   const resolvedParams = await Promise.resolve(params);
   const { username } = resolvedParams;
 
-  // 2️⃣ Fetch creator
   const result = await getCreatorAction(username);
   if (!result.success || !result.data) {
     return {
@@ -24,39 +22,34 @@ export async function generateMetadata({
   }
   const creator = result.data;
 
-  // 3️⃣ Build URLs
+  const displayName = getDisplayName(creator);
+
   const origin = process.env.NEXT_PUBLIC_CLIENT_URL || "https://that-sauce.com";
   const pageUrl = `${origin}/${username}`;
-
-  // match your badge‐wrapper’s default color & scale
   const badgeUrl = `${origin}/api/badges/${username}/black?scale=1.5`;
 
-  // 4️⃣ Metadata payload
-  const title = `${creator.first_name ? `${creator.first_name} ${creator.last_name}` : creator.username} | that sauce`;
-  const description = `View ${creator.username}'s portfolio on that sauce`;
-
   return {
-    title,
-    description,
+    title: `${displayName} | that sauce`,
+    description: `View ${displayName}'s portfolio on That Sauce`,
 
     openGraph: {
-      title,
-      description,
+      title: `${displayName} | that sauce`,
+      description: `Portfolio of ${displayName} on That Sauce`,
       url: pageUrl,
       images: [
         {
           url: badgeUrl,
           width: 320 * 2,
           height: 437 * 2,
-          alt: `That-Sauce badge for ${creator.username}`,
+          alt: `That-Sauce badge for ${displayName}`,
         },
       ],
     },
 
     twitter: {
       card: "summary_large_image",
-      title,
-      description,
+      title: `${displayName} | that sauce`,
+      description: `Portfolio of ${displayName} on That Sauce`,
       images: [badgeUrl],
     },
   };

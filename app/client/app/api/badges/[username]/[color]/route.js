@@ -3,8 +3,8 @@ import fs from "fs/promises";
 import path from "path";
 import { ImageResponse } from "@vercel/og";
 import { getCreatorAction } from "@/actions/creator-actions";
-import Image from "next/image";
 import { NextResponse } from "next/server";
+import { getDisplayName } from "@/utils/display-name";
 
 export async function GET(request, { params }) {
   // const ua = request.headers.get("user-agent") || "";
@@ -33,6 +33,8 @@ export async function GET(request, { params }) {
     });
   }
   const creator = creatorResponse.data;
+
+  const displayName = getDisplayName(creator);
 
   const joinedDate = creator.created_at
     ? new Date(creator.created_at)
@@ -94,10 +96,11 @@ export async function GET(request, { params }) {
             padding: 24 * scale,
             display: "flex",
             flexDirection: "column",
+            gap: 10,
           }}
         >
           {/* Name and role */}
-          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             <div
               style={{
                 fontSize: 32 * scale,
@@ -106,9 +109,7 @@ export async function GET(request, { params }) {
                 fontFamily: "HelveticaNeueLight",
               }}
             >
-              {creator.first_name
-                ? `${creator.first_name} ${creator.last_name}`
-                : creator.username}
+              {displayName}
             </div>
             <div
               style={{
