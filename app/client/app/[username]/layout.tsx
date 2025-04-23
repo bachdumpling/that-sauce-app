@@ -17,7 +17,9 @@ export default async function CreatorLayout({
   children: ReactNode;
   params: { username: string };
 }) {
-  const { username } = params;
+  // Await params before destructuring
+  const resolvedParams = await Promise.resolve(params);
+  const { username } = resolvedParams;
 
   // Fetch creator data
   let creator;

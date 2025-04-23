@@ -32,7 +32,7 @@ export async function generateMetadata({
   const badgeUrl = `${origin}/api/badges/${username}/black?scale=1.5`;
 
   // 4️⃣ Metadata payload
-  const title = `${creator.first_name} ${creator.last_name} | that sauce`;
+  const title = `${creator.first_name ? `${creator.first_name} ${creator.last_name}` : creator.username} | that sauce`;
   const description = `View ${creator.username}'s portfolio on that sauce`;
 
   return {

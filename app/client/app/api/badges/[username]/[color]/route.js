@@ -7,15 +7,17 @@ import Image from "next/image";
 import { NextResponse } from "next/server";
 
 export async function GET(request, { params }) {
-  const ua = request.headers.get("user-agent") || "";
-  const isBot = /bot|facebookexternalhit|Twitterbot/i.test(ua);
+  // const ua = request.headers.get("user-agent") || "";
+  // const isBot = /bot|facebookexternalhit|Twitterbot|Googlebot|Applebot/i.test(
+  //   ua
+  // );
 
-  if (!isBot) {
-    return NextResponse.redirect(
-      `${process.env.NEXT_PUBLIC_CLIENT_URL}/${params.username}`,
-      307
-    );
-  }
+  // if (!isBot) {
+  //   return NextResponse.redirect(
+  //     `${process.env.NEXT_PUBLIC_CLIENT_URL}/${params.username}`,
+  //     307
+  //   );
+  // }
 
   // Await the params object before destructuring
   const resolvedParams = await Promise.resolve(params);
@@ -95,7 +97,7 @@ export async function GET(request, { params }) {
           }}
         >
           {/* Name and role */}
-          <div style={{ display: "flex", flexDirection: "column" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
             <div
               style={{
                 fontSize: 32 * scale,
