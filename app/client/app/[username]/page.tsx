@@ -35,13 +35,13 @@ export async function generateMetadata({
   // 3️⃣ Build URLs
   const origin = process.env.NEXT_PUBLIC_CLIENT_URL || "https://that-sauce.com";
   const pageUrl = `${origin}/${username}`;
+
   // match your badge‐wrapper’s default color & scale
-  const badgeUrl = `${origin}/api/badges/${username}/black?scale=2`;
+  const badgeUrl = `${origin}/api/badges/${username}/black?scale=1.5`;
 
   // 4️⃣ Metadata payload
   const title = `${creator.first_name} ${creator.last_name} | that sauce`;
-  const description =
-    creator.bio || `View ${creator.username}'s portfolio on that sauce`;
+  const description = `View ${creator.username}'s portfolio on that sauce`;
 
   return {
     title,
