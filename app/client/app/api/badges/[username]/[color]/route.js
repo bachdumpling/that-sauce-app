@@ -4,24 +4,23 @@ import path from "path";
 import { ImageResponse } from "@vercel/og";
 import { getCreatorAction } from "@/actions/creator-actions";
 import Image from "next/image";
+
 export async function GET(request, { params }) {
   // Await the params object before destructuring
   const resolvedParams = await Promise.resolve(params);
   const { username, color } = resolvedParams;
+  const url = new URL(request.url);
+  const scale = parseFloat(url.searchParams.get("scale") || "1");
 
   const creatorResponse = await getCreatorAction(username);
-
-  // Handle case where creator might not exist
   if (!creatorResponse.success || !creatorResponse.data) {
     return new Response(JSON.stringify({ error: "Creator not found" }), {
       status: 404,
       headers: { "Content-Type": "application/json" },
     });
   }
-
   const creator = creatorResponse.data;
 
-  // Format joined date
   const joinedDate = creator.created_at
     ? new Date(creator.created_at)
         .toLocaleDateString("en-US", {
@@ -39,7 +38,6 @@ export async function GET(request, { params }) {
   const imgData = await fs.readFile(imgPath);
   const bgDataUri = `data:image/jpeg;base64,${imgData.toString("base64")}`;
 
-  // ▶️ 1. Load your custom font file
   const fontPath = path.join(
     process.cwd(),
     "public",
@@ -48,7 +46,6 @@ export async function GET(request, { params }) {
   );
   const fontData = await fs.readFile(fontPath);
 
-  // Fix JSX structure to ensure proper display properties
   return new ImageResponse(
     (
       <div
@@ -68,8 +65,8 @@ export async function GET(request, { params }) {
           style={{
             position: "absolute",
             bottom: "32%",
-            right: 24 * 2,
-            fontSize: 12 * 2,
+            right: 24 * scale,
+            fontSize: 12 * scale,
             textAlign: "right",
             display: "flex",
           }}
@@ -81,7 +78,7 @@ export async function GET(request, { params }) {
         <div
           style={{
             marginTop: "auto",
-            padding: 24 * 2,
+            padding: 24 * scale,
             display: "flex",
             flexDirection: "column",
           }}
@@ -90,7 +87,7 @@ export async function GET(request, { params }) {
           <div style={{ display: "flex", flexDirection: "column" }}>
             <div
               style={{
-                fontSize: 32 * 2,
+                fontSize: 32 * scale,
                 fontWeight: 500,
                 display: "flex",
                 fontFamily: "HelveticaNeueLight",
@@ -100,7 +97,7 @@ export async function GET(request, { params }) {
             </div>
             <div
               style={{
-                fontSize: 18 * 2,
+                fontSize: 18 * scale,
                 fontWeight: 300,
                 display: "flex",
                 fontFamily: "HelveticaNeueLight",
@@ -117,7 +114,7 @@ export async function GET(request, { params }) {
               justifyContent: "space-between",
               width: "100%",
               marginTop: 16,
-              fontSize: 18,
+              fontSize: 9 * scale,
               opacity: 0.8,
               fontFamily: "HelveticaNeueLight",
             }}
@@ -130,9 +127,9 @@ export async function GET(request, { params }) {
       </div>
     ),
     {
-      width: 320 * 2,
-      height: 437 * 2,
-      deviceScaleFactor: 2,
+      width: 320 * scale,
+      height: 437 * scale,
+      deviceScaleFactor: scale,
       fonts: [
         {
           name: "HelveticaNeueLight",

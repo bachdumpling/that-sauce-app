@@ -1,29 +1,9 @@
-"use client";
-
 import React, { useState, useRef } from "react";
-import {
-  Shuffle,
-  Loader2,
-  Download,
-  Share2,
-  Code,
-  Copy,
-  CheckCircle2,
-  Twitter,
-  Facebook,
-  Linkedin,
-  Mail,
-} from "lucide-react";
+import { Loader2, Download, Share2, Code, CheckCircle2 } from "lucide-react";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import html2canvas from "html2canvas";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Tooltip,
   TooltipContent,
@@ -87,48 +67,27 @@ const CreatorBadge = ({ creator }) => {
     }
   };
 
-  // Social media sharing
-  const shareToSocialMedia = (platform) => {
-    // In a real implementation, you would generate a shareable URL
-    // This would typically be done server-side or through a sharing API
-    const shareUrl = `https://that-sauce.com/${defaultValues.username}`;
-    const shareText = `Check out ${defaultValues.name}'s creative profile on that sauce!`;
-
-    let shareLink = "";
-
-    switch (platform) {
-      case "twitter":
-        shareLink = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`;
-        break;
-      case "facebook":
-        shareLink = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`;
-        break;
-      case "linkedin":
-        shareLink = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(shareUrl)}`;
-        break;
-      case "email":
-        shareLink = `mailto:?subject=${encodeURIComponent(`${defaultValues.name} on that sauce`)}&body=${encodeURIComponent(`${shareText}\n\n${shareUrl}`)}`;
-        break;
-      default:
-        return;
-    }
-
-    window.open(shareLink, "_blank");
-  };
-
+  // Copy profile link
   const origin =
     typeof window !== "undefined"
       ? window.location.origin
       : process.env.NEXT_PUBLIC_CLIENT_URL;
-  const badgeUrl = `${origin}/api/badges/${defaultValues.username}/${selectedBadgeColor}`;
+  const profileUrl = `${origin}/${defaultValues.username}`;
+  const copyProfileLink = () => {
+    navigator.clipboard.writeText(profileUrl);
+    toast.success("Profile link copied to clipboard!");
+  };
+
+  const scale = 2;
+  const badgeUrl = `${origin}/api/badges/${defaultValues.username}/${selectedBadgeColor}?scale=${scale}`;
   const embedCode = `<iframe
-  src="${badgeUrl}"
-  width="320"
-  height="437"
-  frameborder="0"
-  scrolling="no"
-  style="border:none;overflow:hidden;"
-></iframe>`;
+        src="${badgeUrl}"
+        width="${320 * scale}"
+        height="${437 * scale}"
+        frameborder="0"
+        scrolling="no"
+        style="border:none;overflow:hidden;"
+      ></iframe>`;
 
   // Copy embed code
   const copyEmbedCode = () => {
@@ -148,12 +107,20 @@ const CreatorBadge = ({ creator }) => {
         {/* Color selector circles */}
         <div className="flex flex-col gap-4">
           <button
-            className={`w-10 h-10 rounded-full border-2 ${selectedBadgeColor === "black" ? "border-that-sauce-red" : "border-white"} bg-black`}
+            className={`w-10 h-10 rounded-full border-2 ${
+              selectedBadgeColor === "black"
+                ? "border-that-sauce-red"
+                : "border-white"
+            } bg-black`}
             onClick={() => setSelectedBadgeColor("black")}
             aria-label="Black background"
           />
           <button
-            className={`w-10 h-10 rounded-full border-2 ${selectedBadgeColor === "white" ? "border-that-sauce-red" : "border-gray-200"} bg-white`}
+            className={`w-10 h-10 rounded-full border-2 ${
+              selectedBadgeColor === "white"
+                ? "border-that-sauce-red"
+                : "border-gray-200"
+            } bg-white`}
             onClick={() => setSelectedBadgeColor("white")}
             aria-label="White background"
           />
@@ -179,7 +146,9 @@ const CreatorBadge = ({ creator }) => {
               />
               {/* Badge Content */}
               <div
-                className={`absolute top-0 left-0 p-6 flex flex-col h-full w-full z-10 ${selectedBadgeColor === "black" ? "text-white" : "text-black"}`}
+                className={`absolute top-0 left-0 p-6 flex flex-col h-full w-full z-10 ${
+                  selectedBadgeColor === "black" ? "text-white" : "text-black"
+                }`}
               >
                 <div className="absolute bottom-[32%] right-6">
                   <div className="text-xs text-right">
@@ -207,7 +176,7 @@ const CreatorBadge = ({ creator }) => {
             </div>
           </div>
 
-          {/* Sharing Options */}
+          {/* Sharing & Embed Options */}
           <div className="flex flex-wrap justify-center gap-3">
             <TooltipProvider>
               {/* Download Button */}
@@ -231,53 +200,21 @@ const CreatorBadge = ({ creator }) => {
                 </TooltipContent>
               </Tooltip>
 
-              {/* Social Share Popover */}
-              {/* <Popover>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <PopoverTrigger asChild>
-                      <Button variant="outline" size="icon">
-                        <Share2 className="h-4 w-4" />
-                      </Button>
-                    </PopoverTrigger>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Share on Social Media</p>
-                  </TooltipContent>
-                </Tooltip>
-                <PopoverContent className="w-auto p-2">
-                  <div className="flex space-x-2">
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      onClick={() => shareToSocialMedia("twitter")}
-                    >
-                      <Twitter className="h-4 w-4 text-blue-400" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      onClick={() => shareToSocialMedia("facebook")}
-                    >
-                      <Facebook className="h-4 w-4 text-blue-600" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      onClick={() => shareToSocialMedia("linkedin")}
-                    >
-                      <Linkedin className="h-4 w-4 text-blue-800" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      onClick={() => shareToSocialMedia("email")}
-                    >
-                      <Mail className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </PopoverContent>
-              </Popover> */}
+              {/* Copy Profile Link */}
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={copyProfileLink}
+                  >
+                    <Share2 className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Copy profile link</p>
+                </TooltipContent>
+              </Tooltip>
 
               {/* Embed Code */}
               <Tooltip>
@@ -291,7 +228,7 @@ const CreatorBadge = ({ creator }) => {
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>Copy Embed Code</p>
+                  <p>Copy iframe embed code</p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>

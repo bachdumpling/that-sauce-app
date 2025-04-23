@@ -19,30 +19,55 @@ interface CreatorPageProps {
 export async function generateMetadata({
   params,
 }: CreatorPageProps): Promise<Metadata> {
+  // 1️⃣ await params
   const resolvedParams = await Promise.resolve(params);
   const { username } = resolvedParams;
 
-  try {
-    const result = await getCreatorAction(username);
-
-    if (!result.success || !result.data) {
-      return {
-        title: "Creator Not Found",
-      };
-    }
-
-    const creator = result.data;
-
+  // 2️⃣ Fetch creator
+  const result = await getCreatorAction(username);
+  if (!result.success || !result.data) {
     return {
-      title: `${creator.username} | that sauce`,
-      description:
-        creator.bio || `View ${creator.username}'s portfolio on that sauce`,
-    };
-  } catch (error) {
-    return {
-      title: "Creator Profile",
+      title: "Creator Not Found",
     };
   }
+  const creator = result.data;
+
+  // 3️⃣ Build URLs
+  const origin = process.env.NEXT_PUBLIC_CLIENT_URL || "https://that-sauce.com";
+  const pageUrl = `${origin}/${username}`;
+  // match your badge‐wrapper’s default color & scale
+  const badgeUrl = `${origin}/api/badges/${username}/black?scale=2`;
+
+  // 4️⃣ Metadata payload
+  const title = `${creator.first_name} ${creator.last_name} | that sauce`;
+  const description =
+    creator.bio || `View ${creator.username}'s portfolio on that sauce`;
+
+  return {
+    title,
+    description,
+
+    openGraph: {
+      title,
+      description,
+      url: pageUrl,
+      images: [
+        {
+          url: badgeUrl,
+          width: 320 * 2,
+          height: 437 * 2,
+          alt: `That-Sauce badge for ${creator.username}`,
+        },
+      ],
+    },
+
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: [badgeUrl],
+    },
+  };
 }
 
 export default async function CreatorPage({
