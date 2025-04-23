@@ -116,15 +116,22 @@ const CreatorBadge = ({ creator }) => {
     window.open(shareLink, "_blank");
   };
 
+  const origin =
+    typeof window !== "undefined"
+      ? window.location.origin
+      : process.env.NEXT_PUBLIC_CLIENT_URL;
+  const badgeUrl = `${origin}/api/badges/${defaultValues.username}/${selectedBadgeColor}`;
+  const embedCode = `<iframe
+  src="${badgeUrl}"
+  width="320"
+  height="437"
+  frameborder="0"
+  scrolling="no"
+  style="border:none;overflow:hidden;"
+></iframe>`;
+
   // Copy embed code
   const copyEmbedCode = () => {
-    // Generate embed code - this would be more sophisticated in a real implementation
-    const embedCode = `<a href="https://that-sauce.com/${defaultValues.username}" target="_blank">
-  <img src="https://that-sauce.com/api/badges/${defaultValues.username}/${selectedBadgeColor}" 
-       alt="${defaultValues.name} - Creative on that sauce" 
-       width="320" height="437" />
-</a>`;
-
     navigator.clipboard.writeText(embedCode);
     setIsCopied(true);
     toast.success("Embed code copied to clipboard!");
@@ -273,7 +280,7 @@ const CreatorBadge = ({ creator }) => {
               </Popover> */}
 
               {/* Embed Code */}
-              {/* <Tooltip>
+              <Tooltip>
                 <TooltipTrigger asChild>
                   <Button variant="outline" size="icon" onClick={copyEmbedCode}>
                     {isCopied ? (
@@ -286,7 +293,7 @@ const CreatorBadge = ({ creator }) => {
                 <TooltipContent>
                   <p>Copy Embed Code</p>
                 </TooltipContent>
-              </Tooltip> */}
+              </Tooltip>
             </TooltipProvider>
           </div>
         </div>
