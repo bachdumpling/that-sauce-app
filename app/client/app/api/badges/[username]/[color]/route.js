@@ -4,8 +4,19 @@ import path from "path";
 import { ImageResponse } from "@vercel/og";
 import { getCreatorAction } from "@/actions/creator-actions";
 import Image from "next/image";
+import { NextResponse } from "next/server";
 
 export async function GET(request, { params }) {
+  const ua = request.headers.get("user-agent") || "";
+  const isBot = /bot|facebookexternalhit|Twitterbot/i.test(ua);
+
+  if (!isBot) {
+    return NextResponse.redirect(
+      `${process.env.NEXT_PUBLIC_CLIENT_URL}/${params.username}`,
+      307
+    );
+  }
+
   // Await the params object before destructuring
   const resolvedParams = await Promise.resolve(params);
   const { username, color } = resolvedParams;

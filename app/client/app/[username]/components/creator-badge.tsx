@@ -78,7 +78,7 @@ const CreatorBadge = ({ creator }) => {
     toast.success("Profile link copied to clipboard!");
   };
 
-  const scale = 2;
+  const scale = 1.5;
   const badgeUrl = `${origin}/api/badges/${defaultValues.username}/${selectedBadgeColor}?scale=${scale}`;
   const embedCode = `<iframe
         src="${badgeUrl}"
