@@ -21,6 +21,7 @@ import { useState, useRef } from "react";
 import { toast } from "sonner";
 import { uploadCreatorBannerAction } from "@/actions/creator-actions";
 import Image from "next/image";
+import { useProfileEdit } from "@/contexts/ProfileEditContext";
 
 interface CreatorHeaderProps {
   creator: Creator;
@@ -29,6 +30,7 @@ interface CreatorHeaderProps {
 
 export function CreatorHeader({ creator, username }: CreatorHeaderProps) {
   const pathname = usePathname();
+  const { openProfileDialog } = useProfileEdit();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isHovering, setIsHovering] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -36,12 +38,6 @@ export function CreatorHeader({ creator, username }: CreatorHeaderProps) {
   // Check if we're on a project detail page - matches pattern /username/work/project-id
   const isProjectDetailPage =
     pathname.match(new RegExp(`/${username}/work/[^/]+$`)) !== null;
-
-  // Custom event to trigger the profile edit dialog in creator-client.tsx
-  const handleEditProfile = () => {
-    // Dispatch a custom event that will be caught by creator-client.tsx
-    window.dispatchEvent(new Event("edit-creator-profile"));
-  };
 
   const handleUploadBanner = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || e.target.files.length === 0) return;
@@ -181,7 +177,9 @@ export function CreatorHeader({ creator, username }: CreatorHeaderProps) {
             <Button
               variant="default"
               className="p-6 rounded-full"
-              onClick={handleEditProfile}
+              onClick={() => {
+                openProfileDialog(username);
+              }}
             >
               <Pencil className="h-4 w-4 mr-2 mb-1" />
               Edit profile

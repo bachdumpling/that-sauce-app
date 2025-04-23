@@ -11,7 +11,7 @@ import { MobileNav } from "@/components/Nav/mobile-nav";
 import { ProgressBar } from "@/components/ProgressBar";
 import { ProgressBarProvider } from "@/providers/ProgressBarProvider";
 import Nav from "@/components/Nav/nav";
-
+import { ProfileEditProvider } from "@/contexts/ProfileEditContext";
 const defaultUrl = process.env.NEXT_PUBLIC_CLIENT_URL
   ? `https://${process.env.NEXT_PUBLIC_CLIENT_URL}`
   : "https://localhost:3000";
@@ -99,36 +99,38 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          {/* <ProgressBarProvider> */}
-          <main className="min-h-screen flex flex-col items-center">
-            <div className="flex-1 w-full flex flex-col gap-10 items-center">
-              <nav className="w-full flex justify-center h-20 px-4 py-2">
-                <div className="hidden md:flex w-full">
-                  {/* Desktop navigation */}
-                  <Nav />
+          <ProfileEditProvider>
+            {/* <ProgressBarProvider> */}
+            <main className="min-h-screen flex flex-col items-center">
+              <div className="flex-1 w-full flex flex-col gap-10 items-center">
+                <nav className="w-full flex justify-center h-20 px-4 py-2">
+                  <div className="hidden md:flex w-full">
+                    {/* Desktop navigation */}
+                    <Nav />
 
-                  {/* Mobile navigation */}
-                  <div className="md:hidden">
-                    <MobileNav />
+                    {/* Mobile navigation */}
+                    <div className="md:hidden">
+                      <MobileNav />
+                    </div>
                   </div>
-                </div>
-              </nav>
+                </nav>
 
-              <main className="flex-1 w-full mx-auto px-8">{children}</main>
+                <main className="flex-1 w-full mx-auto px-8">{children}</main>
 
-              <footer className="w-full flex flex-col items-center justify-center border-t mx-auto text-center text-xs py-16">
-                <Image
-                  src="/logo.png"
-                  alt="that sauce"
-                  width={100}
-                  height={100}
-                />
-                <p>that sauce 2025</p>
-              </footer>
-            </div>
-          </main>
-          <Analytics />
-          {/* </ProgressBarProvider> */}
+                <footer className="w-full flex flex-col items-center justify-center border-t mx-auto text-center text-xs py-16">
+                  <Image
+                    src="/logo.png"
+                    alt="that sauce"
+                    width={100}
+                    height={100}
+                  />
+                  <p>that sauce 2025</p>
+                </footer>
+              </div>
+            </main>
+            <Analytics />
+            {/* </ProgressBarProvider> */}
+          </ProfileEditProvider>
         </ThemeProvider>
       </body>
     </html>

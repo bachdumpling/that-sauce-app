@@ -21,6 +21,7 @@ import {
   adminRoutes,
   isAdminEmail,
 } from "./routes";
+import { EditProfileButton } from "@/components/shared/edit-profile-button";
 
 export default async function Nav() {
   const supabase = await createClient();
@@ -148,14 +149,17 @@ export default async function Nav() {
                 </div>
               </div>
 
-              <DropdownMenuItem className="focus:bg-zinc-200 dark:focus:bg-zinc-600 rounded-[16px] p-4">
-                <Link
-                  href={userProfileRoutes[0].path}
-                  className="w-full text-sm font-medium"
-                >
-                  {userProfileRoutes[0].label}
-                </Link>
-              </DropdownMenuItem>
+              {profile && (
+                <DropdownMenuItem className="focus:bg-zinc-200 dark:focus:bg-zinc-600 rounded-[16px] p-4">
+                  <EditProfileButton
+                    className="w-full flex justify-start p-0 h-auto"
+                    username={creatorUsername}
+                  >
+                    <span className="text-sm font-medium">Edit Profile</span>
+                  </EditProfileButton>
+                </DropdownMenuItem>
+              )}
+
               <DropdownMenuItem className="focus:bg-zinc-200 dark:focus:bg-zinc-600 rounded-[16px] p-4">
                 <form
                   action={signOutAction}
