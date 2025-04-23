@@ -8,6 +8,7 @@ import {
   updateCreatorProfileServer,
   uploadCreatorAvatarServer,
   uploadCreatorBannerServer,
+  getCreatorPortfolioServer,
 } from "@/lib/api/server/creators";
 import { notFound } from "next/navigation";
 import { serverApiRequest } from "@/lib/api/server/apiServer";
@@ -338,4 +339,13 @@ export async function getRandomCreatorsWithLatestWork(limit: number = 8) {
     );
     return [];
   }
+}
+
+/**
+ * Get a creator's portfolio
+ */
+export async function getCreatorPortfolio(username: string) {
+  const portfolio = await getCreatorPortfolioServer(username);
+
+  return portfolio;
 }

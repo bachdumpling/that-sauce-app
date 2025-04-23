@@ -1,3 +1,4 @@
+import React, { useState, useRef } from "react";
 import {
   Dialog,
   DialogContent,
@@ -15,14 +16,12 @@ import {
   MapPin,
   Mail,
   Briefcase,
-  Instagram,
   Share2,
   LogOut,
   User,
-  X,
-  Link as LinkIcon,
   Pencil,
   Loader2,
+  Link as LinkIcon,
 } from "lucide-react";
 import {
   CREATOR_ROLES,
@@ -30,43 +29,17 @@ import {
 } from "@/lib/constants/creator-options";
 import { MultiSelect, Option } from "@/components/ui/multi-select";
 import Link from "next/link";
-import { useState, useRef } from "react";
 import { SocialIcon } from "@/components/ui/social-icon";
 import { toast } from "sonner";
 import { uploadCreatorAvatarAction } from "@/actions/creator-actions";
 import Image from "next/image";
+import CreatorBadge from "./creator-badge";
 
 // Map CREATOR_ROLES to the format required by MultiSelect
-const ROLE_OPTIONS: Option[] = CREATOR_ROLES.map((role) => ({
+const ROLE_OPTIONS = CREATOR_ROLES.map((role) => ({
   value: role,
   label: role,
 }));
-
-interface ProfileEditDialogProps {
-  isOpen: boolean;
-  onClose: () => void;
-  profileForm: {
-    username: string;
-    first_name: string;
-    last_name: string;
-    bio: string;
-    location: string;
-    years_of_experience: string;
-    work_email: string;
-    primary_role: string[];
-    avatar_url?: string;
-    social_links?: {
-      [key: string]: string;
-    };
-    [key: string]: any; // For dynamic social platform fields
-  };
-  handleFormChange: (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) => void;
-  handlePrimaryRoleChange: (selectedRoles: string[]) => void;
-  handleProfileUpdate: () => void;
-  isSubmitting: boolean;
-}
 
 export default function ProfileEditDialog({
   isOpen,
@@ -76,15 +49,15 @@ export default function ProfileEditDialog({
   handlePrimaryRoleChange,
   handleProfileUpdate,
   isSubmitting,
-}: ProfileEditDialogProps) {
+}) {
   const bioLength = profileForm.bio?.length || 0;
-  const [activeTab, setActiveTab] = useState<string>("profile");
-  const [roleSelectError, setRoleSelectError] = useState<string>("");
+  const [activeTab, setActiveTab] = useState("profile");
+  const [roleSelectError, setRoleSelectError] = useState("");
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef(null);
 
   // Wrapper for handlePrimaryRoleChange to add validation
-  const handleRoleChange = (selectedRoles: string[]) => {
+  const handleRoleChange = (selectedRoles) => {
     if (selectedRoles.length > 3) {
       setRoleSelectError("You can select a maximum of 3 roles");
       return;
@@ -101,7 +74,7 @@ export default function ProfileEditDialog({
   };
 
   // Social links handler - creates controlled inputs for all social platforms
-  const handleSocialLinkChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleSocialLinkChange = (e) => {
     handleFormChange(e);
   };
 
@@ -112,7 +85,7 @@ export default function ProfileEditDialog({
     }
   };
 
-  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAvatarChange = async (e) => {
     if (!e.target.files || e.target.files.length === 0) return;
 
     const file = e.target.files[0];
@@ -131,7 +104,7 @@ export default function ProfileEditDialog({
             name: "avatar_url",
             value: result.data.avatar_url,
           },
-        } as React.ChangeEvent<HTMLInputElement>);
+        });
 
         toast.success("Profile picture updated successfully");
       } else {
@@ -156,7 +129,7 @@ export default function ProfileEditDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl min-h-[60vh] p-0">
+      <DialogContent className="max-w-3xl min-h-[60vh] p-0">
         <DialogHeader className="p-0">
           <DialogTitle className="sr-only">Edit Profile</DialogTitle>
           <DialogDescription className="sr-only">
@@ -202,11 +175,6 @@ export default function ProfileEditDialog({
                   )}
                 </button>
               </div>
-              {/* <span className="text-xs text-gray-500 mt-2">
-                {isUploadingAvatar
-                  ? "Uploading..."
-                  : "Click to change profile picture"}
-              </span> */}
             </div>
 
             <Button
@@ -247,7 +215,7 @@ export default function ProfileEditDialog({
           </div>
 
           {/* Right column - Content */}
-          <div className="flex-1 p-8 overflow-y-auto max-h-[50vh]">
+          <div className="flex-1 p-8 overflow-y-auto max-h-[60vh] w-full">
             {activeTab === "profile" && (
               <div className="grid gap-4">
                 <div className="space-x-2 flex">
@@ -334,29 +302,16 @@ export default function ProfileEditDialog({
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="years_of_experience">
-                    Years of Experience
-                  </Label>
-                  <div className="relative">
-                    <div className="absolute left-4 top-1/2 -translate-y-1/2">
-                      <Briefcase className="h-4 w-4 text-gray-500" />
-                    </div>
-                    <Input
-                      id="years_of_experience"
-                      name="years_of_experience"
-                      type="number"
-                      min="0"
-                      max="50"
-                      value={profileForm.years_of_experience}
-                      onChange={handleFormChange}
-                      className="pl-12"
-                      placeholder="Years of professional experience"
-                    />
+                  <div className="flex justify-between">
+                    <Label htmlFor="primary_role">Primary Role</Label>
+                    {roleSelectError ? (
+                      <p className="text-xs text-red-500">{roleSelectError}</p>
+                    ) : (
+                      <p className="text-xs text-gray-500">
+                        Select up to 3 primary roles
+                      </p>
+                    )}
                   </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="primary_role">Primary Role</Label>
                   <MultiSelect
                     className="h-fit"
                     options={ROLE_OPTIONS}
@@ -364,13 +319,6 @@ export default function ProfileEditDialog({
                     onChange={handleRoleChange}
                     placeholder="Select your roles"
                   />
-                  {roleSelectError ? (
-                    <p className="text-xs text-red-500">{roleSelectError}</p>
-                  ) : (
-                    <p className="text-xs text-gray-500">
-                      Select up to 3 primary roles
-                    </p>
-                  )}
                 </div>
 
                 <div className="space-y-2">
@@ -442,10 +390,16 @@ export default function ProfileEditDialog({
             )}
 
             {activeTab === "share" && (
-              <div className="py-8 text-center">
-                <Share2 className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-                <h3 className="text-lg font-medium">Share Badge</h3>
-                <p className="text-sm text-gray-500">Coming soon</p>
+              <div className="py-4 flex flex-col">
+                <h3 className="text-lg font-medium mb-4">Share Your Badge</h3>
+                <p className="text-sm text-muted-foreground mb-6">
+                  Share your That Sauce creator badge on social media or add it
+                  to your website.
+                </p>
+
+                <div className="mt-2">
+                  <CreatorBadge creator={profileForm} />
+                </div>
               </div>
             )}
 

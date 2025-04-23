@@ -37,42 +37,42 @@ export const metadata = {
 const helveticaNeue = localFont({
   src: [
     {
-      path: "./fonts/HelveticaNeueLight.otf",
+      path: "../public/fonts/HelveticaNeueLight.otf",
       weight: "300",
       style: "normal",
     },
     {
-      path: "./fonts/HelveticaNeueLightItalic.otf",
+      path: "../public/fonts/HelveticaNeueLightItalic.otf",
       weight: "300",
       style: "italic",
     },
     {
-      path: "./fonts/HelveticaNeueRoman.otf",
+      path: "../public/fonts/HelveticaNeueRoman.otf",
       weight: "400",
       style: "normal",
     },
     {
-      path: "./fonts/HelveticaNeueItalic.ttf",
+      path: "../public/fonts/HelveticaNeueItalic.ttf",
       weight: "400",
       style: "italic",
     },
     {
-      path: "./fonts/HelveticaNeueMedium.otf",
+      path: "../public/fonts/HelveticaNeueMedium.otf",
       weight: "500",
       style: "normal",
     },
     {
-      path: "./fonts/HelveticaNeueMediumItalic.otf",
+      path: "../public/fonts/HelveticaNeueMediumItalic.otf",
       weight: "500",
       style: "italic",
     },
     {
-      path: "./fonts/HelveticaNeueBold.otf",
+      path: "../public/fonts/HelveticaNeueBold.otf",
       weight: "700",
       style: "normal",
     },
     {
-      path: "./fonts/HelveticaNeueBoldItalic.otf",
+      path: "../public/fonts/HelveticaNeueBoldItalic.otf",
       weight: "700",
       style: "italic",
     },
@@ -114,9 +114,7 @@ export default function RootLayout({
                 </div>
               </nav>
 
-              <main className="flex-1 w-full mx-auto px-8">
-                {children}
-              </main>
+              <main className="flex-1 w-full mx-auto px-8">{children}</main>
 
               <footer className="w-full flex flex-col items-center justify-center border-t mx-auto text-center text-xs py-16">
                 <Image

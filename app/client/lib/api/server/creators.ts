@@ -120,6 +120,15 @@ export async function uploadCreatorBannerServer(
 }
 
 /**
+ * Get a creator's portfolio
+ */
+export async function getCreatorPortfolioServer(username: string) {
+  return serverApiRequest.get<CreatorPortfolio>(
+    API_ENDPOINTS.getCreatorPortfolio(username)
+  );
+}
+
+/**
  * Get project by title from a specific creator
  * Uses server-side authentication and data fetching
  */

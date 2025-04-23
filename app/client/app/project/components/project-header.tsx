@@ -78,14 +78,9 @@ export default function ProjectHeader({
         <BackButton fallbackPath={`/${creator.username}/work`} />
         {creator?.isOwner && (
           <div className="flex space-x-2">
-            <Button
-              size="sm"
-              variant="secondary"
-              onClick={() => router.push(`/project/${project.id}/edit`)}
-              className="flex-1 px-4 py-2"
-            >
+            <Button size="sm" variant="secondary" className="flex-1 px-4 py-2">
               <Edit className="mr-2 mb-1 h-4 w-4" />
-              Edit
+              <Link href={`/project/${project.id}/edit`}>Edit</Link>
             </Button>
             <Button
               size="sm"

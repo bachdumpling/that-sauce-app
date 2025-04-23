@@ -17,7 +17,8 @@ export const API_ENDPOINTS = {
   updateCreatorProfile: (username: string) => `/creators/${username}`,
   uploadCreatorAvatar: (username: string) => `/creators/${username}/avatar`,
   uploadCreatorBanner: (username: string) => `/creators/${username}/banner`,
-
+  getCreatorPortfolio: (username: string) => `/creators/${username}/portfolio`,
+  
   // Organization endpoints
   organizations: "/organizations",
   getOrganization: (orgId: string) => `/organizations/${orgId}`,
@@ -36,6 +37,21 @@ export const API_ENDPOINTS = {
     batchUploadMedia: `/media/batch-upload`,
     importUrlMedia: `/media/import-url-media`,
     uploadVideoLink: `/media/upload-video-link`,
+  },
+
+  // Analysis endpoints
+  analysis: {
+    // Portfolio analysis
+    portfolioCanAnalyze: (portfolioId: string) =>
+      `/analysis/portfolios/${portfolioId}/can-analyze`,
+    portfolioAnalysis: (portfolioId: string) =>
+      `/analysis/portfolios/${portfolioId}`,
+
+    // Project analysis
+    projectAnalysis: (projectId: string) => `/analysis/projects/${projectId}`,
+
+    // Analysis jobs
+    jobStatus: (jobId: string) => `/analysis/jobs/${jobId}`,
   },
 
   // Scraper endpoints

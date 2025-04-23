@@ -131,6 +131,20 @@ export class CreatorRepository {
   }
 
   /**
+   * Get portfolio for creator
+   */
+  async getPortfolio(creatorId: string): Promise<Portfolio | null> {
+    const { data, error } = await supabase
+      .from("portfolios")
+      .select("*")
+      .eq("creator_id", creatorId)
+      .single();
+
+    if (error) return null;
+    return data;
+  }
+
+  /**
    * Get or create portfolio for creator
    */
   async getOrCreatePortfolio(creatorId: string): Promise<Portfolio | null> {
@@ -164,9 +178,11 @@ export class CreatorRepository {
   /**
    * Get creator details for analysis context
    */
-  async getCreatorDetails(
-    creatorId: string
-  ): Promise<{ username: string; primary_role: any; bio: string | null } | null> {
+  async getCreatorDetails(creatorId: string): Promise<{
+    username: string;
+    primary_role: any;
+    bio: string | null;
+  } | null> {
     const { data, error } = await supabase
       .from("creators")
       .select("username, primary_role, bio")
@@ -174,7 +190,9 @@ export class CreatorRepository {
       .single();
 
     if (error) {
-      logger.error(`Error fetching creator details for ${creatorId}: ${error.message}`);
+      logger.error(
+        `Error fetching creator details for ${creatorId}: ${error.message}`
+      );
       return null;
     }
     return data;

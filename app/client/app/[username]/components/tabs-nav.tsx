@@ -19,7 +19,7 @@ export function TabsNav({ creator, username }: TabsNavProps) {
   const getActiveTab = () => {
     if (pathname.endsWith(`/${username}`)) return "overview";
     if (pathname.includes(`/${username}/work`)) return "work";
-    if (pathname.includes(`/${username}/about`)) return "about";
+    if (pathname.includes(`/${username}/analysis`)) return "analysis";
     return "overview";
   };
 
@@ -48,17 +48,19 @@ export function TabsNav({ creator, username }: TabsNavProps) {
         >
           Work
         </Link>
-        <Link
-          href={`/${username}/about`}
+        {/* <Link
+          href={`/${username}/analysis`}
           className={`py-4 px-1 font-medium text-lg ${
-            activeTab === "about"
+            activeTab === "analysis"
               ? "text-primary"
               : "text-muted-foreground hover:text-foreground"
           }`}
         >
-          About
-        </Link>
+          Analysis
+        </Link> */}
       </div>
     </div>
   );
 }
+
+export default TabsNav;
