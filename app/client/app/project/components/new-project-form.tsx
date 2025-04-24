@@ -824,7 +824,7 @@ export default function NewProjectForm() {
   const projectPreview: Project = {
     id: "new-project-preview", // Use a placeholder ID for new projects
     title: title || "New Project",
-    description: shortDescription || "New Project Description", // Or use description if you prefer
+    short_description: shortDescription || "New Project Description", // Or use description if you prefer
     images: mediaItems
       .filter((item) => item.type === "image")
       .map((item) => ({ url: item.url })), // Map to expected structure

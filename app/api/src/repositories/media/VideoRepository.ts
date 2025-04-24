@@ -26,9 +26,7 @@ export class VideoRepository {
   async getVideosForProject(projectId: string): Promise<VideoMedia[]> {
     const { data, error } = await supabase
       .from(this.tableName)
-      .select(
-        "*, ai_analysis, embedding"
-      )
+      .select("*, ai_analysis, embedding")
       .eq("project_id", projectId);
 
     if (error) {
@@ -88,6 +86,9 @@ export class VideoRepository {
     }
   }
 
+  /**
+   * Update video analysis status and optionally error message.
+   */
   async updateVideoAnalysis(
     videoId: string,
     analysis: string,
@@ -109,6 +110,64 @@ export class VideoRepository {
         `Error updating video analysis for ${videoId}: ${error.message}`
       );
       throw error;
+    }
+  }
+  /**
+   * Get pending videos for a project (those that are still being analyzed)
+   */
+  async getPendingVideosForProject(projectId: string): Promise<any[]> {
+    try {
+      const { data, error } = await supabase
+        .from(this.tableName)
+        .select("id")
+        .eq("project_id", projectId)
+        .eq("analysis_status", "processing");
+
+      if (error) {
+        logger.error(
+          `Error fetching pending videos for project ${projectId}: ${error.message}`
+        );
+        return [];
+      }
+      return data || [];
+    } catch (error) {
+      logger.error(
+        `Exception when fetching pending videos for project ${projectId}: ${error}`
+      );
+      return [];
+    }
+  }
+
+  /**
+   * Get analyzed videos with specific IDs
+   * This is used to check if specific videos have completed analysis
+   */
+  async getAnalyzedVideosWithIds(
+    videoIds: string[]
+  ): Promise<Pick<VideoMedia, "id" | "ai_analysis">[]> {
+    if (!videoIds || videoIds.length === 0) {
+      return [];
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from(this.tableName)
+        .select("id, ai_analysis")
+        .in("id", videoIds)
+        .not("ai_analysis", "is", null);
+
+      if (error) {
+        logger.error(
+          `Error fetching analyzed videos with specific IDs: ${error.message}`
+        );
+        throw error;
+      }
+      return data || [];
+    } catch (error) {
+      logger.error(
+        `Exception fetching analyzed videos with specific IDs: ${error}`
+      );
+      return [];
     }
   }
 }

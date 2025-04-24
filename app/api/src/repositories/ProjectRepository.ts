@@ -397,4 +397,30 @@ export class ProjectRepository {
       throw error;
     }
   }
+  
+  /**
+   * Get projects that are still being processed for a portfolio
+   */
+  async getPendingProjectsForPortfolio(portfolioId: string): Promise<any[]> {
+    try {
+      const { data, error } = await supabase
+        .from(this.tableName)
+        .select("id, title")
+        .eq("portfolio_id", portfolioId)
+        .eq("analysis_status", "processing");
+
+      if (error) {
+        logger.error(
+          `Error fetching pending projects for portfolio ${portfolioId}: ${error.message}`
+        );
+        return [];
+      }
+      return data || [];
+    } catch (error) {
+      logger.error(
+        `Exception when fetching pending projects for portfolio ${portfolioId}: ${error}`
+      );
+      return [];
+    }
+  }
 }

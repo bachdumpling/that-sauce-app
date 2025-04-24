@@ -1,3 +1,6 @@
+// Export shared utilities
+export { triggerRateLimiter, ContentType } from "../utils/triggerRateLimiter";
+
 // Export all Trigger.dev tasks
 export { imageAnalysisTask } from "./imageAnalysisTask";
 export { videoAnalysisTask } from "./videoAnalysisTask";

@@ -81,7 +81,7 @@ export class AnalysisService {
    */
   async startPortfolioAnalysis(
     portfolioId: string,
-    creatorId: string, // creatorId might not be needed if fetched via portfolio
+    creatorId: string,
     jobId: string
   ): Promise<void> {
     try {
@@ -110,32 +110,61 @@ export class AnalysisService {
       logger.info(
         `Starting media analysis for ${projects.length} projects in portfolio ${portfolioId}`
       );
+
+      const mediaPromises = [];
       for (const project of projects) {
-        await this.analyzeProjectMedia(project.id); // Pass only project ID
-        currentStep++;
-        progress = (currentStep / totalSteps) * 100;
-        await this.analysisJobRepository.updateProgress(jobId, progress);
+        mediaPromises.push(this.analyzeProjectMedia(project.id));
       }
+
+      // Wait for all media analyses to complete
+      await Promise.all(mediaPromises);
+
+      // Update progress after all media analyses complete
+      currentStep += projects.length;
+      progress = (currentStep / totalSteps) * 100;
+      await this.analysisJobRepository.updateProgress(jobId, progress);
 
       // 3. STEP 2: Analyze each project
       logger.info(
         `Starting project analysis for ${projects.length} projects in portfolio ${portfolioId}`
       );
+
+      const projectPromises = [];
       for (const project of projects) {
         // Only analyze if not already done (check ai_analysis from initial fetch)
         if (!project.ai_analysis) {
-          await this.analyzeProject(project.id);
+          projectPromises.push(this.analyzeProject(project.id));
         } else {
           logger.info(
             `Skipping project analysis for ${project.id} as it's already analyzed.`
           );
         }
-        currentStep++;
-        progress = (currentStep / totalSteps) * 100;
-        await this.analysisJobRepository.updateProgress(jobId, progress);
       }
 
-      // 4. STEP 3: Analyze portfolio
+      // Wait for all project analyses to complete
+      await Promise.all(projectPromises);
+
+      // Update progress after all project analyses complete
+      currentStep += projects.length;
+      progress = (currentStep / totalSteps) * 100;
+      await this.analysisJobRepository.updateProgress(jobId, progress);
+
+      // 4. STEP 3: Wait an additional 5 seconds to ensure database updates are complete
+      logger.info(
+        `Waiting for any final database updates before portfolio analysis for ${portfolioId}`
+      );
+      await new Promise((resolve) => setTimeout(resolve, 5000));
+
+      // Re-fetch all analyzed projects to ensure we have the latest data
+      const analyzedProjects =
+        await this.projectRepository.getAnalyzedProjectsForPortfolio(
+          portfolioId
+        );
+      logger.info(
+        `Re-fetched ${analyzedProjects.length} analyzed projects for portfolio ${portfolioId}`
+      );
+
+      // 5. STEP 4: Analyze portfolio
       logger.info(`Starting analysis for portfolio ${portfolioId}`);
       const portfolioAnalysis = await this.analyzePortfolio(portfolioId);
       if (!portfolioAnalysis) {
@@ -836,11 +865,16 @@ ${mediaContext}
    */
   private async analyzePortfolio(portfolioId: string): Promise<string | null> {
     try {
-      // Get all analyzed projects for this portfolio using repository
+      // Explicitly re-fetch all analyzed projects for this portfolio
+      // This ensures we capture any projects that were analyzed during the current job
       const projects =
         await this.projectRepository.getAnalyzedProjectsForPortfolio(
           portfolioId
         );
+
+      logger.info(
+        `Re-fetched ${projects.length} analyzed projects for portfolio ${portfolioId}`
+      );
 
       if (!projects || projects.length === 0) {
         logger.warn(
@@ -848,7 +882,6 @@ ${mediaContext}
         );
         return null;
       }
-
       // Get creator ID using repository
       const creatorId =
         await this.portfolioRepository.getPortfolioCreatorId(portfolioId);

@@ -86,6 +86,9 @@ export class ImageRepository {
     }
   }
 
+  /**
+   * Update image analysis status and optionally error message.
+   */
   async updateImageAnalysis(
     imageId: string,
     analysis: string,
@@ -107,6 +110,65 @@ export class ImageRepository {
         `Error updating image analysis for ${imageId}: ${error.message}`
       );
       throw error;
+    }
+  }
+
+  /**
+   * Get pending images for a project (those that are still being analyzed)
+   */
+  async getPendingImagesForProject(projectId: string): Promise<any[]> {
+    try {
+      const { data, error } = await supabase
+        .from(this.tableName)
+        .select("id")
+        .eq("project_id", projectId)
+        .eq("analysis_status", "processing");
+
+      if (error) {
+        logger.error(
+          `Error fetching pending images for project ${projectId}: ${error.message}`
+        );
+        return [];
+      }
+      return data || [];
+    } catch (error) {
+      logger.error(
+        `Exception when fetching pending images for project ${projectId}: ${error}`
+      );
+      return [];
+    }
+  }
+
+  /**
+   * Get analyzed images with specific IDs
+   * This is used to check if specific images have completed analysis
+   */
+  async getAnalyzedImagesWithIds(
+    imageIds: string[]
+  ): Promise<Pick<ImageMedia, "id" | "ai_analysis">[]> {
+    if (!imageIds || imageIds.length === 0) {
+      return [];
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from(this.tableName)
+        .select("id, ai_analysis")
+        .in("id", imageIds)
+        .not("ai_analysis", "is", null);
+
+      if (error) {
+        logger.error(
+          `Error fetching analyzed images with specific IDs: ${error.message}`
+        );
+        throw error;
+      }
+      return data || [];
+    } catch (error) {
+      logger.error(
+        `Exception fetching analyzed images with specific IDs: ${error}`
+      );
+      return [];
     }
   }
 }

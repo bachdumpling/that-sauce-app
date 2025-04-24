@@ -33,6 +33,9 @@ export class CreatorProfileRepository {
             id,
             title,
             description,
+            short_description,
+            roles,
+            client_ids,
             behance_url,
             featured,
             year,
@@ -81,63 +84,108 @@ export class CreatorProfileRepository {
 
       delete creator.profile; // Remove the nested profile object
 
-      // If there are projects, fetch images and videos for each project separately
+      // Fetch organizations, images, and videos for projects
       if (creator.projects && creator.projects.length > 0) {
+        // Fetch organizations based on client_ids
+        const allClientIds = creator.projects
+          .flatMap((project: any) => project.client_ids || [])
+          .filter((id: string | null) => id);
+        const uniqueClientIds = [...new Set(allClientIds)];
+        let organizationsMap: Record<string, any> = {};
+
+        if (uniqueClientIds.length > 0) {
+          const { data: organizationsData, error: orgsError } = await supabase
+            .from("organizations")
+            .select("id, name, logo_url, website")
+            .in("id", uniqueClientIds);
+
+          if (orgsError) {
+            logger.error(`Error fetching organizations: ${orgsError.message}`);
+            // Continue without organization data
+          } else if (organizationsData) {
+            organizationsMap = organizationsData.reduce(
+              (acc: Record<string, any>, org) => {
+                acc[org.id] = org;
+                return acc;
+              },
+              {}
+            );
+          }
+        }
+
+        // Map organizations back to projects (and prepare for images/videos)
         const projectIds = creator.projects.map((project: any) => project.id);
-
-        // Fetch all images for all projects
-        const { data: allImages, error: imagesError } = await supabase
-          .from("images")
-          .select(
-            "id, creator_id, project_id, url, resolutions, created_at, updated_at, order, alt_text"
-          )
-          .in("project_id", projectIds);
-
-        if (imagesError) {
-          logger.error(`Error fetching project images: ${imagesError.message}`);
-        }
-
-        // Fetch all videos for all projects
-        const { data: allVideos, error: videosError } = await supabase
-          .from("videos")
-          .select(
-            "id, creator_id, project_id, title, vimeo_id, youtube_id, url, description, created_at, updated_at"
-          )
-          .in("project_id", projectIds);
-
-        if (videosError) {
-          logger.error(`Error fetching project videos: ${videosError.message}`);
-        }
-
-        // Group images and videos by project_id
-        const imagesByProject: Record<string, any[]> = {};
-        const videosByProject: Record<string, any[]> = {};
-
-        if (allImages) {
-          allImages.forEach((image: any) => {
-            if (!imagesByProject[image.project_id]) {
-              imagesByProject[image.project_id] = [];
-            }
-            imagesByProject[image.project_id].push(image);
-          });
-        }
-
-        if (allVideos) {
-          allVideos.forEach((video: any) => {
-            if (!videosByProject[video.project_id]) {
-              videosByProject[video.project_id] = [];
-            }
-            videosByProject[video.project_id].push(video);
-          });
-        }
-
-        // Assign images and videos to each project
-        creator.projects = creator.projects.map((project: CreatorProject) => ({
+        creator.projects = creator.projects.map((project: any) => ({
           ...project,
-          creator_username: username,
-          images: imagesByProject[project.id] || [],
-          videos: videosByProject[project.id] || [],
+          clients: (project.client_ids || [])
+            .map((id: string) => organizationsMap[id])
+            .filter((org: any) => org), // Add a 'clients' array
         }));
+
+        // If there are projects, fetch images and videos for each project separately
+        if (creator.projects && creator.projects.length > 0) {
+          const projectIds = creator.projects.map((project: any) => project.id);
+
+          // Fetch all images for all projects
+          const { data: allImages, error: imagesError } = await supabase
+            .from("images")
+            .select(
+              "id, creator_id, project_id, url, resolutions, created_at, updated_at, order, alt_text"
+            )
+            .in("project_id", projectIds);
+
+          if (imagesError) {
+            logger.error(
+              `Error fetching project images: ${imagesError.message}`
+            );
+          }
+
+          // Fetch all videos for all projects
+          const { data: allVideos, error: videosError } = await supabase
+            .from("videos")
+            .select(
+              "id, creator_id, project_id, title, vimeo_id, youtube_id, url, description, created_at, updated_at"
+            )
+            .in("project_id", projectIds);
+
+          if (videosError) {
+            logger.error(
+              `Error fetching project videos: ${videosError.message}`
+            );
+          }
+
+          // Group images and videos by project_id
+          const imagesByProject: Record<string, any[]> = {};
+          const videosByProject: Record<string, any[]> = {};
+
+          if (allImages) {
+            allImages.forEach((image: any) => {
+              if (!imagesByProject[image.project_id]) {
+                imagesByProject[image.project_id] = [];
+              }
+              imagesByProject[image.project_id].push(image);
+            });
+          }
+
+          if (allVideos) {
+            allVideos.forEach((video: any) => {
+              if (!videosByProject[video.project_id]) {
+                videosByProject[video.project_id] = [];
+              }
+              videosByProject[video.project_id].push(video);
+            });
+          }
+
+          // Assign images and videos to each project
+          creator.projects = creator.projects.map(
+            (project: CreatorProject) => ({
+              ...project, // Includes 'clients' added in the previous map
+              creator_username: username,
+              images: imagesByProject[project.id] || [],
+              videos: videosByProject[project.id] || [],
+            })
+          );
+        }
       }
 
       return creator;

@@ -607,7 +607,7 @@ export default function EditProjectForm({ projectId }: EditProjectFormProps) {
   const projectPreview: Project = {
     id: projectId,
     title: title,
-    description: shortDescription, // Or use description if you prefer
+    short_description: shortDescription, // Or use description if you prefer
     images: mediaItems
       .filter((item) => item.type === "image")
       .map((item) => ({ url: item.url })), // Map to expected structure

@@ -91,7 +91,6 @@ export default function MediaUploadStep({
   handleSelectThumbnail,
   project,
 }: MediaUploadStepProps) {
-  console.log("project in media upload step", project);
   return (
     <>
       {/* Project Link Import Section - Only show if import option is enabled */}
@@ -328,7 +327,7 @@ export default function MediaUploadStep({
                           className="bg-white text-black border-white hover:bg-gray-100 hover:text-black"
                           onClick={(e) => {
                             e.stopPropagation();
-                            handleRemoveMedia(media.url);
+                            handleRemoveMedia(media.id);
                           }}
                         >
                           <Trash2 className="h-4 w-4" />

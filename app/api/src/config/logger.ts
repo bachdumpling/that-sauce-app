@@ -19,18 +19,4 @@ const logger = pino({
   },
 });
 
-// Test the logger
-logger.debug("Logger initialized");
-logger.info("Logger ready");
-logger.error("Logger error test");
-
-// Test with error object
-logger.error(new Error("Test error object"));
-
-// Test with detailed object
-logger.error({
-  msg: "Error with detailed object",
-  error: new Error("Nested error message"),
-});
-
 export default logger;

@@ -18,6 +18,7 @@ interface Project {
   id: string;
   title: string;
   description?: string;
+  short_description?: string;
   images?: { url: string }[];
   thumbnail_url?: string;
 }
@@ -160,9 +161,9 @@ export function ProjectCard({
           <h3 className="font-medium text-lg">
             {project.title || "Untitled Project"}
           </h3>
-          {project.description && (
+          {project.short_description && (
             <p className="text-muted-foreground text-sm line-clamp-2 mt-1">
-              {project.description}
+              {project.short_description}
             </p>
           )}
         </div>

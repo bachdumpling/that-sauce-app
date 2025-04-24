@@ -61,7 +61,8 @@ export const ANALYSIS_CONFIG = {
       - Unique value proposition`,
 
     PORTFOLIO_ANALYSIS: `As a creative director, analyze this creator's body of work across multiple projects.
-      Focus on:
+    First, List the titles of the projects in the portfolio.
+    Then, Focus on:
       1. Professional Identity and Market Position:
          - Target industries and market segments
          - Client types and commercial focus
