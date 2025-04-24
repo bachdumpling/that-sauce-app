@@ -23,7 +23,7 @@ import {
   getPortfolioAnalysisResults,
   getAnalysisJobStatus,
 } from "@/actions/analysis-actions";
-
+import { redirect } from "next/navigation";
 interface CreatorAnalysisPageProps {
   params: {
     username: string;
@@ -118,6 +118,7 @@ export default async function CreatorAnalysisPage({
     }
 
     creator = result.data;
+
     portfolioId = portfolio.data.id;
     // Count projects
     projectCount = creator.projects?.length || 0;
@@ -145,6 +146,11 @@ export default async function CreatorAnalysisPage({
     return <CreatorAnalysisError error={error} username={username} />;
   }
 
+  // Check ownership after successfully fetching data
+  if (!creator.isOwner) {
+    redirect(`/${username}`);
+  }
+
   // Calculate whether the analysis is in progress
   const isAnalysisInProgress =
     analysisData && !analysisData.has_analysis && analysisData.job;
@@ -152,9 +158,6 @@ export default async function CreatorAnalysisPage({
     ? analysisData.job?.progress || 0
     : 0;
   const analysisCompleted = analysisData && analysisData.has_analysis;
-
-  // Check if this is the portfolio owner
-  const isOwner = creator.isOwner || false;
 
   return (
     <div className="py-8">
@@ -166,7 +169,7 @@ export default async function CreatorAnalysisPage({
           </p>
         </div>
 
-        {isOwner && canAnalyze && projectCount > 2 && (
+        {creator.isOwner && canAnalyze && projectCount > 2 && (
           <form
             action={async () => {
               "use server";
@@ -256,7 +259,7 @@ export default async function CreatorAnalysisPage({
           <CardHeader>
             <CardTitle>No Analysis Available</CardTitle>
             <CardDescription>
-              {isOwner
+              {creator.isOwner
                 ? "Run an analysis to get AI-powered insights about your portfolio."
                 : `${creator.username} hasn't run a portfolio analysis yet.`}
             </CardDescription>

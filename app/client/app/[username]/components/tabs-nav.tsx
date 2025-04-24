@@ -48,16 +48,18 @@ export function TabsNav({ creator, username }: TabsNavProps) {
         >
           Work
         </Link>
-        {/* <Link
-          href={`/${username}/analysis`}
-          className={`py-4 px-1 font-medium text-lg ${
-            activeTab === "analysis"
-              ? "text-primary"
-              : "text-muted-foreground hover:text-foreground"
-          }`}
-        >
-          Analysis
-        </Link> */}
+        {creator.isOwner && (
+          <Link
+            href={`/${username}/analysis`}
+            className={`py-4 px-1 font-medium text-lg ${
+              activeTab === "analysis"
+                ? "text-primary"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            Analysis
+          </Link>
+        )}
       </div>
     </div>
   );
