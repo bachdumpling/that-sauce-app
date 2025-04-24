@@ -100,8 +100,15 @@ export const projectController = {
   ) => {
     try {
       const { id } = req.params;
-      const { title, description, short_description, roles, client_ids, year } =
-        req.body;
+      const {
+        title,
+        description,
+        short_description,
+        roles,
+        client_ids,
+        year,
+        thumbnail_url,
+      } = req.body;
       const userId = req.user?.id;
 
       if (!userId) {
@@ -115,7 +122,8 @@ export const projectController = {
         short_description === undefined &&
         roles === undefined &&
         client_ids === undefined &&
-        year === undefined
+        year === undefined &&
+        thumbnail_url === undefined
       ) {
         return res.status(400).json({ error: "No fields to update" });
       }
@@ -130,6 +138,7 @@ export const projectController = {
       if (roles !== undefined) updateData.roles = roles;
       if (client_ids !== undefined) updateData.client_ids = client_ids;
       if (year !== undefined) updateData.year = year;
+      if (thumbnail_url !== undefined) updateData.thumbnail_url = thumbnail_url;
 
       const project = await projectService.updateProject(
         id,

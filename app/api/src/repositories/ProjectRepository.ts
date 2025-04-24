@@ -93,6 +93,7 @@ export class ProjectRepository {
       | "roles"
       | "client_ids"
       | "year"
+      | "thumbnail_url"
     > & {
       portfolio_id: string;
     }
@@ -142,6 +143,7 @@ export class ProjectRepository {
         | "roles"
         | "client_ids"
         | "year"
+        | "thumbnail_url"
       >
     >
   ): Promise<Project> {

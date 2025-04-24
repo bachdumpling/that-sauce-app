@@ -36,6 +36,17 @@ interface OverviewProps {
   creator: Creator;
 }
 
+// Helper function to shuffle an array (Fisher-Yates shuffle)
+const shuffleArray = <T,>(array: T[]): T[] => {
+  if (!array) return [];
+  const shuffled = [...array];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]; // Swap elements
+  }
+  return shuffled;
+};
+
 export function Overview({ creator }: OverviewProps) {
   return (
     <div className="w-full space-y-8">
@@ -44,37 +55,51 @@ export function Overview({ creator }: OverviewProps) {
         <div className="mt-8">
           <div className="columns-1 md:columns-2 lg:columns-3 gap-4 space-y-4">
             {creator.projects.map((project) => {
-              // Get the first image from each project (sorted by order if available)
-              const firstImage =
-                project.images && project.images.length > 0
-                  ? [...project.images].sort(
-                      (a, b) => (a.order ?? Infinity) - (b.order ?? Infinity)
-                    )[0]
-                  : null;
+              // Filter images with a valid URL and shuffle them
+              const availableImages =
+                project.images?.filter(
+                  (img) =>
+                    img.url ||
+                    img.resolutions?.high_res ||
+                    img.resolutions?.low_res
+                ) || [];
+              // Select up to 3 random images
+              const selectedImages = shuffleArray(availableImages).slice(0, 3);
 
               return (
-                <div
-                  key={project.id}
-                  className="overflow-hidden rounded-lg relative bg-gray-100 break-inside-avoid mb-4"
-                >
-                  {firstImage ? (
-                    <div className="relative">
-                      <Image
-                        src={
-                          firstImage.url ||
-                          firstImage.resolutions?.high_res ||
-                          firstImage.resolutions?.low_res ||
-                          ""
-                        }
-                        alt={firstImage.alt_text || project.title || ""}
-                        width={500}
-                        height={300}
-                        className="w-full h-auto transition-transform duration-300 hover:scale-105"
-                        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                        style={{ objectFit: "cover" }}
-                      />
-                    </div>
+                <div key={project.id}>
+                  {selectedImages.length > 0 ? (
+                    // Map over the selected images and render them
+                    selectedImages.map((image, index) => (
+                      <div
+                        key={image.id || index}
+                        className="overflow-hidden rounded-lg bg-gray-100 break-inside-avoid mb-4 relative block"
+                      >
+                        {" "}
+                        {/* Use block to stack images */}
+                        <Image
+                          src={
+                            image.url ||
+                            image.resolutions?.high_res ||
+                            image.resolutions?.low_res ||
+                            ""
+                          }
+                          alt={
+                            image.alt_text ||
+                            project.title ||
+                            `Project image ${index + 1}`
+                          }
+                          width={500}
+                          height={300}
+                          className="w-full h-auto transition-transform duration-300 hover:scale-105 block"
+                          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                          style={{ objectFit: "cover" }}
+                          priority={index === 0}
+                        />
+                      </div>
+                    ))
                   ) : (
+                    // Fallback if no images are available
                     <div className="flex items-center justify-center h-48 bg-gray-200">
                       <ImageIcon className="w-12 h-12 text-gray-400" />
                     </div>

@@ -19,6 +19,7 @@ export class CreatorProfileRepository {
         return null;
       }
 
+      // First, fetch creator and their projects (without nested images/videos)
       const { data, error } = await supabase
         .from("creators")
         .select(
@@ -35,20 +36,7 @@ export class CreatorProfileRepository {
             behance_url,
             featured,
             year,
-            images (
-              id,
-              url,
-              alt_text,
-              resolutions
-            ),
-            videos (
-              id,
-              title,
-              vimeo_id,
-              youtube_id,
-              url,
-              description
-            )
+            thumbnail_url
           )
           `
         )
@@ -93,11 +81,62 @@ export class CreatorProfileRepository {
 
       delete creator.profile; // Remove the nested profile object
 
-      // Add creator_username to each project
-      if (creator.projects) {
+      // If there are projects, fetch images and videos for each project separately
+      if (creator.projects && creator.projects.length > 0) {
+        const projectIds = creator.projects.map((project: any) => project.id);
+
+        // Fetch all images for all projects
+        const { data: allImages, error: imagesError } = await supabase
+          .from("images")
+          .select(
+            "id, creator_id, project_id, url, resolutions, created_at, updated_at, order, alt_text"
+          )
+          .in("project_id", projectIds);
+
+        if (imagesError) {
+          logger.error(`Error fetching project images: ${imagesError.message}`);
+        }
+
+        // Fetch all videos for all projects
+        const { data: allVideos, error: videosError } = await supabase
+          .from("videos")
+          .select(
+            "id, creator_id, project_id, title, vimeo_id, youtube_id, url, description, created_at, updated_at"
+          )
+          .in("project_id", projectIds);
+
+        if (videosError) {
+          logger.error(`Error fetching project videos: ${videosError.message}`);
+        }
+
+        // Group images and videos by project_id
+        const imagesByProject: Record<string, any[]> = {};
+        const videosByProject: Record<string, any[]> = {};
+
+        if (allImages) {
+          allImages.forEach((image: any) => {
+            if (!imagesByProject[image.project_id]) {
+              imagesByProject[image.project_id] = [];
+            }
+            imagesByProject[image.project_id].push(image);
+          });
+        }
+
+        if (allVideos) {
+          allVideos.forEach((video: any) => {
+            if (!videosByProject[video.project_id]) {
+              videosByProject[video.project_id] = [];
+            }
+            videosByProject[video.project_id].push(video);
+          });
+        }
+
+        // Assign images and videos to each project
         creator.projects = creator.projects.map((project: CreatorProject) => ({
           ...project,
           creator_username: username,
+          images: imagesByProject[project.id] || [],
+          videos: videosByProject[project.id] || [],
         }));
       }
 

@@ -19,6 +19,7 @@ export interface Project {
   embedding?: number[] | null;
   analysis_status?: AnalysisStatus | null;
   analysis_error?: string | null;
+  thumbnail_url?: string | null;
 }
 
 export interface Creator {

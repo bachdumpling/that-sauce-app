@@ -23,8 +23,8 @@ import {
 import { CREATOR_ROLES } from "@/lib/constants/creator-options";
 import MediaUploadStep from "./new-project-steps/media-upload-step";
 import ProjectDetailsStep from "./new-project-steps/project-details-step";
-import { Loader2 } from "lucide-react";
-
+import { Loader2, ImageIcon } from "lucide-react";
+import { ProjectCard } from "@/app/[username]/work/components/project-card";
 interface MediaItem {
   id: string;
   type: "image" | "video" | "youtube" | "vimeo";
@@ -47,6 +47,9 @@ export default function EditProjectForm({ projectId }: EditProjectFormProps) {
   const [isLargeFile, setIsLargeFile] = useState<boolean>(false);
   const [mediaItems, setMediaItems] = useState<MediaItem[]>([]);
   const [selectedMedia, setSelectedMedia] = useState<MediaItem | null>(null);
+  const [selectedThumbnail, setSelectedThumbnail] = useState<string | null>(
+    null
+  );
 
   // Project loading state
   const [isLoading, setIsLoading] = useState(true);
@@ -103,6 +106,11 @@ export default function EditProjectForm({ projectId }: EditProjectFormProps) {
                 alt_text: image.alt_text,
                 order: image.order,
               });
+
+              // If this image is the thumbnail, select it
+              if (project.thumbnail_url === image.url) {
+                setSelectedThumbnail(image.id);
+              }
             });
           }
 
@@ -416,6 +424,16 @@ export default function EditProjectForm({ projectId }: EditProjectFormProps) {
     setSelectedMedia(media);
   };
 
+  const handleSelectThumbnail = (media: MediaItem) => {
+    if (!media || !media.id) {
+      console.error("Invalid media item passed to handleSelectThumbnail");
+      toast.error("Failed to select thumbnail: Invalid item");
+      return;
+    }
+    setSelectedThumbnail(media.id);
+    toast.success("Selected as project thumbnail");
+  };
+
   const handleProceedToDetails = () => {
     setFormStep(2);
   };
@@ -453,15 +471,37 @@ export default function EditProjectForm({ projectId }: EditProjectFormProps) {
       // Get current user's username
       const username = window.location.pathname.split("/")[1] || "";
 
-      // First, update the project
-      const projectResponse = await updateProjectAction(username, projectId, {
+      // First, update the project with basic info and potentially thumbnail URL
+      const projectData: Partial<Project> & { thumbnail_url?: string } = {
         title,
         description,
         short_description: shortDescription,
         roles: selectedRoles,
         client_ids: selectedClients,
         year,
-      });
+      };
+
+      // Add thumbnail_url if a thumbnail is selected
+      if (selectedThumbnail) {
+        // This lookup uses the ID stored in selectedThumbnail
+        const selectedMediaItem = mediaItems.find(
+          (item) => item.id === selectedThumbnail
+        );
+
+        if (
+          selectedMediaItem &&
+          selectedMediaItem.type === "image" &&
+          selectedMediaItem.url
+        ) {
+          projectData.thumbnail_url = selectedMediaItem.url;
+        }
+      }
+
+      const projectResponse = await updateProjectAction(
+        username,
+        projectId,
+        projectData
+      );
 
       if (!projectResponse.success || !projectResponse.data) {
         console.error("Project update failed:", projectResponse);
@@ -469,6 +509,7 @@ export default function EditProjectForm({ projectId }: EditProjectFormProps) {
       }
 
       // Upload any new files if they exist
+      let newUploadedThumbnailId = null;
       if (files.length > 0) {
         setCurrentStep("Uploading media files...");
         const fileUploads = [...files]; // These are true File objects
@@ -484,6 +525,22 @@ export default function EditProjectForm({ projectId }: EditProjectFormProps) {
           throw new Error(
             mediaUploadResponse.message || "Failed to upload media"
           );
+        } else {
+          // No secondary thumbnail update needed, as URL is handled in the first update
+          // Log success/errors from the upload itself
+          if (
+            mediaUploadResponse.data?.images ||
+            mediaUploadResponse.data?.videos
+          ) {
+          }
+          if (
+            mediaUploadResponse.data?.errors &&
+            mediaUploadResponse.data.errors.length > 0
+          ) {
+            toast.warning(
+              `Some new media failed to upload: ${mediaUploadResponse.data.errors.length} errors`
+            );
+          }
         }
       }
 
@@ -546,6 +603,18 @@ export default function EditProjectForm({ projectId }: EditProjectFormProps) {
     );
   }
 
+  // Construct the project object for the preview
+  const projectPreview: Project = {
+    id: projectId,
+    title: title,
+    description: shortDescription, // Or use description if you prefer
+    images: mediaItems
+      .filter((item) => item.type === "image")
+      .map((item) => ({ url: item.url })), // Map to expected structure
+    thumbnail_url: mediaItems.find((item) => item.id === selectedThumbnail)
+      ?.url, // Find the URL of the selected thumbnail
+  };
+
   return (
     <>
       <div className="flex mb-6 border-b">
@@ -571,6 +640,11 @@ export default function EditProjectForm({ projectId }: EditProjectFormProps) {
         </button>
       </div>
 
+      {/* Project Card Preview */}
+      <div className="max-w-lg mx-auto mb-8">
+        <ProjectCard project={projectPreview} isPreview={true} />
+      </div>
+
       {formStep === 1 ? (
         <MediaUploadStep
           showImportOption={false} // No import option for edit
@@ -593,6 +667,9 @@ export default function EditProjectForm({ projectId }: EditProjectFormProps) {
           scrapingHandleId={null}
           onScraperComplete={() => {}}
           accessToken={null}
+          selectedThumbnail={selectedThumbnail}
+          handleSelectThumbnail={handleSelectThumbnail}
+          project={projectPreview} // Pass the constructed project object
         />
       ) : (
         <ProjectDetailsStep
@@ -646,11 +723,28 @@ export default function EditProjectForm({ projectId }: EditProjectFormProps) {
 
             <div className="p-4">
               {selectedMedia.type === "image" && (
-                <img
-                  src={selectedMedia.url}
-                  alt="Preview"
-                  className="max-w-full max-h-[80vh] mx-auto"
-                />
+                <>
+                  <img
+                    src={selectedMedia.url}
+                    alt="Preview"
+                    className="max-w-full max-h-[80vh] mx-auto"
+                  />
+                  <div className="flex justify-end mt-4">
+                    <button
+                      className={`flex items-center px-3 py-1.5 rounded text-sm ${
+                        selectedThumbnail === selectedMedia.id
+                          ? "bg-primary text-white"
+                          : "bg-gray-200 hover:bg-gray-300 text-gray-800"
+                      }`}
+                      onClick={() => handleSelectThumbnail(selectedMedia)}
+                    >
+                      <ImageIcon className="mr-2 h-4 w-4" />
+                      {selectedThumbnail === selectedMedia.id
+                        ? "Selected as Thumbnail"
+                        : "Set as Thumbnail"}
+                    </button>
+                  </div>
+                </>
               )}
               {selectedMedia.type === "video" && (
                 <video

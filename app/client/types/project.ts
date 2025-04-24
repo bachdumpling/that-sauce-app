@@ -65,4 +65,5 @@ export interface Project {
   images: ProjectImage[];
   videos: ProjectVideo[];
   organizations?: Organization[];
+  thumbnail_url?: string;
 }

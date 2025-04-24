@@ -39,7 +39,7 @@ export default async function CreatorLayout({
 
   return (
     <>
-      <div className="container w-full max-w-7xl mx-auto">
+      <div className="w-full mx-auto">
         <CreatorHeader creator={creator} username={username} />
         <TabsNav creator={creator} username={username} />
         {children}

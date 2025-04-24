@@ -161,7 +161,12 @@ export async function getProjectDirectFromDB(
  */
 export async function updateProjectServer(
   projectId: string,
-  projectData: Partial<WithoutEmbedding<Project>>
+  projectData: Partial<
+    WithoutEmbedding<Project> & {
+      thumbnail_id?: string;
+      thumbnail_url?: string;
+    }
+  >
 ): Promise<ApiResponse<WithoutEmbedding<Project>>> {
   const response = await serverApiRequest.put<Project>(
     API_ENDPOINTS.getProject(projectId),

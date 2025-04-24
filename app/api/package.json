@@ -4,6 +4,7 @@
   "main": "api/app.ts",
   "scripts": {
     "dev": "NODE_NO_WARNINGS=1 nodemon",
+    "dev:trigger": "npx trigger.dev@latest dev",
     "start": "NODE_NO_WARNINGS=1 ts-node api/app.ts",
     "build": "npx puppeteer browsers install chrome && tsc",
     "test": "echo \"Error: no test specified\" && exit 1",

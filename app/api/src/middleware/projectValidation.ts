@@ -3,7 +3,15 @@ import { body, param, query, validationResult } from "express-validator";
 
 // Validation for creating/updating projects
 export const validateProject = [
-  body("title").isString().notEmpty().withMessage("Title is required"),
+  body("title")
+    .if((value, { req }) => req.method === "POST") // Only required for POST
+    .isString()
+    .notEmpty()
+    .withMessage("Title is required"),
+  body("title")
+    .if((value, { req }) => req.method === "PUT" && value !== undefined) // Optional for PUT
+    .isString()
+    .withMessage("Title must be a string"),
   body("description").optional().isString(),
   body("short_description")
     .optional()
@@ -24,6 +32,10 @@ export const validateProject = [
     .isInt({ min: 1990, max: new Date().getFullYear() + 1 }),
   body("behance_url").optional().isURL().withMessage("Must be a valid URL"),
   body("featured").optional().isBoolean(),
+  body("thumbnail_url")
+    .optional()
+    .isURL()
+    .withMessage("Thumbnail URL must be a valid URL"),
   (req: Request, res: Response, next: NextFunction) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {

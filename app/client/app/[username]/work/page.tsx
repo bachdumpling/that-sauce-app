@@ -70,22 +70,23 @@ export default async function CreatorWorkPage({
       return <CreatorWorkError error={error} username={username} />;
     }
   }
-
   return (
     <div className="py-8">
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {creator.isOwner && (
           <div className="group hover:opacity-90 transition-opacity">
             <div className="overflow-hidden">
-              <div className="w-full h-72 object-cover rounded-[16px] border border-gray-200 grid place-items-center">
-                <Link href="/project/new">
-                  <Button
-                    variant="outline"
-                    className="flex flex-col items-center justify-center rounded-full p-2"
-                  >
-                    <Plus className="h-6 w-6 text-muted-foreground" />
-                  </Button>
-                </Link>
+              <div className="relative w-full pb-[75%] rounded-[16px] border border-gray-200">
+                <div className="absolute top-0 left-0 w-full h-full grid place-items-center">
+                  <Link href="/project/new">
+                    <Button
+                      variant="outline"
+                      className="flex flex-col items-center justify-center rounded-full p-2"
+                    >
+                      <Plus className="h-6 w-6 text-muted-foreground" />
+                    </Button>
+                  </Link>
+                </div>
               </div>
             </div>
           </div>

@@ -51,7 +51,8 @@ export class ProjectService {
     short_description?: string,
     roles?: string[],
     client_ids?: string[],
-    year?: number
+    year?: number,
+    thumbnail_url?: string
   ): Promise<Project> {
     // Get creator
     const creator = await this.creatorRepo.getByProfileId(userId);
@@ -75,6 +76,7 @@ export class ProjectService {
       year,
       creator_id: creator.id,
       portfolio_id: portfolio.id,
+      thumbnail_url,
     });
 
     // Update portfolio with new project
@@ -89,7 +91,18 @@ export class ProjectService {
   async updateProject(
     projectId: string,
     userId: string,
-    data: Partial<Pick<Project, "title" | "description">>
+    data: Partial<
+      Pick<
+        Project,
+        | "title"
+        | "description"
+        | "short_description"
+        | "roles"
+        | "client_ids"
+        | "year"
+        | "thumbnail_url"
+      >
+    >
   ): Promise<Project> {
     const creator = await this.creatorRepo.getByProfileId(userId);
     if (!creator) {

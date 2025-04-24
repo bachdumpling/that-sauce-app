@@ -12,19 +12,22 @@ import {
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { deleteProjectAction } from "@/actions/project-actions";
+import Image from "next/image";
 
 interface Project {
   id: string;
   title: string;
   description?: string;
   images?: { url: string }[];
+  thumbnail_url?: string;
 }
 
 interface ProjectCardProps {
   project: Project;
   isOwner?: boolean;
   onDelete?: (projectId: string) => void;
-  username?: string; // Add username prop for the action
+  username?: string;
+  isPreview?: boolean;
 }
 
 export function ProjectCard({
@@ -32,6 +35,7 @@ export function ProjectCard({
   isOwner = false,
   onDelete,
   username = "",
+  isPreview = false,
 }: ProjectCardProps) {
   const [isDeleting, setIsDeleting] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -79,25 +83,36 @@ export function ProjectCard({
     return null;
   }
 
+  // If project is not defined, don't render anything
+  if (!project) {
+    return null;
+  }
+
   return (
     <Link
-      href={`/project/${project.id}`}
-      className={`group hover:opacity-90 transition-opacity ${isDeleting ? "opacity-50 pointer-events-none" : ""}`}
+      href={isPreview ? "" : `/project/${project.id}`}
+      className={`group hover:opacity-90 transition-opacity ${isDeleting ? "opacity-50 pointer-events-none" : ""} ${isPreview ? "cursor-default" : ""}`}
     >
       <div className="overflow-hidden">
-        <div className="relative">
+        <div className="relative w-full" style={{ paddingBottom: "75%" }}>
+          {/* Using inline style for paddingBottom to ensure exact 4:3 ratio */}
           {project.images && project.images.length > 0 ? (
-            <img
-              src={project.images[0].url}
+            <Image
+              src={
+                project.thumbnail_url
+                  ? project.thumbnail_url
+                  : project.images[0].url
+              }
               alt={project.title}
-              className="w-full h-72 object-cover rounded-[16px] border border-gray-200"
+              fill
+              className="object-cover rounded-[16px] border border-gray-200 absolute top-0 left-0"
             />
           ) : (
-            <div className="w-full h-72 bg-muted flex items-center justify-center rounded-[16px] border border-gray-200">
+            <div className="w-full h-full bg-muted flex items-center justify-center rounded-[16px] border border-gray-200 absolute top-0 left-0">
               <ImageIcon className="h-12 w-12 text-muted-foreground" />
             </div>
           )}
-          {isOwner && (
+          {isOwner && !isPreview && (
             <div
               className={`absolute top-6 right-6 transition-opacity ${isDropdownOpen ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}
             >
@@ -142,7 +157,9 @@ export function ProjectCard({
         </div>
 
         <div className="pt-4">
-          <h3 className="font-medium text-lg">{project.title}</h3>
+          <h3 className="font-medium text-lg">
+            {project.title || "Untitled Project"}
+          </h3>
           {project.description && (
             <p className="text-muted-foreground text-sm line-clamp-2 mt-1">
               {project.description}

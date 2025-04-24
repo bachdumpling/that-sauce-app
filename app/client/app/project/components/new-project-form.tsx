@@ -29,11 +29,16 @@ import {
   Link,
   ExternalLink,
   ArrowRight,
+  ImageIcon,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 // Import server actions instead of client API functions
-import { createProjectAction } from "@/actions/project-actions";
+import {
+  createProjectAction,
+  updateProjectAction,
+  getProjectByIdAction,
+} from "@/actions/project-actions";
 import { getOrganizationsAction } from "@/actions/organization-actions";
 import {
   batchUploadMediaAction,
@@ -46,6 +51,7 @@ import { Organization } from "@/client/types/project";
 import MediaUploadStep from "./new-project-steps/media-upload-step";
 import ProjectDetailsStep from "./new-project-steps/project-details-step";
 import { ScraperProgress } from "@/components/scraper-progress";
+import { ProjectCard } from "@/app/[username]/work/components/project-card";
 
 interface MediaItem {
   id: string;
@@ -66,6 +72,9 @@ export default function NewProjectForm() {
   const [isLargeFile, setIsLargeFile] = useState<boolean>(false);
   const [mediaItems, setMediaItems] = useState<MediaItem[]>([]);
   const [selectedMedia, setSelectedMedia] = useState<MediaItem | null>(null);
+  const [selectedThumbnail, setSelectedThumbnail] = useState<string | null>(
+    null
+  );
 
   // Form step state
   const [formStep, setFormStep] = useState<number>(1); // 1 = Media upload, 2 = Project details
@@ -482,6 +491,16 @@ export default function NewProjectForm() {
     setSelectedMedia(media);
   };
 
+  const handleSelectThumbnail = (media: MediaItem) => {
+    if (!media || !media.id) {
+      console.error("Invalid media item passed to handleSelectThumbnail");
+      toast.error("Failed to select thumbnail: Invalid item");
+      return;
+    }
+    setSelectedThumbnail(media.id); // Store the ID
+    toast.success("Selected as project thumbnail");
+  };
+
   const handleProceedToDetails = () => {
     // Validate there's at least one media item before proceeding
     if (mediaItems.length === 0) {
@@ -525,6 +544,9 @@ export default function NewProjectForm() {
       // Get current user's username
       const username = window.location.pathname.split("/")[1] || "";
 
+      // Variable to store the final URL determined after uploads/imports
+      let finalThumbnailUrl: string | null = null;
+
       // First, create the project
       const projectResponse = await createProjectAction(username, {
         title,
@@ -533,6 +555,7 @@ export default function NewProjectForm() {
         roles: selectedRoles,
         client_ids: selectedClients,
         year,
+        // No thumbnail info here, will update later if needed
       });
 
       if (!projectResponse.success || !projectResponse.data) {
@@ -567,11 +590,12 @@ export default function NewProjectForm() {
         }));
 
       // Handle local file uploads first if there are any
+      let uploadResponse: any = null; // Store response for later use
       if (fileUploads.length > 0) {
         setCurrentStep(`Uploading ${fileUploads.length} local files...`);
 
         try {
-          const uploadResponse = await batchUploadMediaAction(
+          uploadResponse = await batchUploadMediaAction(
             username,
             projectId,
             fileUploads
@@ -582,7 +606,55 @@ export default function NewProjectForm() {
             toast.error(
               `Project created but file upload failed: ${uploadResponse.message}`
             );
-          } else {
+          } else if (uploadResponse.data) {
+            // Process successful upload, check if selected thumbnail was uploaded
+            const selectedMediaItem = mediaItems.find(
+              (item) => item.id === selectedThumbnail
+            );
+
+            if (selectedMediaItem?.file) {
+              // Access the correct array: data.media
+              const uploadedMediaArray = uploadResponse.data?.media;
+
+              // Declare variable here to ensure it's accessible in the outer scope
+              let matchingImage: any = null;
+
+              // Strategy 1: Match by filename
+              const fileName = selectedMediaItem.file.name;
+
+              // Ensure images array exists before trying to find
+              if (Array.isArray(uploadedMediaArray)) {
+                // Access metadata for original_filename
+                matchingImage = uploadedMediaArray.find(
+                  // Use metadata for original filename
+                  (img: any) => img.metadata?.original_filename === fileName
+                );
+              } else {
+                console.warn(
+                  "uploadResponse.data.media is not an array or is missing."
+                );
+                // Handle case where images array is missing - cannot find match
+              }
+
+              // Strategy 2: Try to match by file size if strategy 1 fails
+              if (!matchingImage) {
+                const fileSize = selectedMediaItem.file.size;
+                // Access metadata for file_size
+                matchingImage = uploadedMediaArray.find(
+                  // Use metadata for file size
+                  (img: any) => img.metadata?.file_size === fileSize
+                );
+              }
+
+              if (matchingImage && matchingImage.url) {
+                finalThumbnailUrl = matchingImage.url; // Store the URL
+              } else {
+                console.warn(
+                  "Could not find matching uploaded image for selected thumbnail file."
+                );
+              }
+            }
+
             if (
               uploadResponse.data.errors &&
               uploadResponse.data.errors.length > 0
@@ -601,11 +673,12 @@ export default function NewProjectForm() {
       }
 
       // Then handle scraped media URLs using the proper endpoint
+      let importResponse: any = null; // Store response for later use
       if (scrapedMediaItems.length > 0) {
         setCurrentStep(`Uploading ${scrapedMediaItems.length} media URLs...`);
 
         try {
-          const importResponse = await importUrlMediaAction(
+          importResponse = await importUrlMediaAction(
             username,
             projectId,
             scrapedMediaItems
@@ -615,6 +688,30 @@ export default function NewProjectForm() {
             console.error("Media URL import failed:", importResponse);
             toast.error(`Media URL import failed: ${importResponse.message}`);
           } else {
+            // Check if we need to set the thumbnail from imported images
+            if (
+              selectedThumbnail &&
+              !finalThumbnailUrl &&
+              // Check the correct media array
+              Array.isArray(importResponse.data?.media) // Check if media array exists
+            ) {
+              // Find the selected thumbnail in imported images (using frontend ID)
+              const selectedMediaItem = mediaItems.find(
+                (item) => item.id === selectedThumbnail
+              );
+
+              if (selectedMediaItem && selectedMediaItem.url) {
+                // Search in the correct media array (importResponse.data.media)
+                const matchingImage = importResponse.data.media.find(
+                  (img: any) => img.url === selectedMediaItem.url
+                );
+
+                if (matchingImage && matchingImage.url) {
+                  finalThumbnailUrl = matchingImage.url; // Store the URL
+                }
+              }
+            }
+
             toast.success(`Imported ${importResponse.data.total} media items`);
 
             if (
@@ -680,6 +777,37 @@ export default function NewProjectForm() {
         }
       }
 
+      // ----- Final Thumbnail Update -----
+      // After all uploads/imports, check if we determined a thumbnail URL
+      if (finalThumbnailUrl) {
+        setCurrentStep("Setting project thumbnail...");
+        try {
+          const updateResponse = await updateProjectAction(
+            username,
+            projectId,
+            {
+              thumbnail_url: finalThumbnailUrl,
+            }
+          );
+
+          if (updateResponse.success) {
+            toast.success("Project thumbnail set successfully");
+          } else {
+            console.error("Thumbnail update failed:", updateResponse);
+            toast.error("Failed to set project thumbnail (URL method)");
+          }
+        } catch (thumbnailError: any) {
+          console.error("Error setting thumbnail URL:", thumbnailError);
+          toast.error(
+            `Thumbnail setting error: ${thumbnailError.message || "Unknown error"}`
+          );
+        }
+      } else if (selectedThumbnail) {
+        // This case means a thumbnail was selected, but we couldn't determine its final URL
+        // (e.g., it wasn't an image, or the upload/import failed/didn't return it)
+        toast.warning("Could not determine final URL for selected thumbnail.");
+      }
+
       setCurrentStep("Finalizing project...");
       toast.success("Project created successfully");
       router.push(`/project/${projectId}`);
@@ -692,8 +820,25 @@ export default function NewProjectForm() {
     }
   };
 
+  // Construct the project object for the preview
+  const projectPreview: Project = {
+    id: "new-project-preview", // Use a placeholder ID for new projects
+    title: title || "New Project",
+    description: shortDescription || "New Project Description", // Or use description if you prefer
+    images: mediaItems
+      .filter((item) => item.type === "image")
+      .map((item) => ({ url: item.url })), // Map to expected structure
+    thumbnail_url: mediaItems.find((item) => item.id === selectedThumbnail)
+      ?.url, // Find the URL of the selected thumbnail
+  };
+
   return (
     <>
+      {/* Project Card Preview */}
+      <div className="max-w-lg mx-auto mb-8">
+        <ProjectCard project={projectPreview} isPreview={true} />
+      </div>
+
       {formStep === 1 ? (
         <MediaUploadStep
           showImportOption={showImportOption}
@@ -716,6 +861,9 @@ export default function NewProjectForm() {
           scrapingHandleId={scrapingHandleId}
           onScraperComplete={onScraperComplete}
           accessToken={accessToken}
+          selectedThumbnail={selectedThumbnail}
+          handleSelectThumbnail={handleSelectThumbnail}
+          project={projectPreview} // Pass the constructed project object
         />
       ) : (
         <ProjectDetailsStep
@@ -753,11 +901,28 @@ export default function NewProjectForm() {
             <DialogDescription>Preview of the selected media</DialogDescription>
           </DialogHeader>
           {selectedMedia?.type === "image" && (
-            <img
-              src={selectedMedia.url}
-              alt="Preview"
-              className="w-full h-auto"
-            />
+            <>
+              <img
+                src={selectedMedia.url}
+                alt="Preview"
+                className="w-full h-auto"
+              />
+              <div className="flex justify-end mt-4 space-x-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    handleSelectThumbnail(selectedMedia);
+                  }}
+                  disabled={selectedThumbnail === selectedMedia.id}
+                >
+                  <ImageIcon className="mr-2 h-4 w-4" />
+                  {selectedThumbnail === selectedMedia.id
+                    ? "Selected as Thumbnail"
+                    : "Set as Thumbnail"}
+                </Button>
+              </div>
+            </>
           )}
           {selectedMedia?.type === "video" && (
             <video src={selectedMedia.url} controls className="w-full h-auto" />

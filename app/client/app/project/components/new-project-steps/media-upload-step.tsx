@@ -15,9 +15,11 @@ import {
   ExternalLink,
   ArrowRight,
   Link as LinkIcon,
+  ImageIcon,
 } from "lucide-react";
 import { VimeoEmbed, YouTubeEmbed } from "@/components/ui/vimeo-embed";
 import { ScraperProgress } from "@/components/scraper-progress";
+import { ProjectCard } from "@/app/[username]/work/components/project-card";
 
 interface MediaItem {
   id: string;
@@ -28,6 +30,14 @@ interface MediaItem {
   vimeo_id?: string;
   alt_text?: string;
   order?: number;
+}
+
+interface Project {
+  id: string;
+  title: string;
+  description?: string;
+  images?: { url: string }[];
+  thumbnail_url?: string;
 }
 
 interface MediaUploadStepProps {
@@ -51,6 +61,9 @@ interface MediaUploadStepProps {
   scrapingHandleId: string | null;
   accessToken: string | null;
   onScraperComplete: (data: any) => void;
+  selectedThumbnail?: string | null;
+  handleSelectThumbnail?: (media: MediaItem) => void;
+  project: Project;
 }
 
 export default function MediaUploadStep({
@@ -74,7 +87,11 @@ export default function MediaUploadStep({
   scrapingHandleId,
   onScraperComplete,
   accessToken,
+  selectedThumbnail,
+  handleSelectThumbnail,
+  project,
 }: MediaUploadStepProps) {
+  console.log("project in media upload step", project);
   return (
     <>
       {/* Project Link Import Section - Only show if import option is enabled */}
@@ -237,11 +254,22 @@ export default function MediaUploadStep({
                     onClick={() => handleOpenMedia(media)}
                   >
                     {media.type === "image" && (
-                      <img
-                        src={media.url}
-                        alt="Preview"
-                        className="w-full object-contain aspect-auto"
-                      />
+                      <>
+                        <img
+                          src={media.url}
+                          alt="Preview"
+                          className={`w-full object-contain aspect-auto ${
+                            selectedThumbnail === media.url
+                              ? "ring-2 ring-primary"
+                              : ""
+                          }`}
+                        />
+                        {selectedThumbnail === media.url && (
+                          <div className="absolute top-2 right-2 bg-primary text-white rounded-full p-1">
+                            <ImageIcon className="h-4 w-4" />
+                          </div>
+                        )}
+                      </>
                     )}
                     {media.type === "video" && (
                       <div className="w-full bg-black overflow-hidden">
@@ -272,30 +300,72 @@ export default function MediaUploadStep({
                       </div>
                     )}
 
-                    <button
-                      className="absolute top-1 right-1 bg-black/70 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleRemoveMedia(media.id);
-                      }}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
+                    <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all duration-200 flex items-center justify-center">
+                      <div className="opacity-0 group-hover:opacity-100 transition-opacity flex gap-2">
+                        {media.type === "image" && handleSelectThumbnail && (
+                          <Button
+                            size="sm"
+                            variant={
+                              selectedThumbnail === media.url
+                                ? "default"
+                                : "outline"
+                            }
+                            className="bg-white text-black border-white hover:bg-gray-100 hover:text-black"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleSelectThumbnail(media);
+                            }}
+                          >
+                            <ImageIcon className="h-4 w-4 mr-1" />
+                            {selectedThumbnail === media.url
+                              ? "Thumbnail"
+                              : "Set as Thumbnail"}
+                          </Button>
+                        )}
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="bg-white text-black border-white hover:bg-gray-100 hover:text-black"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleRemoveMedia(media.url);
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
                   </div>
                 ))}
               </div>
+
+              {/* Project Thumbnail Section - if a thumbnail is selected */}
+              {selectedThumbnail && (
+                <div className="mt-6 p-4 border border-dashed rounded-md bg-gray-50">
+                  <div className="flex items-center gap-2">
+                    <ImageIcon className="h-5 w-5 text-primary" />
+                    <h3 className="text-sm font-medium">
+                      Project Thumbnail Selected
+                    </h3>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    This image will be used as the main preview for your
+                    project.
+                  </p>
+                </div>
+              )}
             </div>
           )}
 
-          {/* Continue Button */}
-          <div className="mt-6">
+          {/* Action buttons */}
+          <div className="mt-8 flex justify-end">
             <Button
               onClick={handleProceedToDetails}
-              className="w-full flex items-center justify-center"
+              className="flex items-center gap-1"
               disabled={mediaItems.length === 0}
             >
-              Continue to Project Details
-              <ArrowRight className="ml-2 h-4 w-4" />
+              Continue
+              <ArrowRight className="h-4 w-4 ml-1" />
             </Button>
           </div>
         </CardContent>

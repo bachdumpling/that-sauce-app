@@ -80,6 +80,9 @@ export async function updateProjectAction(
   try {
     const response = await updateProjectServer(projectId, projectData);
 
+    console.log("projectData in updateProjectAction", projectData);
+    console.log("project update response in updateProjectAction", response);
+
     if (response.success) {
       // Revalidate related paths
       revalidatePath(`/${username}`, "layout");

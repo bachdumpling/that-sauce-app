@@ -413,9 +413,16 @@ export class MediaService {
     // Try to find in images table first
     const { data: imageData, error: imageError } = await supabase
       .from("images")
-      .select("*, projects(title)")
+      .select("*, projects!images_project_id_fkey(title)")
       .eq("id", mediaId)
       .maybeSingle();
+
+    if (imageError) {
+      logger.error("Error querying images table", {
+        error: imageError,
+        mediaId,
+      });
+    }
 
     if (imageData) {
       return {
@@ -440,6 +447,15 @@ export class MediaService {
       .select("*, projects(title)")
       .eq("id", mediaId)
       .maybeSingle();
+
+    if (videoError) {
+      logger.error("Error querying videos table", {
+        error: videoError,
+        mediaId,
+      });
+    }
+
+    console.log("Video data", videoData);
 
     if (videoData) {
       return {

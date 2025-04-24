@@ -84,8 +84,8 @@ export function CreatorHeader({ creator, username }: CreatorHeaderProps) {
   }
 
   return (
-    <div className="flex flex-row gap-10 p-8">
-      <div className="flex-1 flex-col items-start justify-center space-y-6">
+    <div className="flex flex-row items-center justify-evenly gap-10 p-8">
+      <div className="flex-col space-y-6">
         <div className="flex flex-row justify-start items-center gap-4">
           <div className="relative w-20 h-20 bg-gray-200 rounded-full overflow-hidden">
             {/* Placeholder avatar */}
