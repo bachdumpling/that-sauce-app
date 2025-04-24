@@ -16,6 +16,8 @@ import NavClient from "./nav-client";
 import { ThemeSwitcher } from "./theme-switcher";
 import { usePathname } from "next/navigation";
 import { adminRoutes } from "./routes";
+import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
+import { EditProfileButton } from "@/components/shared/edit-profile-button";
 
 export function MobileNav() {
   const [open, setOpen] = useState(false);
@@ -56,6 +58,7 @@ export function MobileNav() {
         <div className="flex flex-col gap-8">
           <div className="flex flex-col gap-4 bg-accent/20 p-4 rounded-lg">
             <NavClient />
+
             <div className="flex items-center justify-between mt-1">
               <span className="text-sm font-medium">Theme</span>
               <ThemeSwitcher />

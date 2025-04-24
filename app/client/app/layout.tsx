@@ -107,11 +107,11 @@ export default function RootLayout({
                   <div className="hidden md:flex w-full">
                     {/* Desktop navigation */}
                     <Nav />
+                  </div>
 
-                    {/* Mobile navigation */}
-                    <div className="md:hidden">
-                      <MobileNav />
-                    </div>
+                  {/* Mobile navigation */}
+                  <div className="md:hidden w-full">
+                    <MobileNav />
                   </div>
                 </nav>
 

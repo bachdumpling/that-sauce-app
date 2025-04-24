@@ -34,14 +34,6 @@ export const userAuthRoutes: Route[] = [
   },
 ];
 
-export const userProfileRoutes: Route[] = [
-  {
-    path: "/settings",
-    label: "Settings",
-    requiresAuth: true,
-  },
-];
-
 export const adminRoutes: Route[] = [
   {
     path: "/admin",

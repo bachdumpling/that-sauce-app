@@ -8,16 +8,17 @@ import { useRouter } from "next/navigation";
 import {
   mainRoutes,
   userAuthRoutes,
-  userProfileRoutes,
   adminRoutes,
   creatorRoutes,
   isAdminEmail,
 } from "./routes";
+import { useProfileEdit } from "@/contexts/ProfileEditContext";
 
 export default function NavClient() {
   const [user, setUser] = useState(null);
   const [creatorUsername, setCreatorUsername] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const { openProfileDialog } = useProfileEdit();
   const router = useRouter();
   const supabase = createClient();
 
@@ -77,26 +78,16 @@ export default function NavClient() {
   return user ? (
     <div className="flex flex-col gap-2 w-full">
       <span className="text-sm text-center py-4">Hey, {user.email}!</span>
+
       <Button
-        onClick={handleSignOut}
-        variant={"outline"}
-        size="sm"
+        variant="outline"
+        onClick={() => {
+          openProfileDialog(creatorUsername);
+        }}
         className="w-full justify-center py-4"
       >
-        Sign out
+        Edit profile
       </Button>
-
-      {userProfileRoutes.map((route) => (
-        <Button
-          key={route.path}
-          asChild
-          size="sm"
-          variant={"outline"}
-          className="w-full justify-center py-4"
-        >
-          <Link href={route.path}>{route.label}</Link>
-        </Button>
-      ))}
 
       {creatorUsername && (
         <Button
@@ -133,6 +124,14 @@ export default function NavClient() {
           <Link href={adminRoutes[0].path}>{adminRoutes[0].label}</Link>
         </Button>
       )}
+      <Button
+        onClick={handleSignOut}
+        variant={"destructive"}
+        size="sm"
+        className="w-full justify-center py-4"
+      >
+        Sign out
+      </Button>
     </div>
   ) : (
     <div className="flex flex-col gap-2 w-full">
