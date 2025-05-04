@@ -22,6 +22,7 @@ import {
   isAdminEmail,
 } from "./routes";
 import { EditProfileButton } from "@/components/shared/edit-profile-button";
+import { DynamicLogo } from "./dynamic-logo";
 
 export default async function Nav() {
   const supabase = await createClient();
@@ -82,13 +83,7 @@ export default async function Nav() {
       {/* Middle */}
       <div className="flex gap-4 justify-center items-center font-semibold w-full">
         <Link href={"/"}>
-          <Image
-            src="/thatsaucelogoheader.png"
-            alt="that sauce"
-            width={200}
-            height={200}
-            priority
-          />
+          <DynamicLogo width={200} height={200} priority />
         </Link>
       </div>
 
@@ -199,13 +194,7 @@ export default async function Nav() {
       {/* Middle */}
       <div className="flex gap-4 justify-center items-center font-semibold w-full">
         <Link href={"/"}>
-          <Image
-            src="/thatsaucelogoheader.png"
-            alt="that sauce"
-            width={200}
-            height={200}
-            priority
-          />
+          <DynamicLogo width={200} height={200} priority />
         </Link>
       </div>
 

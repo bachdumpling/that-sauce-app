@@ -84,12 +84,10 @@ export const portfolioAnalysisTask = task({
         `All project analysis triggers completed for portfolio ${payload.portfolioId}`
       );
 
-      // Now we need to repeatedly check the status of all projects in the portfolio
-      // until they're all analyzed or until we reach a timeout
-
-      // Wait for projects to be fully analyzed - with a timeout
+      // Wait for projects to be analyzed - with a timeout
       let projectsComplete = false;
-      let attemptsRemaining = 10; // 10 attempts with 10-second intervals
+      let attemptsRemaining = 20; // 20 attempts with 10-second intervals
+      const SUFFICIENT_PERCENTAGE = 70; // Consider 70% completion as sufficient
 
       while (!projectsComplete && attemptsRemaining > 0) {
         // Wait 10 seconds between checks
@@ -100,6 +98,12 @@ export const portfolioAnalysisTask = task({
           await projectRepository.getAnalyzedProjectsForPortfolio(
             payload.portfolioId
           );
+
+        // Calculate percentage of projects that are analyzed
+        const percentageAnalyzed =
+          projects.length > 0
+            ? (analyzedProjects.length / projects.length) * 100
+            : 0;
 
         // Check if we have the same number of analyzed projects as total projects
         // AND that all projects we triggered are in the analyzed list
@@ -120,24 +124,69 @@ export const portfolioAnalysisTask = task({
           }
         }
 
+        // Log progress
+        logger.info(
+          `Waiting for project analyses to complete: ${analyzedProjects.length}/${projects.length} projects analyzed (${percentageAnalyzed.toFixed(2)}%). Attempts remaining: ${attemptsRemaining}`
+        );
+
         // If all conditions are met, we're done!
         if (allProjectsAnalyzed && allTriggeredProjectsFound) {
           projectsComplete = true;
           logger.info(
             `All ${analyzedProjects.length} projects for portfolio ${payload.portfolioId} are now analyzed.`
           );
-        } else {
-          // Log progress
-          logger.info(
-            `Waiting for project analyses to complete: ${analyzedProjects.length}/${projects.length} projects analyzed. Attempts remaining: ${attemptsRemaining}`
-          );
-          attemptsRemaining--;
+          break;
         }
+
+        // Check if we have a sufficient percentage of projects analyzed (70% threshold)
+        // If so, we can proceed with portfolio analysis
+        if (percentageAnalyzed >= SUFFICIENT_PERCENTAGE) {
+          logger.info(
+            `Sufficient projects analyzed (${percentageAnalyzed.toFixed(2)}% >= ${SUFFICIENT_PERCENTAGE}%), proceeding with portfolio analysis`
+          );
+          break;
+        }
+
+        // Also check if we've been waiting a while and have at least some analyzed projects
+        if (attemptsRemaining <= 15 && analyzedProjects.length > 0) {
+          logger.warn(
+            `Been waiting for a while and have ${analyzedProjects.length} analyzed projects. Proceeding with portfolio analysis using available projects.`
+          );
+          break;
+        }
+
+        attemptsRemaining--;
       }
 
-      if (!projectsComplete) {
+      if (attemptsRemaining === 0) {
         logger.warn(
-          `Timeout reached waiting for all projects to be analyzed in portfolio ${payload.portfolioId}. Proceeding with available projects.`
+          `Timeout reached waiting for projects to be analyzed in portfolio ${payload.portfolioId}.`
+        );
+
+        // Check one last time how many projects we have analyzed
+        const finalAnalyzedProjects =
+          await projectRepository.getAnalyzedProjectsForPortfolio(
+            payload.portfolioId
+          );
+
+        if (finalAnalyzedProjects.length === 0) {
+          // If no projects are analyzed at all, we can't proceed
+          await analysisJobRepository.updateStatus(
+            payload.jobId,
+            "failed",
+            "No projects were successfully analyzed after waiting"
+          );
+          return {
+            success: false,
+            status: "failed",
+            message: "No projects were successfully analyzed after waiting",
+            portfolioId: payload.portfolioId,
+            jobId: payload.jobId,
+          };
+        }
+
+        logger.info(
+          `Found ${finalAnalyzedProjects.length} analyzed projects after timeout. Proceeding with portfolio analysis using available projects.`
         );
       }
 
@@ -156,7 +205,7 @@ export const portfolioAnalysisTask = task({
         `Final check: ${finalAnalyzedProjects.length}/${projects.length} analyzed projects for portfolio ${payload.portfolioId}`
       );
 
-      // Now analyze the portfolio using all available analyzed projects
+      // Now analyze the portfolio after all projects are analyzed
       logger.info(`Starting analysis for portfolio ${payload.portfolioId}`);
       const portfolioAnalysis = await analysisService.analyzePortfolio(
         payload.portfolioId
